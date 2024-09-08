@@ -1,0 +1,7 @@
+build/bin
+build/darwin
+build/windows/installer
+node_modules
+frontend/dist
+frontend/.vscode
+.idea

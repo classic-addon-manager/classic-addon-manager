@@ -1,0 +1,196 @@
+export namespace addon {
+	
+	export class Addon {
+	    name: string;
+	    displayName: string;
+	    description: string;
+	    version: string;
+	    commit: string;
+	    author: string;
+	    repo: string;
+	    isManaged: boolean;
+	    // Go type: time
+	    updatedAt: any;
+	
+	    static createFrom(source: any = {}) {
+	        return new Addon(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.displayName = source["displayName"];
+	        this.description = source["description"];
+	        this.version = source["version"];
+	        this.commit = source["commit"];
+	        this.author = source["author"];
+	        this.repo = source["repo"];
+	        this.isManaged = source["isManaged"];
+	        this.updatedAt = this.convertValues(source["updatedAt"], null);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class AddonManifest {
+	    name: string;
+	    description: string;
+	    author: string;
+	    repo: string;
+	    tags: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new AddonManifest(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.description = source["description"];
+	        this.author = source["author"];
+	        this.repo = source["repo"];
+	        this.tags = source["tags"];
+	    }
+	}
+
+}
+
+export namespace api {
+	
+	export class Tag {
+	    ref: string;
+	    sha: string;
+	    type: string;
+	    url: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Tag(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ref = source["ref"];
+	        this.sha = source["sha"];
+	        this.type = source["type"];
+	        this.url = source["url"];
+	    }
+	}
+	export class Release {
+	    zipball_url: string;
+	    tag_name: string;
+	    body: string;
+	    // Go type: time
+	    published_at: any;
+	    tag: Tag;
+	
+	    static createFrom(source: any = {}) {
+	        return new Release(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.zipball_url = source["zipball_url"];
+	        this.tag_name = source["tag_name"];
+	        this.body = source["body"];
+	        this.published_at = this.convertValues(source["published_at"], null);
+	        this.tag = this.convertValues(source["tag"], Tag);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+
+export namespace github {
+	
+	export class GithubTag {
+	    ref: string;
+	    sha: string;
+	    type: string;
+	    url: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new GithubTag(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ref = source["ref"];
+	        this.sha = source["sha"];
+	        this.type = source["type"];
+	        this.url = source["url"];
+	    }
+	}
+	export class GithubRelease {
+	    zipball_url: string;
+	    tag_name: string;
+	    body: string;
+	    // Go type: time
+	    published_at: any;
+	    tag: GithubTag;
+	
+	    static createFrom(source: any = {}) {
+	        return new GithubRelease(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.zipball_url = source["zipball_url"];
+	        this.tag_name = source["tag_name"];
+	        this.body = source["body"];
+	        this.published_at = this.convertValues(source["published_at"], null);
+	        this.tag = this.convertValues(source["tag"], GithubTag);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+
