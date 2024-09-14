@@ -2,6 +2,7 @@
     import {activeScreen} from "../stores/ScreenStore";
     import AddonsScreen from "../screens/AddonsScreen.svelte";
     import DiscoverAddonsScreen from "../screens/DiscoverAddonsScreen.svelte";
+    import packageJson from '../../package.json';
 
     let active = 'local_addons';
 </script>
@@ -12,7 +13,7 @@
             <li class="app-navbar-list-item">
                 <!-- TODO: Show button to download update if there is one -->
                 <a href="#" style="font-weight: normal; color: #676767">
-                    0.99.0 (Beta) by Sami
+                    {packageJson.version} (Beta) by Sami
                 </a>
             </li>
             <!-- Move this to settings -->
