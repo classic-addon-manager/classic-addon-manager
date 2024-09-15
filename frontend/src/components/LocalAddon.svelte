@@ -1,6 +1,5 @@
 <script lang="ts">
     import {addon as ad, api} from "../../wailsjs/go/models";
-    import {crossfade} from "svelte/transition";
     import Dialog from "./Dialog.svelte";
     import addons from "../addons";
     import ErrorBar from "./ErrorBar.svelte";
@@ -12,6 +11,7 @@
 
     let dialog: any;
     let dialogErrorMsg = '';
+    let dialogUpdate: Dialog;
 
     let uninstallClicks = 0;
     let uninstallTimeout: any;
@@ -120,9 +120,21 @@
         }
         if(!didInstall) return;
     }
+
+    function formatToLocalTime(dateString: string): string {
+        const date = new Date(dateString);
+        const options: Intl.DateTimeFormatOptions = {
+            hour: '2-digit',
+            minute: '2-digit',
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric'
+        };
+        return date.toLocaleString(undefined, options).replace(',', '');
+    }
 </script>
 
-<tr style="user-select: none; height: 46px" on:click={dialog.toggle()}>
+<tr style="user-select: none; height: 46px" on:click={dialog.toggle}>
     <td style="text-align: left">{addon.displayName}</td>
     <td>{addon.author || ''}</td>
     <td>{addon.version}</td>
@@ -132,7 +144,7 @@
                 <AppLoaderBusy />
             {:else if latestRelease}
                 {#if latestRelease.published_at > addon.updatedAt}
-                    <button class="app-btn app-btn-primary" on:click|preventDefault|stopPropagation={handleUpdateClick}>
+                    <button class="app-btn app-btn-primary" on:click|preventDefault|stopPropagation={dialogUpdate.toggle}>
                         <span class="icons10-refresh"></span>
                         Update ({latestRelease.tag_name})
                     </button>
@@ -154,6 +166,29 @@
         {/if}
     </td>
 </tr>
+
+<Dialog header="Release Notes" bind:this={dialogUpdate}>
+    <div slot="body" class="px-md" style="text-align: left">
+        {#if !latestRelease}
+            <AppLoaderBusy />
+        {:else}
+            <h3 style="margin-bottom: 0">{latestRelease.tag_name}</h3>
+            <h5 style="margin-top: 0;">Released {formatToLocalTime(latestRelease.published_at)}</h5>
+            <p>{latestRelease.body || 'No change log provided by the addon'}</p>
+        {/if}
+    </div>
+    <div slot="footer">
+        <button class="app-btn app-btn-primary" type="button" on:click={() => {
+            dialogUpdate.toggle();
+            handleUpdateClick();
+        }}>
+            <span>Update</span>
+        </button>
+        <button class="app-btn" type="button" on:click={dialogUpdate.toggle}>
+            <span>Cancel</span>
+        </button>
+    </div>
+</Dialog>
 
 <Dialog header="{addon.displayName}" bind:this={dialog}>
     <div slot="body" class="px-md" style="text-align: left">
