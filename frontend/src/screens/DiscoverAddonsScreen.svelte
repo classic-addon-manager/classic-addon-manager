@@ -8,8 +8,8 @@
     let isReady: boolean = $state(false);
     let addons: addon.AddonManifest[] = $state([]);
     let searchPhrase = $state('');
-    let searchMatchNumber = $state(0);
 
+    // Naive search, should be improved. Fuzzy? Relevancy?
     const filteredAddons = $derived(addons.filter(addon => {
         // @ts-ignore
         return addon.displayName.toLowerCase().includes(searchPhrase.toLowerCase()) || addon.description.toLowerCase().includes(searchPhrase.toLowerCase());
@@ -40,27 +40,6 @@
         await _getAddonManifest();
         isReady = true;
     }
-
-    // Naive search, should be improved. Fuzzy? Relevancy?
-    /*function filterAddons(search: string) {
-        if(!search) {
-            // searchMatchNumber = addons.length;
-            return addons;
-        }
-        const lowercasedSearch = search.toLowerCase();
-        let filtered = addons.filter(addon => {
-            // @ts-ignore
-            return addon.displayName.toLowerCase().includes(lowercasedSearch) || addon.description.toLowerCase().includes(lowercasedSearch);
-        });
-        searchMatchNumber = filtered.length;
-        return filtered;
-    }*/
-
-   /* $effect(() => {
-        filterAddons(searchPhrase);
-    });*/
-
-
 </script>
 
 <main style="width: 100%">
@@ -88,7 +67,7 @@
             </div>
 
             <div class="fill-parent">
-                <p class="app-color-grey">Showing {searchMatchNumber} of {addons.length} addons</p>
+                <p class="app-color-grey">Showing {filteredAddons.length} of {addons.length} addons</p>
             </div>
         </div>
 
