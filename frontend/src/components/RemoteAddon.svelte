@@ -5,6 +5,7 @@
     import addons from "../addons";
     import type {addon as addonType} from "../../wailsjs/go/models";
     import ErrorBar from "./ErrorBar.svelte";
+    import doodleru from '../assets/images/doodleru.png';
 
     export let addon: addonType.AddonManifest;
 
@@ -13,8 +14,12 @@
     let isDownloading = false;
     let errorMessage = '';
 
+    let hasBanner = false;
+    let banner: string;
+
     onMount(async() => {
         isInstalled = await IsAddonInstalled(addon.name);
+        hasBanner = await checkForBanner();
     })
 
     async function handleInstallClick() {
@@ -38,15 +43,32 @@
         if(isInstalled) {
             isInstalled = await IsAddonInstalled(addon.name);
         }
+        // TODO: Can't check for banner here because it causes MASSIVE amounts of requests!
     });
+
+    async function checkForBanner() {
+        try {
+            const response = await fetch(`https://raw.githubusercontent.com/${addon.repo}/${addon.branch}/banner.png`);
+            response.body?.getReader().read().then(({done, value}) => {
+                if(!done) {
+                    const blob = new Blob([value]);
+                    banner = URL.createObjectURL(blob);
+                }
+            });
+            return response.ok;
+        } catch (e) {
+            console.error("Error checking image:", e);
+            return false;
+        }
+    }
 </script>
 
 <div class="card">
     <div class="card-header">
         <div class="app-flex" style="justify-content: space-between; align-items: center">
-            <h2>{addons.nameToDisplayName(addon.name)} <span style="font-weight: normal; font-size: 1rem">by {addon.author}</span></h2>
+            <h2 style="flex-grow: 1">{addons.nameToDisplayName(addon.name)} <span style="font-weight: normal; font-size: 1rem; white-space: nowrap">by {addon.author}</span></h2>
 
-            <div class="app-cmd-bar">
+            <div class="app-cmd-bar" style="align-self: flex-start; margin-top: 1rem">
                 <button class="app-cmdbar-button" on:click={handleInstallClick}>
                     {#if !isInstalled && !isDownloading}
                         <i class="icons10-download app-color-primary"></i>
@@ -95,5 +117,14 @@
             <div class="badge">{tag}</div>
         {/each}
     </div>
+
+    <div style="width: 100%; border-radius: 0.5rem; margin-top: 1rem; max-height: 360px; overflow: hidden">
+        {#if hasBanner}
+            <img src={banner} alt="Banner" style="width: 100%; height: auto; object-fit: cover;"/>
+        {:else}
+            <img src={doodleru} alt="Banner" style="width: 100%; height: auto; object-fit: cover; opacity: 25%; filter: blur(1px)"/>
+        {/if}
+    </div>
+
     <p style="text-wrap: auto">{addon.description}</p>
 </div>

@@ -52,6 +52,7 @@ export namespace addon {
 	    description: string;
 	    author: string;
 	    repo: string;
+	    branch: string;
 	    tags: string[];
 	
 	    static createFrom(source: any = {}) {
@@ -64,6 +65,7 @@ export namespace addon {
 	        this.description = source["description"];
 	        this.author = source["author"];
 	        this.repo = source["repo"];
+	        this.branch = source["branch"];
 	        this.tags = source["tags"];
 	    }
 	}

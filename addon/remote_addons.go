@@ -19,6 +19,7 @@ type AddonManifest struct {
 	Description string   `json:"description"`
 	Author      string   `json:"author"`
 	Repo        string   `json:"repo"`
+	Branch      string   `json:"branch"`
 	Tags        []string `json:"tags"`
 }
 
