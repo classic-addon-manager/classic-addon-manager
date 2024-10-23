@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { preventDefault, stopPropagation } from 'svelte/legacy';
+
     import {addon as ad, api} from "../../wailsjs/go/models";
     import Dialog from "./Dialog.svelte";
     import addons from "../addons";
@@ -7,17 +9,21 @@
     import {GetLatestRelease as GoGetLatestRelease} from "../../wailsjs/go/main/App";
     import AppLoaderBusy from "./AppLoaderBusy.svelte";
 
-    export let addon: ad.Addon;
+    interface Props {
+        addon: ad.Addon;
+    }
 
-    let dialog: any;
-    let dialogErrorMsg = '';
-    let dialogUpdate: Dialog;
+    let { addon }: Props = $props();
 
-    let uninstallClicks = 0;
+    let dialog: any = $state();
+    let dialogErrorMsg = $state('');
+    let dialogUpdate: Dialog = $state();
+
+    let uninstallClicks = $state(0);
     let uninstallTimeout: any;
 
-    let latestRelease: api.Release;
-    let isCheckingForUpdates = false;
+    let latestRelease: api.Release = $state();
+    let isCheckingForUpdates = $state(false);
 
     onMount(async() => {
         if(addon.isManaged) {
@@ -134,7 +140,7 @@
     }
 </script>
 
-<tr style="user-select: none; height: 46px" on:click={dialog.toggle}>
+<tr style="user-select: none; height: 46px" onclick={dialog.toggle}>
     <td style="text-align: left">{addon.displayName}</td>
     <td>{addon.author || ''}</td>
     <td>{addon.version}</td>
@@ -144,7 +150,7 @@
                 <AppLoaderBusy />
             {:else if latestRelease}
                 {#if latestRelease.published_at > addon.updatedAt}
-                    <button class="app-btn app-btn-primary" on:click|preventDefault|stopPropagation={dialogUpdate.toggle}>
+                    <button class="app-btn app-btn-primary" onclick={stopPropagation(preventDefault(dialogUpdate.toggle))}>
                         <span class="icons10-refresh"></span>
                         Update ({latestRelease.tag_name})
                     </button>
@@ -168,84 +174,92 @@
 </tr>
 
 <Dialog header="Release Notes" bind:this={dialogUpdate}>
-    <div slot="body" class="px-md" style="text-align: left">
-        {#if !latestRelease}
-            <AppLoaderBusy />
-        {:else}
-            <h3 style="margin-bottom: 0">{latestRelease.tag_name}</h3>
-            <h5 style="margin-top: 0;">Released {formatToLocalTime(latestRelease.published_at)}</h5>
-            <p>{latestRelease.body || 'No change log provided by the addon'}</p>
-        {/if}
-    </div>
-    <div slot="footer">
-        <button class="app-btn app-btn-primary" type="button" on:click={() => {
+    {#snippet body()}
+        <div  class="px-md" style="text-align: left">
+            {#if !latestRelease}
+                <AppLoaderBusy />
+            {:else}
+                <h3 style="margin-bottom: 0">{latestRelease.tag_name}</h3>
+                <h5 style="margin-top: 0;">Released {formatToLocalTime(latestRelease.published_at)}</h5>
+                <p>{latestRelease.body || 'No change log provided by the addon'}</p>
+            {/if}
+        </div>
+    {/snippet}
+    {#snippet footer()}
+        <div >
+            <button class="app-btn app-btn-primary" type="button" onclick={() => {
             dialogUpdate.toggle();
             handleUpdateClick();
         }}>
-            <span>Update</span>
-        </button>
-        <button class="app-btn" type="button" on:click={dialogUpdate.toggle}>
-            <span>Cancel</span>
-        </button>
-    </div>
+                <span>Update</span>
+            </button>
+            <button class="app-btn" type="button" onclick={dialogUpdate.toggle}>
+                <span>Cancel</span>
+            </button>
+        </div>
+    {/snippet}
 </Dialog>
 
 <Dialog header="{addon.displayName}" bind:this={dialog}>
-    <div slot="body" class="px-md" style="text-align: left">
-        {#if addon.isManaged}
-            <p>{addon.description}</p>
-        {:else}
-            <p>This addon is not managed by Classic Addon Manager.</p>
+    {#snippet body()}
+        <div  class="px-md" style="text-align: left">
+            {#if addon.isManaged}
+                <p>{addon.description}</p>
+            {:else}
+                <p>This addon is not managed by Classic Addon Manager.</p>
 
-            {#await addons.repoHasAddon(addon.name)}
-                <span></span>
-            {:then found}
-                {#if found}
-                    <h3>Good news!</h3>
-                    <p>The addon was found in our addon repository. Do you want Classic Addon Manager to manage updates?</p>
-                    {#if dialogErrorMsg}
-                        <div style="margin-bottom: 1rem;">
-                            <ErrorBar bind:message={dialogErrorMsg} />
-                        </div>
+                {#await addons.repoHasAddon(addon.name)}
+                    <span></span>
+                {:then found}
+                    {#if found}
+                        <h3>Good news!</h3>
+                        <p>The addon was found in our addon repository. Do you want Classic Addon Manager to manage updates?</p>
+                        {#if dialogErrorMsg}
+                            <div style="margin-bottom: 1rem;">
+                                <ErrorBar bind:message={dialogErrorMsg} />
+                            </div>
+                        {/if}
+                        <button style="margin-bottom: 1rem" class="app-btn app-btn-primary"
+                            onclick={handleMatchAddon}
+                        >Yes, do it!</button>
                     {/if}
-                    <button style="margin-bottom: 1rem" class="app-btn app-btn-primary"
-                        on:click={handleMatchAddon}
-                    >Yes, do it!</button>
-                {/if}
-            {/await}
-        {/if}
-    </div>
-    <div slot="footer">
-        {#if dialogErrorMsg}
-            <div style="margin-bottom: 1rem;">
-                <ErrorBar bind:message={dialogErrorMsg} />
-            </div>
-        {/if}
-        <div class="app-flex" style="justify-content: space-between">
-            <div>
-                {#if addon.isManaged}
-                    <button class="app-btn app-btn-outline-primary" type="button" on:click={handleForceUpdate}>
-                        <i class="icons10-refresh"></i><span>Force Reinstall</span>
+                {/await}
+            {/if}
+        </div>
+    {/snippet}
+    {#snippet footer()}
+        <div >
+            {#if dialogErrorMsg}
+                <div style="margin-bottom: 1rem;">
+                    <ErrorBar bind:message={dialogErrorMsg} />
+                </div>
+            {/if}
+            <div class="app-flex" style="justify-content: space-between">
+                <div>
+                    {#if addon.isManaged}
+                        <button class="app-btn app-btn-outline-primary" type="button" onclick={handleForceUpdate}>
+                            <i class="icons10-refresh"></i><span>Force Reinstall</span>
+                        </button>
+                    {/if}
+                    <button class="app-btn app-btn-outline-danger" type="button" onclick={handleUninstall}>
+                        {#if uninstallClicks === 0}
+                            <i class="icons10-trash"></i>
+                            <span>
+                                Uninstall
+                            </span>
+                        {:else}
+                            <span>Click again</span>
+                        {/if}
                     </button>
-                {/if}
-                <button class="app-btn app-btn-outline-danger" type="button" on:click={handleUninstall}>
-                    {#if uninstallClicks === 0}
-                        <i class="icons10-trash"></i>
-                        <span>
-                            Uninstall
-                        </span>
-                    {:else}
-                        <span>Click again</span>
-                    {/if}
+                </div>
+
+                <button style="" class="app-btn" type="button" onclick={dialog.toggle()}>
+                    <span>Close</span>
                 </button>
             </div>
 
-            <button style="" class="app-btn" type="button" on:click={dialog.toggle()}>
-                <span>Close</span>
-            </button>
         </div>
-
-    </div>
+    {/snippet}
 </Dialog>
 
 <style>

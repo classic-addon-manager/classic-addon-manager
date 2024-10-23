@@ -1,6 +1,12 @@
 <script lang="ts">
-    export let header = '';
-    let div = null;
+    interface Props {
+        header?: string;
+        body?: import('svelte').Snippet;
+        footer?: import('svelte').Snippet;
+    }
+
+    let { header = '', body, footer }: Props = $props();
+    let div = $state(null);
 
     export function toggle() {
         if(div === null) return;
@@ -18,14 +24,14 @@
             <h3>{header}</h3>
         </div>
         <div class="app-dialog-body">
-            <slot name="body"></slot>
+            {@render body?.()}
         </div>
         <div class="app-dialog-footer">
-            <slot name="footer">
-                <button class="app-btn" type="button" on:click={toggle}>
+            {#if footer}{@render footer()}{:else}
+                <button class="app-btn" type="button" onclick={toggle}>
                     <span>Close</span>
                 </button>
-            </slot>
+            {/if}
         </div>
     </div>
 </div>

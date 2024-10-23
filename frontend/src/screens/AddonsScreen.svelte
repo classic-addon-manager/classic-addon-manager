@@ -4,7 +4,7 @@
     import {onMount} from "svelte";
     import AppLoaderBusy from "../components/AppLoaderBusy.svelte";
 
-    let localAddonRefs = [];
+    let localAddonRefs = $state([]);
     onMount(() => {
         localAddonRefs = [];
     })
@@ -19,14 +19,14 @@
         isCheckingUpdates = false;
     }
 
-    let isCheckingUpdates = false;
+    let isCheckingUpdates = $state(false);
 </script>
 
 <main style="width: 100%;">
     <div class="app-flex" style="justify-content: space-between; align-items: center">
         <h1>Addons ({$installedAddons.length})</h1>
         <div>
-            <button style="width: 173px" class="app-btn app-btn-outline-primary" on:click={checkAllUpdates}>
+            <button style="width: 173px" class="app-btn app-btn-outline-primary" onclick={checkAllUpdates}>
                 {#if isCheckingUpdates}
                     <div class="fill-parent app-flex" style="align-items: center; justify-content: center">
                         <AppLoaderBusy />

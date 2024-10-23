@@ -4,7 +4,7 @@
     import DiscoverAddonsScreen from "../screens/DiscoverAddonsScreen.svelte";
     import packageJson from '../../package.json';
 
-    let active = 'local_addons';
+    let active = $state('local_addons');
 </script>
 
 <div class="fill-parent app-flex" style="align-items: flex-end">
@@ -23,7 +23,7 @@
             </label>-->
 
             <li class="app-navbar-list-item">
-                <a class:active={active === 'local_addons'} href="#" on:click={() => {
+                <a class:active={active === 'local_addons'} href="#" onclick={() => {
                     $activeScreen = AddonsScreen
                     active = 'local_addons'
                 }}>
@@ -33,7 +33,7 @@
             </li>
 
             <li class="app-navbar-list-item">
-                <a class:active={active === 'discover_addons'} href="#" on:click={() => {
+                <a class:active={active === 'discover_addons'} href="#" onclick={() => {
                     $activeScreen = DiscoverAddonsScreen
                     active = 'discover_addons'
                 }}>
@@ -57,7 +57,7 @@
                 <span>ArcheAge Classic Website</span>
             </a></li>
 
-            <li class="app-navbar-list-item"><a href="#" class="undefined" on:click={() => {
+            <li class="app-navbar-list-item"><a href="#" class="undefined" onclick={() => {
                 // @ts-ignore
                 window.runtime.Quit()
             }}>

@@ -2,7 +2,7 @@
     import {onMount} from "svelte";
     import {GetConfigString, SelectDirectory, SetConfigString} from "../../wailsjs/go/main/App";
 
-    let aacPath = '';
+    let aacPath = $state('');
 
     onMount(async () => {
         aacPath = await GetConfigString('general.aacpath');
@@ -18,7 +18,7 @@
     <div class="app-flex" style="flex-flow: row">
         <div class="app-input-container" style="flex: 1">
             <input
-                    on:click={async () => {
+                    onclick={async () => {
                     let path = await SelectDirectory();
                     if(path) {
                         aacPath = path;
@@ -28,7 +28,7 @@
                     class="app-input-text" style="width: 100%" id="aac-path" type="text" placeholder="Enter ArcheAge Classic path" autocomplete="off" value={aacPath}>
         </div>
         <button class="app-btn" style="flex-shrink: 1; flex-grow: 0.5; margin-left: 0.5em"
-            on:click={async () => {
+            onclick={async () => {
                 let path = await SelectDirectory();
                 if(path) {
                     aacPath = path;

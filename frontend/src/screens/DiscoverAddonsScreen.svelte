@@ -5,10 +5,15 @@
     import RemoteAddon from "../components/RemoteAddon.svelte";
     import type {addon} from "../../wailsjs/go/models";
 
-    let isReady = false;
-    let addons: addon.AddonManifest[] = [];
-    let searchPhrase = '';
-    let searchMatchNumber: number = 0;
+    let isReady: boolean = $state(false);
+    let addons: addon.AddonManifest[] = $state([]);
+    let searchPhrase = $state('');
+    let searchMatchNumber = $state(0);
+
+    const filteredAddons = $derived(addons.filter(addon => {
+        // @ts-ignore
+        return addon.displayName.toLowerCase().includes(searchPhrase.toLowerCase()) || addon.description.toLowerCase().includes(searchPhrase.toLowerCase());
+    }));
 
     onMount(async () => {
         await _getAddonManifest();
@@ -36,12 +41,10 @@
         isReady = true;
     }
 
-    $: filterAddons(searchPhrase);
-
     // Naive search, should be improved. Fuzzy? Relevancy?
-    function filterAddons(search: string) {
+    /*function filterAddons(search: string) {
         if(!search) {
-            searchMatchNumber = addons.length;
+            // searchMatchNumber = addons.length;
             return addons;
         }
         const lowercasedSearch = search.toLowerCase();
@@ -51,7 +54,13 @@
         });
         searchMatchNumber = filtered.length;
         return filtered;
-    }
+    }*/
+
+   /* $effect(() => {
+        filterAddons(searchPhrase);
+    });*/
+
+
 </script>
 
 <main style="width: 100%">
@@ -60,7 +69,7 @@
         <button class="app-btn app-btn-outline-primary"
                 class:input-field-default-disabled={!isReady}
                 disabled={!isReady}
-            on:click={refreshAddons}
+            onclick={refreshAddons}
         ><i class="icons10-refresh font-size-16px"></i>Refresh Addons</button>
     </div>
 
@@ -84,7 +93,7 @@
         </div>
 
         <div class="addon-grid-container" style="margin-bottom: 1rem">
-            {#each filterAddons(searchPhrase) as addon}
+            {#each filteredAddons as addon}
                 <RemoteAddon addon={addon} />
             {:else}
                 <div class="app-flex-center"><h3>No addons found</h3></div>

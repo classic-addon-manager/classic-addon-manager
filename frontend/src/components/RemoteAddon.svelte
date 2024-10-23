@@ -1,3 +1,4 @@
+<!-- @migration-task Error while migrating Svelte code: Can't migrate code with afterUpdate. Please migrate by hand. -->
 <script lang="ts">
     import AppLoaderBusy from "./AppLoaderBusy.svelte";
     import {IsAddonInstalled} from "../../wailsjs/go/main/App";

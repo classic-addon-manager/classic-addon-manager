@@ -6,7 +6,7 @@
     import {onDestroy, onMount} from "svelte";
     import addons from "./addons";
 
-    let ActiveScreen: any;
+    let ActiveScreen: any = $state();
     let unsub = activeScreen.subscribe(value => {
         ActiveScreen = value;
     });
@@ -39,7 +39,7 @@
         </nav>
     </aside>
     <div class="app-page-container px-md">
-        <svelte:component this={ActiveScreen} />
+        <ActiveScreen />
     </div>
 </div>
 
