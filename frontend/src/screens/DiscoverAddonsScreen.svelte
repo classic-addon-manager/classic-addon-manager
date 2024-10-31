@@ -72,7 +72,7 @@
         </div>
 
         <div class="addon-grid-container" style="margin-bottom: 1rem">
-            {#each filteredAddons as addon}
+            {#each filteredAddons as addon(addon.name)}
                 <RemoteAddon addon={addon} />
             {:else}
                 <div class="app-flex-center"><h3>No addons found</h3></div>
