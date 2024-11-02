@@ -13,7 +13,7 @@
             <li class="app-navbar-list-item">
                 <!-- TODO: Show button to download update if there is one -->
                 <a href="#" style="font-weight: normal; color: #676767">
-                    {packageJson.version} (Beta) by Sami
+                    v{packageJson.version} by Sami
                 </a>
             </li>
             <!-- Move this to settings -->

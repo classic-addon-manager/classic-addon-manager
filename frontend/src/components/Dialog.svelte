@@ -6,7 +6,7 @@
     }
 
     let { header = '', body, footer }: Props = $props();
-    let div = $state(null);
+    let div: HTMLDivElement|null = $state(null);
 
     export function toggle() {
         if(div === null) return;

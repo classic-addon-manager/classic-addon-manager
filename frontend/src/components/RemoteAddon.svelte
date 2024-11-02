@@ -77,7 +77,7 @@
                 </button>
                 <div class="app-cmdbar-menu">
                     <div class="app-cmdbar-menu-trigger" data-win-toggle="dropdown" data-win-target="#MyMenu">
-                        <button class="app-cmdbar-button" onclick={() => cmdbarExpanded = !cmdbarExpanded} oncancel={() => cmdbarExpanded = false}>
+                        <button class="app-cmdbar-button" onclick={() => cmdbarExpanded = !cmdbarExpanded} oncancel={() => cmdbarExpanded = false} aria-label="Toggle command bar">
                             <i class="icons10-angle-down"></i>
                         </button>
                     </div>

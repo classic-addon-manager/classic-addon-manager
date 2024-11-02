@@ -17,12 +17,12 @@
 
     let dialog: any = $state();
     let dialogErrorMsg = $state('');
-    let dialogUpdate: Dialog = $state();
+    let dialogUpdate: typeof Dialog | undefined = $state();
 
     let uninstallClicks = $state(0);
     let uninstallTimeout: any;
 
-    let latestRelease: api.Release = $state();
+    let latestRelease: api.Release|undefined = $state();
     let isCheckingForUpdates = $state(false);
 
     onMount(async() => {
@@ -39,7 +39,7 @@
     async function handleCheckUpdates() {
         isCheckingForUpdates = true;
         console.log("Checking for updates for addon: ", addon.name);
-        let release: api.Release = null;
+        let release: api.Release | undefined;
         try {
             release = await GoGetLatestRelease(addon.name)
         } catch(e) {
@@ -85,7 +85,7 @@
 
         try {
             await addons.install(manifest)
-        } catch(e) {
+        } catch(e: any) {
             if(e.toString().includes('no release found')) {
                 dialogErrorMsg = "No release found for this addon.";
             }
@@ -99,7 +99,7 @@
         let didInstall = false;
         try {
             didInstall = await addons.install(await addons.getManifest(addon.name))
-        } catch(e) {
+        } catch(e: any) {
             if(e.toString().includes('no release found')) {
                 dialogErrorMsg = "No release found for this addon.";
             } else {
@@ -116,7 +116,7 @@
         let didInstall = false;
         try {
             didInstall = await addons.install(await addons.getManifest(addon.name))
-        } catch(e) {
+        } catch(e: any) {
             if(e.toString().includes('no release found')) {
                 // dialogErrorMsg = "No release found for this addon.";
             } else {
