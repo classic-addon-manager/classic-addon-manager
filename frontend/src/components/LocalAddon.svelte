@@ -253,7 +253,7 @@
                     </button>
                 </div>
 
-                <button style="" class="app-btn" type="button" onclick={dialog.toggle()}>
+                <button style="" class="app-btn" type="button" onclick={dialog.toggle}>
                     <span>Close</span>
                 </button>
             </div>
