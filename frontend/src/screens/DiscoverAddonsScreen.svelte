@@ -62,7 +62,7 @@
             <div class="app-input-search-bar fill-parent">
                 <input class="app-input-text" type="search" placeholder="Search by name or description" bind:value={searchPhrase} />
                 <div class="app-input-end-content">
-                    <button type="submit"></button>
+                    <button type="submit" aria-label="Search"></button>
                 </div>
             </div>
 
