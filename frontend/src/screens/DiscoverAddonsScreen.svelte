@@ -4,16 +4,24 @@
     import {GetAddonManifest} from "../../wailsjs/go/main/App";
     import RemoteAddon from "../components/RemoteAddon.svelte";
     import type {addon} from "../../wailsjs/go/models";
+    import Dropdown from "../components/Dropdown.svelte";
 
     let isReady: boolean = $state(false);
     let addons: addon.AddonManifest[] = $state([]);
     let searchPhrase = $state('');
+    let selectedTag = $state('all');
+    let tags = $state([{label: 'All', value: 'all'}]);
 
     // Naive search, should be improved. Fuzzy? Relevancy?
-    const filteredAddons = $derived(addons.filter(addon => {
-        // @ts-ignore
-        return addon.displayName.toLowerCase().includes(searchPhrase.toLowerCase()) || addon.description.toLowerCase().includes(searchPhrase.toLowerCase());
-    }));
+    const filteredAddons = $derived.by(() => {
+        return addons.filter(addon => {
+            if(selectedTag != 'all' && !addon.tags.includes(selectedTag)) {
+                return false;
+            }
+            // @ts-ignore
+            return addon.displayName.toLowerCase().includes(searchPhrase.toLowerCase()) || addon.description.toLowerCase().includes(searchPhrase.toLowerCase());
+        });
+    });
 
     onMount(async () => {
         await _getAddonManifest();
@@ -27,9 +35,20 @@
                 ...addon,
                 displayName: addon.name.replace(/_/g, " ")
             });
+            for(let tag of addon.tags) {
+                // Skip the Example tag
+                if(tag == 'Example') {
+                    continue;
+                }
+                if(tags.find(t => t.value == tag)) {
+                    continue;
+                }
+                tags.push({label: tag, value: tag});
+            }
         }
         // Sort addons alphabetically by name
         tmp.sort((a, b) => a.name.localeCompare(b.name));
+        tags.sort((a, b) => a.label.localeCompare(b.label));
         addons = tmp;
         searchPhrase = '';
     }
@@ -59,7 +78,14 @@
         </div>
     {:else}
         <div class="app-flex-col" style="margin-bottom: 0rem; width: 100%">
+            
             <div class="app-input-search-bar fill-parent">
+                <div style="margin-right: 0.5rem">
+                    <Dropdown valueChanged={(tag) => {
+                    selectedTag = tag;
+                }} options={tags} />
+                </div>
+                
                 <input class="app-input-text" type="search" placeholder="Search by name or description" bind:value={searchPhrase} />
                 <div class="app-input-end-content">
                     <button type="submit" aria-label="Search"></button>
