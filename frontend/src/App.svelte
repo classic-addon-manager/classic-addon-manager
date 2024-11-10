@@ -1,20 +1,21 @@
 <script lang="ts">
+    import "./app.css";
     import aacLogo from './assets/images/aac-logo-wide.png';
     import daru from './assets/images/doodleru.png';
     import Navbar from "./components/Navbar.svelte";
     import {activeScreen} from "./stores/ScreenStore";
     import {onDestroy, onMount} from "svelte";
     import addons from "./addons";
-
+    
     let ActiveScreen: any = $state();
     let unsub = activeScreen.subscribe(value => {
         ActiveScreen = value;
     });
-
+    
     onMount(async () => {
         await addons.populateAddonStore();
     });
-
+    
     // TODO: Add a way to reset addon settings file because it can contain parsing errors
     onDestroy(() => {
         unsub();
