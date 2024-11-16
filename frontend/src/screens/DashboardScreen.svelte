@@ -15,11 +15,17 @@
 
     import { getInstalledAddons } from "$stores/AddonStore.svelte";
     import { addon } from "../../wailsjs/go/models";
+    import { setUpdatesAvailableCount } from "$stores/AddonStore.svelte";
 
     import LocalAddon from "../components/LocalAddon.svelte";
+    import { onMount } from "svelte";
 
     let localAddons: Array<addon.Addon> = $state([]);
     let isCheckingForUpdates = $state(false);
+
+    onMount(() => {
+        setUpdatesAvailableCount(0);
+    });
 
     $effect(() => {
         localAddons = getInstalledAddons();
@@ -38,6 +44,7 @@
         if (isCheckingForUpdates) {
             return;
         }
+        setUpdatesAvailableCount(0);
         isCheckingForUpdates = true;
         const event = new CustomEvent("check-updates");
         document.dispatchEvent(event);
@@ -46,8 +53,6 @@
             isCheckingForUpdates = false;
         }, 1000);
     }
-
-    $inspect(searchName);
 </script>
 
 <header class="bg-muted/40 flex h-14 items-center gap-4 border-b px-4">

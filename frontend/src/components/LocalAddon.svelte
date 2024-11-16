@@ -1,9 +1,10 @@
 <script lang="ts">
     import { onMount, onDestroy } from "svelte";
     import { addon as ad, api } from "../../wailsjs/go/models";
-    import * as Table from "$lib/components/ui/table/index.js";
+    import { addUpdateAvailableCount } from "$stores/AddonStore.svelte";
     import { GetLatestRelease as GoGetLatestRelease } from "../../wailsjs/go/main/App";
 
+    import * as Table from "$lib/components/ui/table/index.js";
     import CheckMark from "lucide-svelte/icons/check";
     import Download from "lucide-svelte/icons/download";
     import LoaderCircle from "lucide-svelte/icons/loader-circle";
@@ -37,6 +38,10 @@
         }
         latestRelease = release;
         isCheckingForUpdates = false;
+
+        if (release.published_at > addon.updatedAt) {
+            addUpdateAvailableCount();
+        }
     }
 
     onMount(async () => {
