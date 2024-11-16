@@ -3,12 +3,13 @@ package main
 import (
 	"ClassicAddonManager/config"
 	"embed"
+	"os"
+
 	"github.com/sqweek/dialog"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 	"github.com/wailsapp/wails/v2/pkg/options/windows"
-	"os"
 )
 
 //go:embed all:frontend/dist

@@ -7,8 +7,24 @@
     "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
-      "$lib": ["./src/lib"],
-      "$lib/*": ["./src/lib/*"]
+      "$lib": [
+        "./src/lib"
+      ],
+      "$lib/*": [
+        "./src/lib/*"
+      ],
+      "$screens": [
+        "./src/screens"
+      ],
+      "$screens/*": [
+        "./src/screens/*"
+      ],
+      "$stores": [
+        "./src/stores"
+      ],
+      "$stores/*": [
+        "./src/stores/*"
+      ],
     },
     /**
      * Typecheck JS in `.svelte` and `.js` files by default.
