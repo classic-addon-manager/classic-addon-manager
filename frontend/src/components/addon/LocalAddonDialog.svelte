@@ -43,10 +43,13 @@
 <Dialog.Root {open} {onOpenChange}>
     <Dialog.Content>
         <Dialog.Header>
-            <Dialog.Title>{addon.displayName}</Dialog.Title>
-            <Dialog.Description>
-                {addon.description}
-            </Dialog.Description>
+            <Dialog.Title>
+                {addon.displayName}
+                {#if addon.isManaged}
+                    <span class="text-muted-foreground">{addon.version}</span>
+                {/if}
+            </Dialog.Title>
+            <Dialog.Description>{addon.description}</Dialog.Description>
         </Dialog.Header>
         <div class="flex flex-col">
             {#if !addon.isManaged}
@@ -66,5 +69,11 @@
                 {/await}
             {/if}
         </div>
+        {#if addon.isManaged}
+            <Dialog.Footer>
+                <Button type="button" variant="outline">Reinstall</Button>
+                <Button type="button" variant="destructive">Uninstall</Button>
+            </Dialog.Footer>
+        {/if}
     </Dialog.Content>
 </Dialog.Root>
