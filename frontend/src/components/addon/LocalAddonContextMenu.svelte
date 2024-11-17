@@ -5,6 +5,7 @@
     import Trash from "lucide-svelte/icons/trash";
     import Bug from "lucide-svelte/icons/bug";
     import Github from "lucide-svelte/icons/github";
+    import {toast} from "svelte-sonner";
 
     let {
         contextTriggerArea,
@@ -47,7 +48,7 @@
             </ContextMenu.Item>
         {/if}
 
-        <ContextMenu.Item class="gap-2">
+        <ContextMenu.Item class="gap-2" onclick={() => toast.success(`${addon.displayName} was uninstalled`)}>
             <Trash size={16}/>
             Uninstall
         </ContextMenu.Item>

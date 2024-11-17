@@ -18,6 +18,7 @@
     let {addon}: Props = $props();
 
     let latestRelease: api.Release | undefined = $state();
+    let isUpdating = $state(false);
     let isCheckingForUpdates = $state(false);
     let openDialog = $state(false);
 
@@ -83,10 +84,16 @@
                         <Badge class="py-1 cursor-pointer" variant="default" onclick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
+                            isUpdating = true;
                             // TODO: Call update function
                         }}>
-                            <Download size={14} class="mr-1"/>
-                            Update ({latestRelease.tag_name})
+                            {#if isUpdating}
+                                <LoaderCircle size={14} class="mr-1 animate-spin active:scale-95"/>
+                                Updating...
+                            {:else}
+                                <Download size={14} class="mr-1"/>
+                                Update ({latestRelease.tag_name})
+                            {/if}
                         </Badge>
                     {:else}
                         <div class="flex justify-center">
