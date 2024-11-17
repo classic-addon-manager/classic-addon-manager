@@ -1,52 +1,55 @@
 <script lang="ts">
-    import type { Snippet } from "svelte";
-    import { addon } from "../../../wailsjs/go/models";
+    import type {Snippet} from "svelte";
+    import {addon as ad} from "../../../wailsjs/go/models";
     import * as ContextMenu from "$lib/components/ui/context-menu/index.js";
     import Trash from "lucide-svelte/icons/trash";
     import Bug from "lucide-svelte/icons/bug";
     import Github from "lucide-svelte/icons/github";
 
     let {
-        content,
-        addonData,
+        contextTriggerArea,
+        addon,
     }: {
-        content: Snippet;
-        addonData: addon.Addon;
+        contextTriggerArea: Snippet;
+        addon: ad.Addon;
     } = $props();
 </script>
 
 <ContextMenu.Root>
     <ContextMenu.Trigger>
-        {@render content()}
+        {@render contextTriggerArea()}
     </ContextMenu.Trigger>
     <ContextMenu.Content>
-        {#if addonData.isManaged}
+        {#if addon.isManaged}
             <ContextMenu.Item
-                class="gap-3"
-                onclick={() => {
+                    class="gap-3"
+                    onclick={() => {
                     // @ts-ignore
                     window.runtime.BrowserOpenURL(
-                        `https://github.com/${addonData.repo}`,
+                        `https://github.com/${addon.repo}`,
                     );
                 }}
             >
-                <Github size={16} /> View code
+                <Github size={16}/>
+                View code
             </ContextMenu.Item>
             <ContextMenu.Item
-                class="gap-2"
-                onclick={() => {
+                    class="gap-2"
+                    onclick={() => {
                     // @ts-ignore
                     window.runtime.BrowserOpenURL(
-                        `https://github.com/${addonData.repo}/issues/new`,
+                        `https://github.com/${addon.repo}/issues/new`,
                     );
                 }}
             >
-                <Bug size={16} /> Report issue
+                <Bug size={16}/>
+                Report issue
             </ContextMenu.Item>
         {/if}
 
         <ContextMenu.Item class="gap-2">
-            <Trash size={16} /> Uninstall
+            <Trash size={16}/>
+            Uninstall
         </ContextMenu.Item>
     </ContextMenu.Content>
 </ContextMenu.Root>

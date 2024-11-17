@@ -1,25 +1,29 @@
 <script lang="ts">
-    import { onMount, onDestroy } from "svelte";
-    import { addon as ad, api } from "../../wailsjs/go/models";
-    import { addUpdateAvailableCount } from "$stores/AddonStore.svelte";
-    import { GetLatestRelease as GoGetLatestRelease } from "../../wailsjs/go/main/App";
-
-    import * as Table from "$lib/components/ui/table/index.js";
-    import CheckMark from "lucide-svelte/icons/check";
-    import Download from "lucide-svelte/icons/download";
-    import LoaderCircle from "lucide-svelte/icons/loader-circle";
-    import ShieldQuestion from "lucide-svelte/icons/shield-question";
-    import { Badge } from "$lib/components/ui/badge/index.js";
+    import {onDestroy, onMount} from "svelte";
+    import {addon as ad, api} from "../../wailsjs/go/models";
+    import {addUpdateAvailableCount,} from "$stores/AddonStore.svelte";
+    import {GetLatestRelease as GoGetLatestRelease} from "../../wailsjs/go/main/App";
     import LocalAddonContextMenu from "./addon/LocalAddonContextMenu.svelte";
+    import LocalAddonDialog from "./addon/LocalAddonDialog.svelte";
+    import LoaderCircle from "lucide-svelte/icons/loader-circle";
+    import Download from "lucide-svelte/icons/download";
+    import CheckMark from "lucide-svelte/icons/check";
+    import ShieldQuestion from "lucide-svelte/icons/shield-question";
+    import {Badge} from "$lib/components/ui/badge";
 
     interface Props {
         addon: ad.Addon;
     }
 
-    let { addon }: Props = $props();
+    let {addon}: Props = $props();
 
     let latestRelease: api.Release | undefined = $state();
     let isCheckingForUpdates = $state(false);
+    let openDialog = $state(false);
+
+    function handleOpenDialogChange(o: boolean) {
+        openDialog = o;
+    }
 
     async function handleCheckUpdates() {
         isCheckingForUpdates = true;
@@ -56,59 +60,56 @@
     });
 </script>
 
-<!-- 
-    In order to not break tables the context menu has to be applied to every element.  
-    If you are just starting out looking to contribute to the project, this is a good place to start.
--->
-<Table.Row class="cursor-pointer">
-    <Table.Cell class="font-medium">
-        <LocalAddonContextMenu addonData={addon}>
-            {#snippet content()}
-                {addon.displayName}
-            {/snippet}
-        </LocalAddonContextMenu>
-    </Table.Cell>
-    <Table.Cell class="text-center">
-        <LocalAddonContextMenu addonData={addon}>
-            {#snippet content()}
-                {addon.author || "?"}
-            {/snippet}
-        </LocalAddonContextMenu>
-    </Table.Cell>
-    <Table.Cell class="text-center">
-        <LocalAddonContextMenu addonData={addon}>
-            {#snippet content()}
-                {addon.version || "?"}
-            {/snippet}
-        </LocalAddonContextMenu>
-    </Table.Cell>
-    <Table.Cell class="text-center">
-        {#if addon.isManaged}
-            {#if isCheckingForUpdates}
-                <div class="flex justify-center">
-                    <LoaderCircle size={20} class="mr-1 animate-spin" />
-                </div>
-            {:else if latestRelease}
-                {#if latestRelease.published_at > addon.updatedAt}
-                    <Badge class="py-1 cursor-pointer" variant="default">
-                        <Download size={14} class="mr-1" /> Update ({latestRelease.tag_name})
-                    </Badge>
+<LocalAddonDialog
+        {addon}
+        bind:open={openDialog}
+        onOpenChange={handleOpenDialogChange}
+/>
+
+{#snippet contextTriggerArea()}
+    <div class="grid grid-cols-4 p-2 hover:bg-muted/50 border-t transition-colors items-center text-sm"
+         onclick={() => (openDialog = true)}>
+        <div class="font-medium">{addon.displayName}</div>
+        <div class="text-center">{addon.author}</div>
+        <div class="text-center">{addon.version}</div>
+        <div class="text-center">
+            {#if addon.isManaged}
+                {#if isCheckingForUpdates}
+                    <div class="flex justify-center">
+                        <LoaderCircle size={20} class="mr-1 animate-spin"/>
+                    </div>
+                {:else if latestRelease}
+                    {#if latestRelease.published_at > addon.updatedAt}
+                        <Badge class="py-1 cursor-pointer" variant="default" onclick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            // TODO: Call update function
+                        }}>
+                            <Download size={14} class="mr-1"/>
+                            Update ({latestRelease.tag_name})
+                        </Badge>
+                    {:else}
+                        <div class="flex justify-center">
+                            <CheckMark size={20} class="text-green-600 mr-2"/>
+                            Up to
+                            date
+                        </div>
+                    {/if}
                 {:else}
                     <div class="flex justify-center">
-                        <CheckMark size={20} class="text-green-600 mr-2" /> Up to
-                        date
+                        <CheckMark size={20} class="text-green-600 mr-2"/>
+                        Up to date
                     </div>
                 {/if}
             {:else}
-                <div class="flex justify-center">
-                    <CheckMark size={20} class="text-green-600 mr-2" /> Up to date
-                </div>
+                <Badge class="py-1 cursor-pointer" variant="warning">
+                    <ShieldQuestion size={14} class="mr-2"/>
+                    Not managed
+                </Badge
+                >
             {/if}
-        {:else}
-            <Badge class="py-1 cursor-pointer" variant="warning">
-                <ShieldQuestion size={20} class="mr-2" />
-                Not managed</Badge
-            >
-        {/if}
-    </Table.Cell>
-</Table.Row>
+        </div>
+    </div>
+{/snippet}
+
+<LocalAddonContextMenu {addon} {contextTriggerArea}/>
