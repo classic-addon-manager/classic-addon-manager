@@ -6,6 +6,7 @@
     import Bug from "lucide-svelte/icons/bug";
     import Github from "lucide-svelte/icons/github";
     import {toast} from "svelte-sonner";
+    import addons from "../../addons";
 
     let {
         contextTriggerArea,
@@ -14,6 +15,18 @@
         contextTriggerArea: Snippet;
         addon: ad.Addon;
     } = $props();
+
+    async function handleUninstall() {
+        console.debug("Uninstalling addon: ", addon.name);
+        let didUninstall = await addons.uninstall(addon.name);
+        if (didUninstall) {
+            console.debug("Uninstalled addon: ", addon.name);
+            toast.success(`${addon.displayName} was uninstalled`);
+        } else {
+            console.error("Failed to uninstall addon: ", addon.name);
+            toast.error(`Failed to uninstall ${addon.displayName}`);
+        }
+    }
 </script>
 
 <ContextMenu.Root>
@@ -48,7 +61,7 @@
             </ContextMenu.Item>
         {/if}
 
-        <ContextMenu.Item class="gap-2" onclick={() => toast.success(`${addon.displayName} was uninstalled`)}>
+        <ContextMenu.Item class="gap-2" onclick={handleUninstall}>
             <Trash size={16}/>
             Uninstall
         </ContextMenu.Item>

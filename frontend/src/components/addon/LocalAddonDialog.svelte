@@ -15,6 +15,9 @@
         addon: ad.Addon;
     } = $props();
 
+    let uninstallClicks = $state(0);
+    let uninstallTimeout: any;
+
     async function handleMatchAddon() {
         let manifest = await addons.getManifest(addon.name)
         if (!manifest) {
@@ -34,6 +37,51 @@
 
         toast.success('Addon matched', {
             description: `${addon.displayName} was matched and will be managed by Classic Addon Manager`,
+            duration: 7000
+        });
+        open = false;
+    }
+
+    async function handleUninstall() {
+        if (uninstallClicks === 0) {
+            toast.info('Click again to uninstall');
+        }
+        uninstallClicks++;
+
+        uninstallTimeout = setTimeout(() => {
+            uninstallClicks = 0;
+        }, 5000);
+
+        if (uninstallClicks === 2) {
+            clearTimeout(uninstallTimeout);
+            uninstallClicks = 0;
+            console.debug("Uninstalling addon: ", addon.name);
+            let didUninstall = await addons.uninstall(addon.name);
+            if (didUninstall) {
+                console.debug("Uninstalled addon: ", addon.name);
+                toast.success(`${addon.displayName} was uninstalled`);
+            } else {
+                console.error("Failed to uninstall addon: ", addon.name);
+                toast.error(`Failed to uninstall ${addon.displayName}`);
+            }
+        }
+    }
+
+    async function handleReinstall() {
+        let didInstall = false;
+        try {
+            didInstall = await addons.install(await addons.getManifest(addon.name))
+        } catch (e: any) {
+            if (e.toString().includes('no release found')) {
+                toast.error('No release found for this addon');
+            } else {
+                toast.error('Failed to update addon');
+            }
+            return;
+        }
+        if (!didInstall) return;
+        toast.success('Addon reinstalled', {
+            description: `${addon.displayName} was reinstalled`,
             duration: 7000
         });
         open = false;
@@ -71,8 +119,8 @@
         </div>
         {#if addon.isManaged}
             <Dialog.Footer>
-                <Button type="button" variant="outline">Reinstall</Button>
-                <Button type="button" variant="destructive">Uninstall</Button>
+                <Button type="button" variant="outline" onclick={handleReinstall}>Reinstall</Button>
+                <Button type="button" variant="destructive" onclick={handleUninstall}>Uninstall</Button>
             </Dialog.Footer>
         {/if}
     </Dialog.Content>
