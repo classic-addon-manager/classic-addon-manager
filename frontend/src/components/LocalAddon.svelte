@@ -10,6 +10,7 @@
     import CheckMark from "lucide-svelte/icons/check";
     import ShieldQuestion from "lucide-svelte/icons/shield-question";
     import {Badge} from "$lib/components/ui/badge";
+    import LocalAddonUpdateDialog from "./addon/LocalAddonUpdateDialog.svelte";
 
     interface Props {
         addon: ad.Addon;
@@ -18,12 +19,16 @@
     let {addon}: Props = $props();
 
     let latestRelease: api.Release | undefined = $state();
-    let isUpdating = $state(false);
     let isCheckingForUpdates = $state(false);
     let openDialog = $state(false);
+    let openUpdateDialog = $state(false);
 
     function handleOpenDialogChange(o: boolean) {
         openDialog = o;
+    }
+
+    function handleOpenUpdateDialogChange(o: boolean) {
+        openUpdateDialog = o;
     }
 
     async function handleCheckUpdates() {
@@ -67,6 +72,15 @@
         onOpenChange={handleOpenDialogChange}
 />
 
+{#if latestRelease}
+    <LocalAddonUpdateDialog
+            {addon}
+            release={latestRelease}
+            bind:open={openUpdateDialog}
+            onOpenChange={handleOpenUpdateDialogChange}
+    />
+{/if}
+
 {#snippet contextTriggerArea()}
     <div class="grid grid-cols-4 p-2 hover:bg-muted/50 border-t transition-colors items-center text-sm"
          onclick={() => (openDialog = true)}>
@@ -84,16 +98,11 @@
                         <Badge class="py-1 cursor-pointer" variant="default" onclick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            isUpdating = true;
+                            openUpdateDialog = true;
                             // TODO: Call update function
                         }}>
-                            {#if isUpdating}
-                                <LoaderCircle size={14} class="mr-1 animate-spin active:scale-95"/>
-                                Updating...
-                            {:else}
-                                <Download size={14} class="mr-1"/>
-                                Update ({latestRelease.tag_name})
-                            {/if}
+                            <Download size={14} class="mr-1"/>
+                            Update ({latestRelease.tag_name})
                         </Badge>
                     {:else}
                         <div class="flex justify-center">
