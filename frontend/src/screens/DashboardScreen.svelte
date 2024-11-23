@@ -21,12 +21,10 @@
     import {setUpdatesAvailableCount} from "$stores/AddonStore.svelte";
 
     import LocalAddon from "../components/LocalAddon.svelte";
-    import LocalAddonDialog from "../components/addon/LocalAddonDialog.svelte";
     import {onMount} from "svelte";
 
     let localAddons: Array<addon.Addon> = $state([]);
     let isCheckingForUpdates = $state(false);
-    let localDialogOpen = $state(false);
     onMount(() => {
         setUpdatesAvailableCount(0);
     });
@@ -57,10 +55,6 @@
             isCheckingForUpdates = false;
         }, 1000);
     }
-
-    setInterval(() => {
-        localDialogOpen = true;
-    }, 2000);
 </script>
 
 <header class="bg-muted/40 flex h-14 items-center gap-4 border-b px-4">
@@ -120,21 +114,6 @@
                     <LocalAddon {addon}/>
                 {/each}
             </div>
-            <!--Table.Root>
-                <Table.Header>
-                    <Table.Row>
-                        <Table.Head>Name</Table.Head>
-                        <Table.Head class="text-center">Author</Table.Head>
-                        <Table.Head class="text-center">Version</Table.Head>
-                        <Table.Head class="text-center">Status</Table.Head>
-                    </Table.Row>
-                </Table.Header>
-                <Table.Body>
-                    {#each filteredAddons as addon (addon.name)}
-                        <LocalAddon {addon} />
-                    {/each}
-                </Table.Body>
-            </Table.Root-->
         </div>
     {:else}
         <div

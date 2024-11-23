@@ -3,14 +3,14 @@
     import {addon as ad, api} from "../../wailsjs/go/models";
     import {addUpdateAvailableCount,} from "$stores/AddonStore.svelte";
     import {GetLatestRelease as GoGetLatestRelease} from "../../wailsjs/go/main/App";
-    import LocalAddonContextMenu from "./addon/LocalAddonContextMenu.svelte";
-    import LocalAddonDialog from "./addon/LocalAddonDialog.svelte";
+    import LocalAddonContextMenu from "./local_addon/LocalAddonContextMenu.svelte";
+    import LocalAddonDialog from "./local_addon/LocalAddonDialog.svelte";
     import LoaderCircle from "lucide-svelte/icons/loader-circle";
     import Download from "lucide-svelte/icons/download";
     import CheckMark from "lucide-svelte/icons/check";
     import ShieldQuestion from "lucide-svelte/icons/shield-question";
     import {Badge} from "$lib/components/ui/badge";
-    import LocalAddonUpdateDialog from "./addon/LocalAddonUpdateDialog.svelte";
+    import LocalAddonUpdateDialog from "./local_addon/LocalAddonUpdateDialog.svelte";
 
     interface Props {
         addon: ad.Addon;

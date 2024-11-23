@@ -3,8 +3,8 @@ import {
     UninstallAddon as GoUninstallAddon,
     InstallAddon as GoInstallAddon, GetAddonManifests as GoGetAddonManifests
 } from "../wailsjs/go/main/App";
-import { setAddons } from "./stores/AddonStore.svelte";
-import type { addon } from "../wailsjs/go/models";
+import {setAddons} from "./stores/AddonStore.svelte";
+import type {addon} from "../wailsjs/go/models";
 
 export default {
     populateAddonStore,
