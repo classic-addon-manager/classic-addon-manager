@@ -10,7 +10,6 @@
 
     import {Input} from "$lib/components/ui/input/index.js";
     import {setActiveNavbar} from "$stores/NavbarStore.svelte";
-    import * as Table from "$lib/components/ui/table/index.js";
     import LoaderCircle from "lucide-svelte/icons/loader-circle";
 
     import {

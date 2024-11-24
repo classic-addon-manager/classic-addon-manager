@@ -31,8 +31,6 @@
         });
     });
 
-    $inspect(filteredAddons)
-
     onMount(async () => {
         await getAddonManifest();
         isReady = true;

@@ -6,16 +6,21 @@
     import {toast} from "svelte-sonner";
     import {onMount} from "svelte";
     import {IsAddonInstalled} from "../../wailsjs/go/main/App";
-    import doodleru from '../assets/images/doodleru-sm.png';
     import Blocks from "lucide-svelte/icons/blocks";
+    import RemoteAddonDialog from "./remote_addon/RemoteAddonDialog.svelte";
 
     let {addon}: { addon: ad.AddonManifest } = $props();
     let isInstalled = $state(false);
     let isDownloading = $state(false);
+    let openDialog = $state(false);
 
     onMount(async () => {
         isInstalled = await IsAddonInstalled(addon.name);
-    })
+    });
+
+    function handleOpenDialogChange(o: boolean) {
+        openDialog = o;
+    }
 
     async function handleInstallClick() {
         if (isInstalled || isDownloading) return;
@@ -36,20 +41,27 @@
     }
 </script>
 
+<RemoteAddonDialog
+        bind:open={openDialog}
+        {addon}
+        onOpenChange={handleOpenDialogChange}
+/>
 
-<div class="flex items-center justify-around bg-muted/50 hover:bg-gray-400/20 aspect-video h-12 w-full rounded-lg cursor-pointer transition-all">
+<div class="flex items-center justify-around bg-muted/50 hover:bg-gray-400/20 aspect-video h-12 w-full rounded-lg cursor-pointer transition-all"
+     onclick={() => openDialog = true}
+>
     <div class="grid grid-cols-10 items-center justify-between bg-muted/50 aspect-video h-12 w-full rounded-lg">
         <div class="flex gap-3 items-center col-span-4 overflow-hidden">
             <Blocks class="scale-75 opacity-50 flex-shrink-0 ml-2 h-[38px] w-[38px]"/>
             <!--            <img src={doodleru} alt="Doodleru" class="scale-90 opacity-50 flex-shrink-0 ml-2 h-[38px] w-[38px]"/>-->
             <!--            <Skeleton class="flex-shrink-0 ml-2 h-[38px] w-[38px]"/>-->
-            <div class="text-muted-foreground whitespace-nowrap">{addons.nameToDisplayName(addon.name)}
+            <div class="text-foreground font-medium- whitespace-nowrap">{addons.nameToDisplayName(addon.name)}
 
             </div>
         </div>
-        <div class="text-muted-foreground col-span-2">{addon.author}</div>
-        <div class="text-muted-foreground col-span-2">{addon.tags.join(', ')}</div>
-        <div class="text-muted-foreground col-span-1 ml-7">
+        <div class="text-foreground font-light col-span-2">{addon.author}</div>
+        <div class="text-foreground font-light col-span-2">{addon.tags.join(', ')}</div>
+        <div class="text-foreground col-span-1 ml-7">
             {#if isInstalled}
                 <Button
                         variant="default"
