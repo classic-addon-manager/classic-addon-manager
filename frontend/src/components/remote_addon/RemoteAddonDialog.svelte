@@ -83,6 +83,32 @@
         };
         return date.toLocaleString(undefined, options).replace(',', '');
     }
+
+    async function handleInstall(): Promise<void> {
+        if (isInstalled) {
+            toast.error('Addon is already installed');
+            return;
+        }
+        let didInstall: boolean = false;
+        try {
+            didInstall = await addons.install(addon);
+            if (!didInstall) {
+                toast.error('Failed to install addon');
+            }
+        } catch (e) {
+            if (e == 'no release found') {
+                toast.error(`No release found for ${addon.name}`);
+            } else {
+                toast.error('Failed to install addon');
+            }
+        }
+
+        if (didInstall) {
+            toast.success('Addon installed', {description: `${addons.nameToDisplayName(addon.name)} was installed`});
+            isInstalled = true;
+            open = false;
+        }
+    }
 </script>
 
 <Dialog.Root {open} {onOpenChange}>
@@ -101,7 +127,7 @@
             <Tabs.Content value="description">
                 <div class="flex flex-1 flex-col max-h-[calc(100vh-30vh)] overflow-auto">
                     {#if hasBanner}
-                        <img class="max-h-[40svh] aspect-auto object-scale-down" src={banner} alt=""/>
+                        <img class="max-h-[40svh] aspect-video object-fill" src={banner} alt=""/>
                     {/if}
                     <div>
                         <p class="mt-4">{addon.description}</p>
@@ -114,16 +140,15 @@
             </Tabs.Content>
         </Tabs.Root>
         <div class="flex">
-            <Button
-                    class="ml-auto mt-2"
-                    variant="default"
-                    onclick={() => {
-                                alert('Not implemented yet');
-                            // addons.install(addon);
-                        }}
-            >
-                Install
-            </Button>
+            {#if !isInstalled}
+                <Button
+                        class="ml-auto mt-2"
+                        variant="default"
+                        onclick={handleInstall}
+                >
+                    Install
+                </Button>
+            {/if}
         </div>
     </Dialog.Content>
 </Dialog.Root>
