@@ -7,6 +7,7 @@
     import {GetLatestRelease as GoGetLatestRelease, IsAddonInstalled} from "../../../wailsjs/go/main/App";
     import {toast} from "svelte-sonner";
     import {Button} from "$lib/components/ui/button";
+    import {GithubIcon, BugIcon} from "lucide-svelte";
 
     let {
         open = $bindable(),
@@ -115,8 +116,39 @@
     <Dialog.Content class="max-h-[90%]">
         <Dialog.Header>
             <Dialog.Title>
-                {addons.nameToDisplayName(addon.name)} <span
-                    class="text-muted-foreground">{release ? release.tag_name : ''}</span>
+                <div class="flex">
+                    <div class="flex-row">
+                        {addons.nameToDisplayName(addon.name)}
+                        <span class="text-muted-foreground">{release ? release.tag_name : ''}</span>
+                    </div>
+                </div>
+
+                <div class="flex-row mt-2">
+                    <div class="flex gap-4">
+                        <a href="javascript: void(0);"
+                           class="text-muted-foreground text-sm hover:text-blue-500 transition duration-300 ease-in-out"
+                           onclick={() => {
+                            // @ts-ignore
+                            window.runtime.BrowserOpenURL(`https://github.com/${addon.repo}`);
+                        }}>
+                            <div class="flex items-center">
+                                <GithubIcon class="w-4 h-4 mr-1"/>
+                                View code
+                            </div>
+                        </a>
+                        <a href="javascript: void(0);"
+                           class="text-muted-foreground text-sm hover:text-blue-500 transition duration-300 ease-in-out"
+                           onclick={() => {
+                            // @ts-ignore
+                            window.runtime.BrowserOpenURL(`https://github.com/${addon.repo}/issues/new`);
+                        }}>
+                            <div class="flex items-center">
+                                <BugIcon class="w-4 h-4 mr-1"/>
+                                Report issue
+                            </div>
+                        </a>
+                    </div>
+                </div>
             </Dialog.Title>
         </Dialog.Header>
         <Tabs.Root value="description" class="w-full">
