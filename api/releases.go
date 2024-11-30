@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-func GetLatestRelease(name string) (Release, error) {
+func GetLatestAddonRelease(name string) (Release, error) {
 	url := apiUrl + "/latest_release/" + name
 
 	resp, err := http.Get(url)
@@ -22,25 +22,25 @@ func GetLatestRelease(name string) (Release, error) {
 
 	// If the status code is not 200 here, there's likely no release
 	if resp.StatusCode != 200 {
-		logger.Error("GetLatestRelease Error: Status Code", errors.New(strconv.Itoa(resp.StatusCode)))
+		logger.Error("GetLatestAddonRelease Error: Status Code", errors.New(strconv.Itoa(resp.StatusCode)))
 		return Release{}, errors.New("no release found")
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		logger.Error("GetLatestRelease Error:", err)
+		logger.Error("GetLatestAddonRelease Error:", err)
 		return Release{}, err
 	}
 
 	var apiResponse ApiResponse
 
 	if err := json.Unmarshal(body, &apiResponse); err != nil {
-		logger.Error("GetLatestRelease Error:", err)
+		logger.Error("GetLatestAddonRelease Error:", err)
 		return Release{}, err
 	}
 
 	if !apiResponse.Status {
-		logger.Warn("GetLatestRelease status false: " + apiResponse.Message)
+		logger.Warn("GetLatestAddonRelease status false: " + apiResponse.Message)
 		return Release{}, errors.New(apiResponse.Message)
 	}
 
@@ -61,7 +61,7 @@ func GetLatestRelease(name string) (Release, error) {
 	tag := Tag{}
 	err = mapstructure.Decode(data["tag"], &tag)
 	if err != nil {
-		logger.Error("GetLatestRelease Error:", err)
+		logger.Error("GetLatestAddonRelease Error:", err)
 		return Release{}, err
 	}
 

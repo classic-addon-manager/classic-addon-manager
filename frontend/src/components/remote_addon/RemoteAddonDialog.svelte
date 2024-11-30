@@ -4,7 +4,7 @@
     import {addon as ad, api} from "../../../wailsjs/go/models";
     import {onMount} from "svelte";
     import addons from "../../addons.js";
-    import {GetLatestRelease as GoGetLatestRelease, IsAddonInstalled} from "../../../wailsjs/go/main/App";
+    import {GetLatestAddonRelease as GoGetLatestRelease, IsAddonInstalled} from "../../../wailsjs/go/main/App";
     import {toast} from "svelte-sonner";
     import {Button} from "$lib/components/ui/button";
     import {GithubIcon, BugIcon} from "lucide-svelte";

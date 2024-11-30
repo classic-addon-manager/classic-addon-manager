@@ -129,8 +129,8 @@ func (a *App) GetAddonManifests() []addon.AddonManifest {
 	return addon.GetAddonManifest(false)
 }
 
-func (a *App) GetLatestRelease(name string) (api.Release, error) {
-	release, err := api.GetLatestRelease(name)
+func (a *App) GetLatestAddonRelease(name string) (api.Release, error) {
+	release, err := api.GetLatestAddonRelease(name)
 	if err != nil {
 		logger.Error("Error getting latest release:", err)
 		return api.Release{}, err

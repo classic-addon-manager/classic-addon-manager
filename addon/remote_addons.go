@@ -32,7 +32,7 @@ func InstallAddon(manifest AddonManifest) (bool, error) {
 	logger.Info("Installing addon:" + manifest.Name + " from " + manifest.Repo)
 
 	zipName := manifest.Name + ".zip"
-	release, err := api.GetLatestRelease(manifest.Name)
+	release, err := api.GetLatestAddonRelease(manifest.Name)
 	if err != nil {
 		return false, err
 	}

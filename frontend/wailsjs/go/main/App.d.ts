@@ -14,7 +14,7 @@ export function GetConfigBool(arg1:string):Promise<boolean>;
 
 export function GetConfigString(arg1:string):Promise<string>;
 
-export function GetLatestRelease(arg1:string):Promise<api.Release>;
+export function GetLatestAddonRelease(arg1:string):Promise<api.Release>;
 
 export function GetReleases(arg1:string):Promise<Array<github.GithubRelease>>;
 
