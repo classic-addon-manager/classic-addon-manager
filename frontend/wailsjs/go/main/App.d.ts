@@ -16,6 +16,8 @@ export function GetConfigString(arg1:string):Promise<string>;
 
 export function GetLatestAddonRelease(arg1:string):Promise<api.Release>;
 
+export function GetLatestApplicationRelease():Promise<api.ApplicationRelease>;
+
 export function GetReleases(arg1:string):Promise<Array<github.GithubRelease>>;
 
 export function InstallAddon(arg1:addon.AddonManifest):Promise<boolean>;

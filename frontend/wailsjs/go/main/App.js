@@ -26,6 +26,10 @@ export function GetLatestAddonRelease(arg1) {
   return window['go']['main']['App']['GetLatestAddonRelease'](arg1);
 }
 
+export function GetLatestApplicationRelease() {
+  return window['go']['main']['App']['GetLatestApplicationRelease']();
+}
+
 export function GetReleases(arg1) {
   return window['go']['main']['App']['GetReleases'](arg1);
 }

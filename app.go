@@ -146,3 +146,12 @@ func (a *App) GetReleases(repo string) ([]github.GithubRelease, error) {
 	}
 	return releases, nil
 }
+
+func (a *App) GetLatestApplicationRelease() (api.ApplicationRelease, error) {
+	release, err := api.GetLatestApplicationRelease()
+	if err != nil {
+		logger.Error("Error getting latest application release:", err)
+		return api.ApplicationRelease{}, err
+	}
+	return release, nil
+}
