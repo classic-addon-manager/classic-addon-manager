@@ -12,10 +12,12 @@
     let {
         open = $bindable(),
         onOpenChange,
+        onInstall,
         addon
     }: {
         open: boolean;
         onOpenChange: (open: boolean) => void;
+        onInstall: (installed: boolean) => boolean;
         addon: ad.AddonManifest;
     } = $props();
 
@@ -106,6 +108,7 @@
 
         if (didInstall) {
             toast.success('Addon installed', {description: `${addon.alias} was installed`});
+            onInstall(didInstall);
             isInstalled = true;
             open = false;
         }

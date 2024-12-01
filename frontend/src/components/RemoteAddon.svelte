@@ -39,12 +39,17 @@
         }
         isDownloading = false;
     }
+
+    function handleOnInstall(installed: boolean) {
+        isInstalled = installed;
+    }
 </script>
 
 <RemoteAddonDialog
         bind:open={openDialog}
         {addon}
         onOpenChange={handleOpenDialogChange}
+        onInstall={handleOnInstall}
 />
 
 <div class="flex items-center justify-around bg-muted/50 hover:bg-gray-400/20 aspect-video h-12 w-full rounded-lg cursor-pointer transition-all"
