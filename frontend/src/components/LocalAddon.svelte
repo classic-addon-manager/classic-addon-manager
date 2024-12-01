@@ -59,8 +59,6 @@
             document.addEventListener("check-updates", handleCheckUpdates);
             await handleCheckUpdates();
         }
-
-        console.log(addon);
     });
 
     onDestroy(() => {
@@ -101,7 +99,6 @@
                             e.preventDefault();
                             e.stopPropagation();
                             openUpdateDialog = true;
-                            // TODO: Call update function
                         }}>
                             <Download size={14} class="mr-1"/>
                             Update ({latestRelease.tag_name})
