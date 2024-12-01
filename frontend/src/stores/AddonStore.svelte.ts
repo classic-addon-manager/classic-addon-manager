@@ -1,4 +1,4 @@
-import type { addon } from "../../wailsjs/go/models";
+import type {addon} from "../../wailsjs/go/models";
 
 let installedAddons: Array<addon.Addon> = $state([]);
 let updatesAvailableCount: number = $state(0);
@@ -22,10 +22,6 @@ export function getUpdatesAvailableCount(): number {
 
 export function setUpdatesAvailableCount(count: number) {
     updatesAvailableCount = count;
-}
-
-export function toggleLocalAddonDialog() {
-    localAddonDialogOpen = !localAddonDialogOpen;
 }
 
 export function getLocalAddonDialogOpen(): boolean {

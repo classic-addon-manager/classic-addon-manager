@@ -21,10 +21,10 @@
         let didUninstall = await addons.uninstall(addon.name);
         if (didUninstall) {
             console.debug("Uninstalled addon: ", addon.name);
-            toast.success(`${addon.displayName} was uninstalled`);
+            toast.success(`${addon.alias} was uninstalled`);
         } else {
             console.error("Failed to uninstall addon: ", addon.name);
-            toast.error(`Failed to uninstall ${addon.displayName}`);
+            toast.error(`Failed to uninstall ${addon.alias}`);
         }
     }
 </script>

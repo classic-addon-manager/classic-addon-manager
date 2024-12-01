@@ -10,7 +10,6 @@ export default {
     populateAddonStore,
     install,
     uninstall,
-    nameToDisplayName,
     repoHasAddon,
     getManifest
 }
@@ -22,10 +21,6 @@ async function getManifest(name: string): Promise<addon.AddonManifest> {
         throw new Error("Addon not found");
     }
     return m;
-}
-
-function nameToDisplayName(name: string): string {
-    return name.replaceAll("_", " ");
 }
 
 async function repoHasAddon(addon: string): Promise<boolean> {

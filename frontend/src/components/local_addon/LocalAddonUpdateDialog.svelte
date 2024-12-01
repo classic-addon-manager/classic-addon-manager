@@ -48,7 +48,7 @@
         }
         if (!didInstall) return;
         toast.success('Addon updated', {
-            description: `${addon.displayName} was updated to ${release.tag_name}`,
+            description: `${addon.alias} was updated to ${release.tag_name}`,
             duration: 7000
         });
         open = false;
@@ -59,7 +59,7 @@
     <Dialog.Content>
         <Dialog.Header>
             <Dialog.Title>
-                {addon.displayName}
+                {addon.alias}
                 {#if addon.isManaged}
                     <span class="text-muted-foreground">{release.tag_name}</span>
                 {/if}

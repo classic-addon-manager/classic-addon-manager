@@ -16,6 +16,7 @@ import (
 
 type AddonManifest struct {
 	Name        string   `json:"name"`
+	Alias       string   `json:"alias"`
 	Description string   `json:"description"`
 	Author      string   `json:"author"`
 	Repo        string   `json:"repo"`
@@ -142,8 +143,4 @@ func downloadManifest(manifestPath string) error {
 		return err
 	}
 	return nil
-}
-
-func CheckForUpdate() {
-
 }

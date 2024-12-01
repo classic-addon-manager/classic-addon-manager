@@ -55,7 +55,7 @@
             <Blocks class="scale-75 opacity-50 flex-shrink-0 ml-2 h-[38px] w-[38px]"/>
             <!--            <img src={doodleru} alt="Doodleru" class="scale-90 opacity-50 flex-shrink-0 ml-2 h-[38px] w-[38px]"/>-->
             <!--            <Skeleton class="flex-shrink-0 ml-2 h-[38px] w-[38px]"/>-->
-            <div class="text-foreground font-medium- whitespace-nowrap">{addons.nameToDisplayName(addon.name)}
+            <div class="text-foreground font-medium- whitespace-nowrap">{addon.alias}
 
             </div>
         </div>

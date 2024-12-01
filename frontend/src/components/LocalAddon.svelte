@@ -59,6 +59,8 @@
             document.addEventListener("check-updates", handleCheckUpdates);
             await handleCheckUpdates();
         }
+
+        console.log(addon);
     });
 
     onDestroy(() => {
@@ -84,7 +86,7 @@
 {#snippet contextTriggerArea()}
     <div class="grid grid-cols-4 p-2 hover:bg-muted/50 border-t transition-colors items-center text-sm"
          onclick={() => (openDialog = true)}>
-        <div class="font-medium">{addon.displayName}</div>
+        <div class="font-medium">{addon.alias}</div>
         <div class="text-center">{addon.author}</div>
         <div class="text-center">{addon.version}</div>
         <div class="text-center">

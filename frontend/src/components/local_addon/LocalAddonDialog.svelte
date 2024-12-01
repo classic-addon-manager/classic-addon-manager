@@ -36,7 +36,7 @@
         }
 
         toast.success('Addon matched', {
-            description: `${addon.displayName} was matched and will be managed by Classic Addon Manager`,
+            description: `${addon.alias} was matched and will be managed by Classic Addon Manager`,
             duration: 7000
         });
         open = false;
@@ -59,10 +59,10 @@
             let didUninstall = await addons.uninstall(addon.name);
             if (didUninstall) {
                 console.debug("Uninstalled addon: ", addon.name);
-                toast.success(`${addon.displayName} was uninstalled`);
+                toast.success(`${addon.alias} was uninstalled`);
             } else {
                 console.error("Failed to uninstall addon: ", addon.name);
-                toast.error(`Failed to uninstall ${addon.displayName}`);
+                toast.error(`Failed to uninstall ${addon.alias}`);
             }
         }
     }
@@ -81,7 +81,7 @@
         }
         if (!didInstall) return;
         toast.success('Addon reinstalled', {
-            description: `${addon.displayName} was reinstalled`,
+            description: `${addon.alias} was reinstalled`,
             duration: 7000
         });
         open = false;
@@ -92,7 +92,7 @@
     <Dialog.Content>
         <Dialog.Header>
             <Dialog.Title>
-                {addon.displayName}
+                {addon.alias}
                 {#if addon.isManaged}
                     <span class="text-muted-foreground">{addon.version}</span>
                 {/if}

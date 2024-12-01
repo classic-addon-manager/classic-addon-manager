@@ -105,7 +105,7 @@
         }
 
         if (didInstall) {
-            toast.success('Addon installed', {description: `${addons.nameToDisplayName(addon.name)} was installed`});
+            toast.success('Addon installed', {description: `${addon.alias} was installed`});
             isInstalled = true;
             open = false;
         }
@@ -118,7 +118,7 @@
             <Dialog.Title>
                 <div class="flex">
                     <div class="flex-row">
-                        {addons.nameToDisplayName(addon.name)}
+                        {addon.alias}
                         <span class="text-muted-foreground">{release ? release.tag_name : ''}</span>
                     </div>
                 </div>

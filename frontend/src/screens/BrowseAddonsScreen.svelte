@@ -27,7 +27,7 @@
                 return false;
             }
             // @ts-ignore
-            return addon.displayName.toLowerCase().includes(searchPhrase.toLowerCase()) || addon.description.toLowerCase().includes(searchPhrase.toLowerCase());
+            return addon.alias.toLowerCase().includes(searchPhrase.toLowerCase()) || addon.description.toLowerCase().includes(searchPhrase.toLowerCase());
         });
     });
 
@@ -40,8 +40,7 @@
         let tmp = [];
         for (let addon of await GoGetAddonManifest(false)) {
             tmp.push({
-                ...addon,
-                displayName: addon.name.replace(/_/g, " ")
+                ...addon
             });
             for (let tag of addon.tags) {
                 // Skip the Example tag
