@@ -27,41 +27,41 @@ type GithubTag struct {
 	Url  string `json:"url"`
 }
 
-// GetLatestRelease returns the latest zipball release of a GitHub repository
-func GetLatestRelease(repo string) (GithubRelease, error) {
+// GetLatestAddonRelease returns the latest zipball release of a GitHub repository
+func GetLatestAddonRelease(repo string) (GithubRelease, error) {
 	// Get the latest release from the GitHub API
 	//https://api.github.com/repos/OWNER/REPO/releases
 	url := githubApi + "/repos/" + repo + "/releases/latest"
 
 	resp, err := http.Get(url)
 	if err != nil {
-		logger.Error("GetLatestRelease Error:", err)
+		logger.Error("GetLatestAddonRelease Error:", err)
 		return GithubRelease{}, err
 	}
 	defer resp.Body.Close()
 
 	// If the status code is not 200 here, there's likely no release
 	if resp.StatusCode != 200 {
-		logger.Error("GetLatestRelease Error: Status Code", errors.New(strconv.Itoa(resp.StatusCode)))
+		logger.Error("GetLatestAddonRelease Error: Status Code", errors.New(strconv.Itoa(resp.StatusCode)))
 		return GithubRelease{}, errors.New("no release found")
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		logger.Error("GetLatestRelease Error:", err)
+		logger.Error("GetLatestAddonRelease Error:", err)
 		return GithubRelease{}, err
 	}
 
 	var release GithubRelease
 
 	if err := json.Unmarshal(body, &release); err != nil {
-		logger.Error("GetLatestRelease Error:", err)
+		logger.Error("GetLatestAddonRelease Error:", err)
 		return GithubRelease{}, err
 	}
 
 	tag, err := getTagByRelease(repo, &release)
 	if err != nil {
-		logger.Error("GetLatestRelease Error:", err)
+		logger.Error("GetLatestAddonRelease Error:", err)
 		return GithubRelease{}, err
 	}
 

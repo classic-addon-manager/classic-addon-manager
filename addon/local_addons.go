@@ -15,7 +15,7 @@ import (
 
 type Addon struct {
 	Name        string    `json:"name"`
-	DisplayName string    `json:"displayName"`
+	Alias       string    `json:"alias"`
 	Description string    `json:"description"`
 	Version     string    `json:"version"`
 	Commit      string    `json:"commit"`
@@ -70,7 +70,6 @@ func IsInstalled(name string) bool {
 func AddManagedAddon(manifest AddonManifest, release api.Release) {
 	addon := Addon{
 		Name:        manifest.Name,
-		DisplayName: strings.ReplaceAll(manifest.Name, "_", " "),
 		Description: manifest.Description,
 		Version:     release.TagName,
 		Commit:      release.Tag.Sha,
@@ -78,6 +77,12 @@ func AddManagedAddon(manifest AddonManifest, release api.Release) {
 		Repo:        manifest.Repo,
 		IsManaged:   true,
 		UpdatedAt:   release.PublishedAt,
+	}
+
+	if manifest.Alias == "" {
+		addon.Alias = strings.ReplaceAll(manifest.Name, "_", " ")
+	} else {
+		addon.Alias = manifest.Alias
 	}
 
 	LocalAddons[manifest.Name] = addon

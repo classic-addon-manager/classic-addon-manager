@@ -2,7 +2,7 @@ export namespace addon {
 	
 	export class Addon {
 	    name: string;
-	    displayName: string;
+	    alias: string;
 	    description: string;
 	    version: string;
 	    commit: string;
@@ -19,7 +19,7 @@ export namespace addon {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
-	        this.displayName = source["displayName"];
+	        this.alias = source["alias"];
 	        this.description = source["description"];
 	        this.version = source["version"];
 	        this.commit = source["commit"];
@@ -49,6 +49,7 @@ export namespace addon {
 	}
 	export class AddonManifest {
 	    name: string;
+	    alias: string;
 	    description: string;
 	    author: string;
 	    repo: string;
@@ -62,6 +63,7 @@ export namespace addon {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
+	        this.alias = source["alias"];
 	        this.description = source["description"];
 	        this.author = source["author"];
 	        this.repo = source["repo"];
@@ -74,6 +76,20 @@ export namespace addon {
 
 export namespace api {
 	
+	export class ApplicationRelease {
+	    version: string;
+	    url: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ApplicationRelease(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.version = source["version"];
+	        this.url = source["url"];
+	    }
+	}
 	export class Tag {
 	    ref: string;
 	    sha: string;

@@ -16,6 +16,7 @@ import (
 
 type AddonManifest struct {
 	Name        string   `json:"name"`
+	Alias       string   `json:"alias"`
 	Description string   `json:"description"`
 	Author      string   `json:"author"`
 	Repo        string   `json:"repo"`
@@ -32,7 +33,7 @@ func InstallAddon(manifest AddonManifest) (bool, error) {
 	logger.Info("Installing addon:" + manifest.Name + " from " + manifest.Repo)
 
 	zipName := manifest.Name + ".zip"
-	release, err := api.GetLatestRelease(manifest.Name)
+	release, err := api.GetLatestAddonRelease(manifest.Name)
 	if err != nil {
 		return false, err
 	}
@@ -142,8 +143,4 @@ func downloadManifest(manifestPath string) error {
 		return err
 	}
 	return nil
-}
-
-func CheckForUpdate() {
-
 }

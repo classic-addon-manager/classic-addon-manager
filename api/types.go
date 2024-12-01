@@ -22,3 +22,8 @@ type Tag struct {
 	Type string `json:"type"`
 	Url  string `json:"url"`
 }
+
+type ApplicationRelease struct {
+	Version string `json:"version"`
+	Url     string `json:"url"`
+}

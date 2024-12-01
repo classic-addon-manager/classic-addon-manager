@@ -22,8 +22,12 @@ export function GetConfigString(arg1) {
   return window['go']['main']['App']['GetConfigString'](arg1);
 }
 
-export function GetLatestRelease(arg1) {
-  return window['go']['main']['App']['GetLatestRelease'](arg1);
+export function GetLatestAddonRelease(arg1) {
+  return window['go']['main']['App']['GetLatestAddonRelease'](arg1);
+}
+
+export function GetLatestApplicationRelease() {
+  return window['go']['main']['App']['GetLatestApplicationRelease']();
 }
 
 export function GetReleases(arg1) {
