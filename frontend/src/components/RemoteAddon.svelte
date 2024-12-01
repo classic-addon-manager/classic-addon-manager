@@ -40,7 +40,7 @@
         isDownloading = false;
     }
 
-    function handleOnInstall(installed: boolean) {
+    function handleOnInstall(installed: boolean): void {
         isInstalled = installed;
     }
 </script>

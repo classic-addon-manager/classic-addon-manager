@@ -17,7 +17,7 @@
     }: {
         open: boolean;
         onOpenChange: (open: boolean) => void;
-        onInstall: (installed: boolean) => boolean;
+        onInstall: (installed: boolean) => void;
         addon: ad.AddonManifest;
     } = $props();
 
