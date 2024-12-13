@@ -13,9 +13,13 @@
     let isInstalled = $state(false);
     let isDownloading = $state(false);
     let openDialog = $state(false);
+    let hasIcon = $state(false);
+    let icon: string = $state('');
+
 
     onMount(async () => {
         isInstalled = await IsAddonInstalled(addon.name);
+        hasIcon = await checkForIcon();
     });
 
     function handleOpenDialogChange(o: boolean) {
@@ -43,6 +47,35 @@
     function handleOnInstall(installed: boolean): void {
         isInstalled = installed;
     }
+
+    async function checkForIcon() {
+        const response = await fetch(`https://raw.githubusercontent.com/${addon.repo}/${addon.branch}/icon.png`);
+        if (!response.ok) {
+            return false;
+        }
+
+        const reader = response.body?.getReader();
+        if (reader) {
+            const chunks = [];
+            let done = false;
+            while (!done) {
+                let result;
+                try {
+                    result = await reader.read();
+                } catch (e) {
+                    console.error("Error reading image:", e);
+                    return false;
+                }
+                done = result.done;
+                if (result.value) {
+                    chunks.push(result.value);
+                }
+            }
+            const blob = new Blob(chunks);
+            icon = URL.createObjectURL(blob);
+        }
+        return true;
+    }
 </script>
 
 <RemoteAddonDialog
@@ -57,12 +90,12 @@
 >
     <div class="grid grid-cols-10 items-center justify-between bg-muted/50 aspect-video h-12 w-full rounded-lg">
         <div class="flex gap-3 items-center col-span-4 overflow-hidden">
-            <Blocks class="scale-75 opacity-50 flex-shrink-0 ml-2 h-[38px] w-[38px]"/>
-            <!--            <img src={doodleru} alt="Doodleru" class="scale-90 opacity-50 flex-shrink-0 ml-2 h-[38px] w-[38px]"/>-->
-            <!--            <Skeleton class="flex-shrink-0 ml-2 h-[38px] w-[38px]"/>-->
-            <div class="text-foreground font-medium- whitespace-nowrap">{addon.alias}
-
-            </div>
+            {#if hasIcon}
+                <img class="ml-2 h-[38px] w-[38px] rounded-sm" src={icon} alt=""/>
+            {:else}
+                <Blocks class="scale-75 opacity-50 flex-shrink-0 ml-2 h-[38px] w-[38px]"/>
+            {/if}
+            <div class="text-foreground font-medium- whitespace-nowrap">{addon.alias}</div>
         </div>
         <div class="text-foreground font-light col-span-2">{addon.author}</div>
         <div class="text-foreground font-light col-span-2">{addon.tags.join(', ')}</div>
@@ -88,7 +121,3 @@
         </div>
     </div>
 </div>
-
-<style>
-
-</style>
