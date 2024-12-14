@@ -122,3 +122,20 @@ func GetLatestApplicationRelease() (ApplicationRelease, error) {
 
 	return release, nil
 }
+
+func SubmitDownload(name string) {
+	url := apiUrl + "/addon/" + name + "/download"
+	req, err := http.NewRequest("POST", url, nil)
+	if err != nil {
+		logger.Error("SubmitDownload Error:", err)
+		return
+	}
+	req.Header.Set("X-Client", GetApiClientHeader())
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		logger.Error("SubmitDownload Error:", err)
+		return
+	}
+	defer resp.Body.Close()
+}

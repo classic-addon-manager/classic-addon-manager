@@ -105,7 +105,6 @@
                         variant="default"
                         class="w-24 h-8 cursor-not-allowed"
                         disabled={true}
-                        onclick={handleInstallClick}
                 >
                     Installed
                 </Button>
@@ -113,7 +112,6 @@
                 <Button
                         variant="default"
                         class="w-24 h-8"
-                        onclick={handleInstallClick}
                 >
                     Install
                 </Button>

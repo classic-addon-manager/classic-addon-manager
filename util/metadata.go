@@ -2,7 +2,6 @@ package util
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"os"
@@ -24,8 +23,6 @@ func init() {
 	if err != nil {
 		log.Fatalf("failed to parse package.json: %v", err)
 	}
-
-	fmt.Println("Read package version")
 }
 
 func GetVersion() string {

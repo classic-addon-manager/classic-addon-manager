@@ -73,6 +73,7 @@ func InstallAddon(manifest AddonManifest) (bool, error) {
 	AddManagedAddon(manifest, release)
 
 	logger.Info(manifest.Name + " installed successfully")
+	api.SubmitDownload(manifest.Name)
 	return true, nil
 }
 
