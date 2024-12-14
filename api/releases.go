@@ -14,7 +14,13 @@ import (
 func GetLatestAddonRelease(name string) (Release, error) {
 	url := apiUrl + "/latest_release/" + name
 
-	resp, err := http.Get(url)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return Release{}, err
+	}
+	req.Header.Set("X-Client", GetApiClientHeader())
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
 		return Release{}, err
 	}
@@ -72,7 +78,13 @@ func GetLatestAddonRelease(name string) (Release, error) {
 func GetLatestApplicationRelease() (ApplicationRelease, error) {
 	url := apiUrl + "/latest_application_release"
 
-	resp, err := http.Get(url)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return ApplicationRelease{}, err
+	}
+	req.Header.Set("X-Client", GetApiClientHeader())
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
 		return ApplicationRelease{}, err
 	}
