@@ -16,7 +16,6 @@
     let hasIcon = $state(false);
     let icon: string = $state('');
 
-
     onMount(async () => {
         isInstalled = await IsAddonInstalled(addon.name);
         hasIcon = await checkForIcon();
@@ -24,24 +23,6 @@
 
     function handleOpenDialogChange(o: boolean) {
         openDialog = o;
-    }
-
-    async function handleInstallClick() {
-        if (isInstalled || isDownloading) return;
-        isDownloading = true;
-
-        try {
-            isInstalled = await addons.install(addon)
-        } catch (e) {
-            if (e == 'no release found') {
-                toast.error(`No release found for ${addon.name}`);
-                isDownloading = false;
-                isInstalled = false;
-                return;
-            }
-            isInstalled = false;
-        }
-        isDownloading = false;
     }
 
     function handleOnInstall(installed: boolean): void {
