@@ -8,6 +8,8 @@
 
     import RemoteAddon from "../components/RemoteAddon.svelte";
     import RemoteAddonSkeleton from "../components/remote_addon/RemoteAddonSkeleton.svelte";
+    import {Button} from "$lib/components/ui/button";
+    import {toast} from "svelte-sonner";
 
     let isReady: boolean = $state(false);
     let searchPhrase: string = $state('');
@@ -36,9 +38,9 @@
         isReady = true;
     });
 
-    async function getAddonManifest() {
+    async function getAddonManifest(ignoreCache: boolean = false) {
         let tmp = [];
-        for (let addon of await GoGetAddonManifest(false)) {
+        for (let addon of await GoGetAddonManifest(ignoreCache)) {
             tmp.push({
                 ...addon
             });
@@ -86,6 +88,18 @@
                     {/each}
                 </Select.Content>
             </Select.Root>
+        </div>
+        <div>
+            <Button
+                    variant="secondary"
+                    disabled={!isReady}
+                    onclick={async() => {
+                        await getAddonManifest(true);
+                        toast.success('Addons refreshed');
+                    }}
+            >
+                Refresh
+            </Button>
         </div>
     </div>
 </header>

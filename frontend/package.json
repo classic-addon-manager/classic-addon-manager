@@ -1,7 +1,7 @@
 {
   "name": "frontend",
   "private": true,
-  "version": "2.0.2",
+  "version": "2.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,14 +10,14 @@
     "check": "svelte-check --tsconfig ./tsconfig.json"
   },
   "devDependencies": {
-    "@types/semver": "^7.5.8",
     "@sveltejs/vite-plugin-svelte": "^4.0.0",
     "@tailwindcss/aspect-ratio": "^0.4.2",
     "@tailwindcss/typography": "^0.5.15",
     "@tsconfig/svelte": "^5.0.4",
+    "@types/semver": "^7.5.8",
     "@wailsapp/runtime": "^1.1.1",
     "autoprefixer": "^10.4.20",
-    "bits-ui": "^1.0.0-next.64",
+    "bits-ui": "^1.0.0-next.71",
     "clsx": "^2.1.1",
     "lucide-svelte": "^0.460.1",
     "mode-watcher": "^0.4.1",

@@ -1,6 +1,5 @@
 <script lang="ts">
     import type {addon as ad} from "../../wailsjs/go/models.js";
-    import addons from "../addons";
     import {Skeleton} from "$lib/components/ui/skeleton";
     import {Button} from "$lib/components/ui/button";
     import {toast} from "svelte-sonner";
@@ -11,7 +10,6 @@
 
     let {addon}: { addon: ad.AddonManifest } = $props();
     let isInstalled = $state(false);
-    let isDownloading = $state(false);
     let openDialog = $state(false);
     let hasIcon = $state(false);
     let icon: string = $state('');
