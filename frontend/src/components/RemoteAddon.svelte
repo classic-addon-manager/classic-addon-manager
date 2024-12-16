@@ -1,10 +1,8 @@
 <script lang="ts">
     import type {addon as ad} from "../../wailsjs/go/models.js";
-    import {Skeleton} from "$lib/components/ui/skeleton";
     import {Button} from "$lib/components/ui/button";
-    import {toast} from "svelte-sonner";
     import {onMount} from "svelte";
-    import {IsAddonInstalled} from "../../wailsjs/go/main/App";
+    import {IsAddonInstalled} from "../../wailsjs/go/app/App";
     import Blocks from "lucide-svelte/icons/blocks";
     import RemoteAddonDialog from "./remote_addon/RemoteAddonDialog.svelte";
 

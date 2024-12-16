@@ -1,7 +1,7 @@
 package api
 
 import (
-	"ClassicAddonManager/logger"
+	"ClassicAddonManager/backend/logger"
 	"encoding/json"
 	"errors"
 	"github.com/mitchellh/mapstructure"

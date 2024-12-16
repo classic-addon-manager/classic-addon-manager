@@ -4,20 +4,21 @@
     import semver from "semver";
 
     import {Button} from "$lib/components/ui/button/index.js";
-    import * as Card from "$lib/components/ui/card/index.js";
+    import * as Card from "$lib/components/ui/card/index";
     import {getActiveScreen} from "../stores/ScreenStore.svelte";
     import DashboardItem from "../components/navbar/DashboardItem.svelte";
     import AddonsItem from "../components/navbar/AddonsItem.svelte";
     import AACWebsiteItem from "../components/navbar/AACWebsiteItem.svelte";
 
-    import {GetLatestApplicationRelease as GoGetLatestApplicationRelease} from "../../wailsjs/go/main/App";
+    import {GetLatestApplicationRelease as GoGetLatestApplicationRelease} from "../../wailsjs/go/app/App";
 
     import {onMount} from "svelte";
+    import TroubleshootingItem from "../components/navbar/TroubleshootingItem.svelte";
 
     let updateAvailable = $state(false);
     let updateInformation = $state({
         version: "",
-        url: ""
+        url: "",
     });
 
     onMount(async () => {
@@ -54,6 +55,7 @@
                 <nav class="grid items-start px-2 text-sm font-medium">
                     <DashboardItem/>
                     <AddonsItem/>
+                    <TroubleshootingItem/>
                     <AACWebsiteItem/>
                 </nav>
             </div>
@@ -74,10 +76,16 @@
                             </Card.Description>
                         </Card.Header>
                         <Card.Content class="p-2 pt-0 md:p-4 md:pt-0">
-                            <Button size="sm" class="w-full" onclick={() => {
-                                // @ts-ignore
-                                window.runtime.BrowserOpenURL(updateInformation.url);
-                            }}>Download
+                            <Button
+                                    size="sm"
+                                    class="w-full"
+                                    onclick={() => {
+                                    // @ts-ignore
+                                    window.runtime.BrowserOpenURL(
+                                        updateInformation.url,
+                                    );
+                                }}
+                            >Download
                             </Button>
                         </Card.Content>
                     </Card.Root>

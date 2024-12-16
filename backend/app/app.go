@@ -1,12 +1,12 @@
-package main
+package app
 
 import (
-	"ClassicAddonManager/addon"
-	"ClassicAddonManager/api"
-	"ClassicAddonManager/config"
-	"ClassicAddonManager/file"
-	"ClassicAddonManager/github"
-	"ClassicAddonManager/logger"
+	"ClassicAddonManager/backend/addon"
+	"ClassicAddonManager/backend/api"
+	"ClassicAddonManager/backend/config"
+	"ClassicAddonManager/backend/file"
+	"ClassicAddonManager/backend/github"
+	"ClassicAddonManager/backend/logger"
 	"context"
 	"encoding/json"
 	"github.com/sqweek/dialog"
@@ -26,9 +26,9 @@ func NewApp() *App {
 	return &App{}
 }
 
-// startup is called when the app starts. The context is saved
+// Startup is called when the app starts. The context is saved
 // so we can call the runtime methods
-func (a *App) startup(ctx context.Context) {
+func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
 
 	if !file.FileExists(filepath.Join(config.GetAddonDir(), "addons.txt")) {
@@ -154,4 +154,13 @@ func (a *App) GetLatestApplicationRelease() (api.ApplicationRelease, error) {
 		return api.ApplicationRelease{}, err
 	}
 	return release, nil
+}
+
+func (a *App) ResetAddonSettings() error {
+	err := addon.ResetAddonSettings()
+	if err != nil {
+		logger.Error("Error resetting addon settings:", err)
+		return err
+	}
+	return nil
 }

@@ -1,7 +1,7 @@
 package logger
 
 import (
-	"ClassicAddonManager/config"
+	"ClassicAddonManager/backend/config"
 	"fmt"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"

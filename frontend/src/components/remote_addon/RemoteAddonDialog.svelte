@@ -1,10 +1,10 @@
 <script lang="ts">
-    import * as Dialog from "$lib/components/ui/dialog/index.js";
-    import * as Tabs from "$lib/components/ui/tabs/index.js";
+    import * as Dialog from "$lib/components/ui/dialog/index";
+    import * as Tabs from "$lib/components/ui/tabs/index";
     import {addon as ad, api} from "../../../wailsjs/go/models";
     import {onMount} from "svelte";
     import addons from "../../addons.js";
-    import {GetLatestAddonRelease as GoGetLatestRelease, IsAddonInstalled} from "../../../wailsjs/go/main/App";
+    import {GetLatestAddonRelease as GoGetLatestRelease, IsAddonInstalled} from "../../../wailsjs/go/app/App";
     import {toast} from "svelte-sonner";
     import {Button} from "$lib/components/ui/button";
     import {GithubIcon, BugIcon} from "lucide-svelte";

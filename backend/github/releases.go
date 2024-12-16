@@ -1,7 +1,7 @@
 package github
 
 import (
-	"ClassicAddonManager/logger"
+	"ClassicAddonManager/backend/logger"
 	"encoding/json"
 	"errors"
 	"io"

@@ -1,10 +1,10 @@
 package addon
 
 import (
-	"ClassicAddonManager/api"
-	"ClassicAddonManager/config"
-	"ClassicAddonManager/file"
-	"ClassicAddonManager/logger"
+	"ClassicAddonManager/backend/api"
+	"ClassicAddonManager/backend/config"
+	"ClassicAddonManager/backend/file"
+	"ClassicAddonManager/backend/logger"
 	"encoding/json"
 	"errors"
 	"os"

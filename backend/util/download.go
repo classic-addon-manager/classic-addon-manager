@@ -1,7 +1,7 @@
 package util
 
 import (
-	"ClassicAddonManager/logger"
+	"ClassicAddonManager/backend/logger"
 	"io"
 	"net/http"
 	"os"

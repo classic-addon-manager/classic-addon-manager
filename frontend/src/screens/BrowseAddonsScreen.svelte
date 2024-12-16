@@ -3,7 +3,7 @@
     import {Input} from "$lib/components/ui/input/index.js";
     import * as Select from "$lib/components/ui/select/index.js";
     import {onMount} from "svelte";
-    import {GetAddonManifest as GoGetAddonManifest} from "../../wailsjs/go/main/App";
+    import {GetAddonManifest as GoGetAddonManifest} from "../../wailsjs/go/app/App";
     import type {addon} from "../../wailsjs/go/models";
 
     import RemoteAddon from "../components/RemoteAddon.svelte";

@@ -24,6 +24,8 @@ export function InstallAddon(arg1:addon.AddonManifest):Promise<boolean>;
 
 export function IsAddonInstalled(arg1:string):Promise<boolean>;
 
+export function ResetAddonSettings():Promise<void>;
+
 export function SelectDirectory():Promise<string>;
 
 export function SetConfigBool(arg1:string,arg2:boolean):Promise<void>;

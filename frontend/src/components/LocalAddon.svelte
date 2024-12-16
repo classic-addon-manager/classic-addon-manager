@@ -2,7 +2,7 @@
     import {onDestroy, onMount} from "svelte";
     import {addon as ad, api} from "../../wailsjs/go/models";
     import {addUpdateAvailableCount,} from "$stores/AddonStore.svelte";
-    import {GetLatestAddonRelease as GoGetLatestRelease} from "../../wailsjs/go/main/App";
+    import {GetLatestAddonRelease as GoGetLatestRelease} from "../../wailsjs/go/app/App";
     import LocalAddonContextMenu from "./local_addon/LocalAddonContextMenu.svelte";
     import LocalAddonDialog from "./local_addon/LocalAddonDialog.svelte";
     import LoaderCircle from "lucide-svelte/icons/loader-circle";
@@ -95,7 +95,7 @@
                     </div>
                 {:else if latestRelease}
                     {#if latestRelease.published_at > addon.updatedAt}
-                        <Badge class="py-1 cursor-pointer" variant="default" onclick={(e) => {
+                        <Badge class="py-1 cursor-pointer flex-shrink-0 flex-grow-0" variant="default" onclick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
                             openUpdateDialog = true;

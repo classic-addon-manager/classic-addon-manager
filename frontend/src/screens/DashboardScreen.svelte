@@ -12,10 +12,7 @@
     import {setActiveNavbar} from "$stores/NavbarStore.svelte";
     import LoaderCircle from "lucide-svelte/icons/loader-circle";
 
-    import {
-        getInstalledAddons,
-        getLocalAddonDialogOpen,
-    } from "$stores/AddonStore.svelte";
+    import {getInstalledAddons} from "$stores/AddonStore.svelte";
     import {addon} from "../../wailsjs/go/models";
     import {setUpdatesAvailableCount} from "$stores/AddonStore.svelte";
 
@@ -120,7 +117,7 @@
                 data-x-chunk-name="dashboard-02-chunk-1"
                 data-x-chunk-description="This is the empty state for the dashboard screen"
         >
-            <div class="flex flex-col items-center gap-1 text-center">
+            <div class="flex flex-col items-center gap-1 text-center h-[calc(100vh-26vh)] overflow-auto pt-20">
                 <h3 class="text-2xl font-bold tracking-tight">
                     You have no addons
                 </h3>

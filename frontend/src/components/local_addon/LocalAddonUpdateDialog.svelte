@@ -1,10 +1,11 @@
 <script lang="ts">
-    import * as Dialog from "$lib/components/ui/dialog/index.js";
-    import {Button} from "$lib/components/ui/button/index.js";
+    import * as Dialog from "$lib/components/ui/dialog/index";
+    import {Button} from "$lib/components/ui/button/index";
     import {addon as ad, api} from "../../../wailsjs/go/models";
     import LoaderCircle from "lucide-svelte/icons/loader-circle";
     import addons from "../../addons";
     import {toast} from "svelte-sonner";
+    import {getUpdatesAvailableCount, setUpdatesAvailableCount} from "$stores/AddonStore.svelte";
 
     let {
         open = $bindable(),
@@ -51,6 +52,7 @@
             description: `${addon.alias} was updated to ${release.tag_name}`,
             duration: 7000
         });
+        setUpdatesAvailableCount(getUpdatesAvailableCount() - 1);
         open = false;
     }
 </script>

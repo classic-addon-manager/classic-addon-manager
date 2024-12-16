@@ -1,9 +1,9 @@
 package addon
 
 import (
-	"ClassicAddonManager/config"
-	"ClassicAddonManager/file"
-	"ClassicAddonManager/logger"
+	"ClassicAddonManager/backend/config"
+	"ClassicAddonManager/backend/file"
+	"ClassicAddonManager/backend/logger"
 	"github.com/sqweek/dialog"
 	"path/filepath"
 )

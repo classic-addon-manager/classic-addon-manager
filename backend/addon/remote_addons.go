@@ -1,11 +1,11 @@
 package addon
 
 import (
-	"ClassicAddonManager/api"
-	"ClassicAddonManager/config"
-	"ClassicAddonManager/file"
-	"ClassicAddonManager/logger"
-	"ClassicAddonManager/util"
+	"ClassicAddonManager/backend/api"
+	"ClassicAddonManager/backend/config"
+	"ClassicAddonManager/backend/file"
+	"ClassicAddonManager/backend/logger"
+	"ClassicAddonManager/backend/util"
 	"encoding/json"
 	"errors"
 	"io"
@@ -96,8 +96,6 @@ func GetAddonManifest(ignoreCache bool) []AddonManifest {
 		return []AddonManifest{} // TODO: handle error, should show something to the frontend
 	}
 
-	//fmt.Println("Time since last manifest download:", time.Since(t))
-	//fmt.Println("Target time:", time.Minute*60)
 	// If more than 60 minutes old, download new manifest
 	if ignoreCache || time.Since(t) > time.Minute*60 {
 		err = downloadManifest(manifestPath)

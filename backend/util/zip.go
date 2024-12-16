@@ -1,9 +1,9 @@
 package util
 
 import (
-	"ClassicAddonManager/config"
-	"ClassicAddonManager/file"
-	"ClassicAddonManager/logger"
+	"ClassicAddonManager/backend/config"
+	"ClassicAddonManager/backend/file"
+	"ClassicAddonManager/backend/logger"
 	"archive/zip"
 	"errors"
 	"fmt"

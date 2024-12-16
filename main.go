@@ -1,7 +1,8 @@
 package main
 
 import (
-	"ClassicAddonManager/config"
+	"ClassicAddonManager/backend/app"
+	"ClassicAddonManager/backend/config"
 	"embed"
 	"os"
 
@@ -22,10 +23,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Create an instance of the app structure
-	app := NewApp()
+	a := app.NewApp()
 
-	// Create application with options
 	err = wails.Run(&options.App{
 		Title:         "Classic Addon Manager",
 		Width:         950,
@@ -37,9 +36,9 @@ func main() {
 			Assets: assets,
 		},
 		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
-		OnStartup:        app.startup,
+		OnStartup:        a.Startup,
 		Bind: []interface{}{
-			app,
+			a,
 		},
 		Windows: &windows.Options{
 			DisablePinchZoom: true,
