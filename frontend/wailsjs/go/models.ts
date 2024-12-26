@@ -212,3 +212,26 @@ export namespace github {
 
 }
 
+export namespace util {
+	
+	export class LogParseResult {
+	    Type: string;
+	    Addon: string;
+	    File: string;
+	    Error: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new LogParseResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.Type = source["Type"];
+	        this.Addon = source["Addon"];
+	        this.File = source["File"];
+	        this.Error = source["Error"];
+	    }
+	}
+
+}
+

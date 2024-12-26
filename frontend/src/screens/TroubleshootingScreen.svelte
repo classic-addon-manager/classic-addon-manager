@@ -1,15 +1,26 @@
 <script lang="ts">
     import * as Card from "$lib/components/ui/card/index";
     import * as Accordion from "$lib/components/ui/accordion/index";
+    import {Badge} from "$lib/components/ui/badge/index";
     import {Button} from "$lib/components/ui/button/index";
     import {toast} from "svelte-sonner";
     import {
         ResetAddonSettings as GoResetAddonSettings,
-        UninstallAddon as GoUninstallAddon
+        UninstallAddon as GoUninstallAddon,
+        DiagnoseIssues as GoDiagnoseIssues
     } from "../../wailsjs/go/app/App.js";
     import {getInstalledAddons} from "$stores/AddonStore.svelte";
-    import {addon} from "../../wailsjs/go/models.js";
+    import {addon, util} from "../../wailsjs/go/models.js";
     import addons from "../addons";
+    import {onMount} from "svelte";
+
+    let issues: util.LogParseResult[] = $state([]);
+    let issueCount = $derived.by(() => issues.length);
+
+    onMount(async () => {
+        let res = await GoDiagnoseIssues();
+        issues = res;
+    });
 
     async function handleResetAddonSettings() {
         try {
@@ -82,9 +93,25 @@
                 </Accordion.Content>
             </Accordion.Item>
             <Accordion.Item value="item-3">
-                <Accordion.Trigger>Diagnose issues</Accordion.Trigger>
+                <Accordion.Trigger>Diagnostic
+                    {#if issueCount > 0}
+                        <div class="ml-auto mr-5 no-underline">
+                            <Badge variant="destructive">{issueCount} issues</Badge>
+                        </div>
+                    {:else}
+                        <div class="ml-auto mr-5 no-underline">
+                            <Badge variant="successful">
+                                No issues found
+                            </Badge>
+                        </div>
+                    {/if}
+                </Accordion.Trigger>
                 <Accordion.Content>
-                    Coming soon.
+                    {#if issueCount === 0}
+                        <p>No issues found, good job!</p>
+                    {:else}
+                        TODO: Implement issue display
+                    {/if}
                 </Accordion.Content>
             </Accordion.Item>
         </Accordion.Root>

@@ -51,6 +51,7 @@
 
         if (release.published_at > addon.updatedAt) {
             addUpdateAvailableCount();
+            
         }
     }
 

@@ -7,6 +7,7 @@ import (
 	"ClassicAddonManager/backend/file"
 	"ClassicAddonManager/backend/github"
 	"ClassicAddonManager/backend/logger"
+	"ClassicAddonManager/backend/util"
 	"context"
 	"encoding/json"
 	"github.com/sqweek/dialog"
@@ -163,4 +164,8 @@ func (a *App) ResetAddonSettings() error {
 		return err
 	}
 	return nil
+}
+
+func (a *App) DiagnoseIssues() ([]util.LogParseResult, error) {
+	return util.DiagnoseIssues()
 }
