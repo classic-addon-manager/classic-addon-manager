@@ -22,10 +22,45 @@ func LoadConfig() error {
 		return err
 	}
 
+	path, err := detectAACPath()
+	if err != nil {
+		dialog.Message("Could not detect ArcheAge Classic installation: %s", err.Error()).Title("Classic Addon Manager Error").Error()
+		return err
+	}
+
+	aacPath = path + "\\Documents"
+
+	fmt.Println("Detected ArcheAge Classic installation at", aacPath)
+
 	// Workaround for early testers
 	SetString("general.aacpath", aacPath)
 
 	return nil
+}
+
+func detectAACPath() (string, error) {
+	// Find all instances of C:\AAClassic* and get the one with the highest number
+	matches, err := filepath.Glob("C:\\AAClassic*")
+	if err != nil {
+		return "", err
+	}
+
+	if len(matches) == 0 {
+		return "", errors.New("could not find any ArcheAge Classic installations")
+	}
+
+	var highestVersion string
+	for _, match := range matches {
+		if highestVersion == "" {
+			highestVersion = match
+			continue
+		}
+		if match > highestVersion {
+			highestVersion = match
+		}
+	}
+
+	return highestVersion, nil
 }
 
 //goland:noinspection GoTypeAssertionOnErrors
