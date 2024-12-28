@@ -2,7 +2,13 @@
 <img align="center" src="https://github.com/user-attachments/assets/0804a15e-4f6e-4a0a-9400-c8aa73029a4c" width="700">
 <img align="center" src="https://github.com/user-attachments/assets/593b5b46-8cb7-4858-9764-2949968e699c" width="700">
 
-Documentation coming soon.
+## Development requirements
+You need to install the following dependencies for Wails to be operational.
+    Go 1.20+
+    NPM (Node 15+)
+Once that is done visit the following link to install the Wails CLI
+
+https://wails.io/docs/gettingstarted/installation
 
 ## Live Development
 
