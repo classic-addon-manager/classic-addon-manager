@@ -30,8 +30,6 @@ func LoadConfig() error {
 
 	aacPath = path + "\\Documents"
 
-	fmt.Println("Detected ArcheAge Classic installation at", aacPath)
-
 	// Workaround for early testers
 	SetString("general.aacpath", aacPath)
 

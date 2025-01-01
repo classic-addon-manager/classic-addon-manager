@@ -1,6 +1,8 @@
 <script lang="ts">
     import * as Card from "$lib/components/ui/card/index";
     import * as Accordion from "$lib/components/ui/accordion/index";
+    import * as Collapsible from "$lib/components/ui/collapsible/index";
+    import {ScrollArea} from "$lib/components/ui/scroll-area/index";
     import {Badge} from "$lib/components/ui/badge/index";
     import {Button} from "$lib/components/ui/button/index";
     import {toast} from "svelte-sonner";
@@ -13,13 +15,28 @@
     import {addon, util} from "../../wailsjs/go/models.js";
     import addons from "../addons";
     import {onMount} from "svelte";
+    import {ChevronsUpDown} from "lucide-svelte";
 
     let issues: util.LogParseResult[] = $state([]);
     let issueCount = $derived.by(() => issues.length);
 
+    let groupedIssues = $derived.by(() => {
+        let grouped: { [key: string]: { type: string, error: string, file: string }[] } = {};
+        for (let issue of issues) {
+            if (!grouped[issue.Addon]) {
+                grouped[issue.Addon] = [];
+            }
+            grouped[issue.Addon].push({
+                type: issue.Type,
+                error: issue.Error,
+                file: issue.File
+            });
+        }
+        return grouped;
+    });
+
     onMount(async () => {
-        let res = await GoDiagnoseIssues();
-        issues = res;
+        issues = await GoDiagnoseIssues();
     });
 
     async function handleResetAddonSettings() {
@@ -110,7 +127,42 @@
                     {#if issueCount === 0}
                         <p>No issues found, good job!</p>
                     {:else}
-                        TODO: Implement issue display
+                        <ScrollArea class="rounded-md border p-4 border-zinc-700">
+                            {#each Object.keys(groupedIssues) as addonName}
+                                <Collapsible.Root class="space-y-2 py-2 hover:bg-zinc-900">
+                                    <Collapsible.Trigger class="w-full">
+                                        <div class="flex items-center justify-between space-x-4 px-4 cursor-pointer">
+                                            <div class="flex w-full">
+                                                <h4 class="text-sm font-semibold">{addonName === 'x2ui' ? 'Addon API' : addonName}</h4>
+                                                <div class="ml-auto no-underline">
+                                                    <Badge variant="destructive">{groupedIssues[addonName].length}
+                                                        issues
+                                                    </Badge>
+                                                </div>
+                                            </div>
+                                            <Button variant="ghost" size="sm" class="w-9 p-0">
+                                                <ChevronsUpDown/>
+                                                <span class="sr-only">Toggle</span>
+                                            </Button>
+                                        </div>
+                                    </Collapsible.Trigger>
+                                    <Collapsible.Content class="space-y-2 px-3 pb-1">
+                                        <!-- Issue content -->
+                                        {#each groupedIssues[addonName] as issue}
+                                            <div class="rounded-md border px-4 py-3 font-mono text-sm select-text">
+                                                {issue.error} in
+                                                <span class="font-semibold text-indigo-400 select-text">{issue.file}</span>
+                                            </div>
+                                        {/each}
+
+                                    </Collapsible.Content>
+                                </Collapsible.Root>
+                                {#each groupedIssues[addonName] as issue}
+
+                                {/each}
+                            {/each}
+                        </ScrollArea>
+
                     {/if}
                 </Accordion.Content>
             </Accordion.Item>
