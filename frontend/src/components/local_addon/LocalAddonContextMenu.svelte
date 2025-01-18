@@ -3,6 +3,7 @@
     import {addon as ad} from "../../../wailsjs/go/models";
     import * as ContextMenu from "$lib/components/ui/context-menu/index.js";
     import Trash from "lucide-svelte/icons/trash";
+    import AlertTriangle from "lucide-svelte/icons/alert-triangle";
     import Bug from "lucide-svelte/icons/bug";
     import Github from "lucide-svelte/icons/github";
     import {toast} from "svelte-sonner";
@@ -25,6 +26,18 @@
         } else {
             console.error("Failed to uninstall addon: ", addon.name);
             toast.error(`Failed to uninstall ${addon.alias}`);
+        }
+    }
+
+    async function handleUnmanage() {
+        console.debug("Unmanaging addon: ", addon.name);
+        let didUnmanage = await addons.unmanage(addon.name);
+        if (didUnmanage) {
+            console.debug("Unmanaged addon: ", addon.name);
+            toast.success(`${addon.alias} was unmanaged`);
+        } else {
+            console.error("Failed to unmanage addon: ", addon.name);
+            toast.error(`Failed to unmanage ${addon.alias}`);
         }
     }
 </script>
@@ -65,5 +78,12 @@
             <Trash size={16}/>
             Uninstall
         </ContextMenu.Item>
+
+        {#if addon.isManaged}
+            <ContextMenu.Item class="gap-2" onclick={handleUnmanage}>
+                <AlertTriangle size={16}/>
+                Unmanage
+            </ContextMenu.Item>
+        {/if}
     </ContextMenu.Content>
 </ContextMenu.Root>

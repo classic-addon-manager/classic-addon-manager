@@ -1,7 +1,9 @@
 import {
     GetAddOns as GoGetAddOns,
     UninstallAddon as GoUninstallAddon,
-    InstallAddon as GoInstallAddon, GetAddonManifests as GoGetAddonManifests
+    InstallAddon as GoInstallAddon,
+    GetAddonManifests as GoGetAddonManifests,
+    UnmanageAddon as GoUnmanageAddon
 } from "../wailsjs/go//app/App";
 import {setAddons, getInstalledAddons} from "./stores/AddonStore.svelte";
 import type {addon} from "../wailsjs/go/models";
@@ -12,7 +14,8 @@ export default {
     uninstall,
     repoHasAddon,
     getManifest,
-    getInstalledAddons
+    getInstalledAddons,
+    unmanage
 }
 
 async function getManifest(name: string): Promise<addon.AddonManifest> {
@@ -45,6 +48,15 @@ async function populateAddonStore(): Promise<void> {
 
 async function uninstall(addon: string): Promise<boolean> {
     const result = await GoUninstallAddon(addon);
+    if (result) {
+        await populateAddonStore();
+        return true;
+    }
+    return false;
+}
+
+async function unmanage(addon: string): Promise<boolean> {
+    const result = await GoUnmanageAddon(addon);
     if (result) {
         await populateAddonStore();
         return true;

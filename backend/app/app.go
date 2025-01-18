@@ -122,6 +122,10 @@ func (a *App) UninstallAddon(name string) bool {
 	return addon.RemoveFromAddonsTxt(name)
 }
 
+func (a *App) UnmanageAddon(name string) bool {
+	return addon.RemoveManagedAddon(name)
+}
+
 func (a *App) IsAddonInstalled(name string) bool {
 	return addon.IsInstalled(name)
 }

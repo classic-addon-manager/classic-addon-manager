@@ -36,3 +36,5 @@ export function SetConfigBool(arg1:string,arg2:boolean):Promise<void>;
 export function SetConfigString(arg1:string,arg2:string):Promise<void>;
 
 export function UninstallAddon(arg1:string):Promise<boolean>;
+
+export function UnmanageAddon(arg1:string):Promise<boolean>;

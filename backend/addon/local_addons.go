@@ -89,6 +89,16 @@ func AddManagedAddon(manifest AddonManifest, release api.Release) {
 	SaveManagedAddonsToDisk()
 }
 
+func RemoveManagedAddon(name string) bool {
+	delete(LocalAddons, name)
+	SaveManagedAddonsToDisk()
+	// Check if the addon is still in LocalAddons
+	if _, exists := LocalAddons[name]; exists {
+		return false
+	}
+	return true
+}
+
 func SaveManagedAddonsToDisk() {
 	var managedAddons []Addon
 	for _, addon := range LocalAddons {

@@ -65,3 +65,7 @@ export function SetConfigString(arg1, arg2) {
 export function UninstallAddon(arg1) {
   return window['go']['app']['App']['UninstallAddon'](arg1);
 }
+
+export function UnmanageAddon(arg1) {
+  return window['go']['app']['App']['UnmanageAddon'](arg1);
+}
