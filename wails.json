@@ -9,5 +9,6 @@
   "author": {
     "name": "Sami",
     "email": "asjur@proton.me"
-  }
+  },
+  "devServer": "wails.localhost:80"
 }
