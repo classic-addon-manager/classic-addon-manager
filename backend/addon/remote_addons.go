@@ -9,8 +9,10 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 )
 
@@ -22,6 +24,7 @@ type AddonManifest struct {
 	Repo        string   `json:"repo"`
 	Branch      string   `json:"branch"`
 	Tags        []string `json:"tags"`
+	Downloads   int      `json:"downloads"`
 }
 
 func InstallAddon(manifest AddonManifest) (bool, error) {
@@ -77,8 +80,40 @@ func InstallAddon(manifest AddonManifest) (bool, error) {
 	return true, nil
 }
 
-// GetAddonManifest https://github.com/classic-addon-manager/addons/releases/latest/download/addons.json
-func GetAddonManifest(ignoreCache bool) []AddonManifest {
+// GetAddonManifest https://aac.gaijin.dev/addons
+func GetAddonManifest() []AddonManifest {
+	req, err := http.NewRequest("GET", "https://aac.gaijin.dev/addons", nil)
+	if err != nil {
+		logger.Error("GetAddonManifest Error:", err)
+		return []AddonManifest{}
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		logger.Error("GetAddonManifest Error:", err)
+		return []AddonManifest{}
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		logger.Error("GetAddonManifest Error: Status Code", errors.New(strconv.Itoa(resp.StatusCode)))
+		return []AddonManifest{}
+	}
+
+	var manifests []AddonManifest
+	if err := json.NewDecoder(resp.Body).Decode(&manifests); err != nil {
+		logger.Error("GetAddonManifest Error:", err)
+		return []AddonManifest{}
+	}
+
+	logger.Info("Retrieved " + strconv.Itoa(len(manifests)) + " addon manifests from remote source")
+
+	return manifests
+}
+
+// GetAddonManifestLocal This function used to be called however it should be transformed into a fallback if the HTTP call fails
+func GetAddonManifestLocal(ignoreCache bool) []AddonManifest {
 	cacheDir := config.GetCacheDir()
 	manifestPath := filepath.Join(cacheDir, "addons.json")
 	// Check if manifest exists

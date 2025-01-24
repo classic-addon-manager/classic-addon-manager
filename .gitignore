@@ -5,3 +5,4 @@ node_modules
 frontend/dist
 frontend/.vscode
 .idea
+/ClassicAddonManager.exe

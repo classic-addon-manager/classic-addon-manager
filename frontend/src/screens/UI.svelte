@@ -14,12 +14,15 @@
 
     import {onMount} from "svelte";
     import TroubleshootingItem from "../components/navbar/TroubleshootingItem.svelte";
+    import UserBar from "../components/UserBar.svelte";
 
     let updateAvailable = $state(false);
     let updateInformation = $state({
         version: "",
         url: "",
     });
+
+    let ActiveScreen = $derived.by(() => getActiveScreen())
 
     onMount(async () => {
         try {
@@ -92,12 +95,16 @@
                 </div>
             {/if}
 
+            <div class="w-full">
+                <UserBar/>
+            </div>
+
             <div class="mx-auto mb-2 text-gray-300 text-opacity-40">
                 <span>v{packageJson.version} by Sami</span>
             </div>
         </div>
     </div>
     <div class="flex flex-col">
-        <svelte:component this={getActiveScreen()}/>
+        <ActiveScreen/>
     </div>
 </div>

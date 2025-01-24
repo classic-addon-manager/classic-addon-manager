@@ -9,7 +9,7 @@ export function DiagnoseIssues():Promise<Array<util.LogParseResult>>;
 
 export function GetAddOns():Promise<Array<addon.Addon>>;
 
-export function GetAddonManifest(arg1:boolean):Promise<Array<addon.AddonManifest>>;
+export function GetAddonManifest():Promise<Array<addon.AddonManifest>>;
 
 export function GetAddonManifests():Promise<Array<addon.AddonManifest>>;
 

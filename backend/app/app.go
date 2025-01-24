@@ -86,8 +86,8 @@ func (a *App) GetAddOns() []addon.Addon {
 	return addon.GetAddons()
 }
 
-func (a *App) GetAddonManifest(ignoreCache bool) []addon.AddonManifest {
-	return addon.GetAddonManifest(ignoreCache)
+func (a *App) GetAddonManifest() []addon.AddonManifest {
+	return addon.GetAddonManifest()
 }
 
 func (a *App) InstallAddon(ad addon.AddonManifest) (bool, error) {
@@ -131,7 +131,7 @@ func (a *App) IsAddonInstalled(name string) bool {
 }
 
 func (a *App) GetAddonManifests() []addon.AddonManifest {
-	return addon.GetAddonManifest(false)
+	return addon.GetAddonManifest()
 }
 
 func (a *App) GetLatestAddonRelease(name string) (api.Release, error) {

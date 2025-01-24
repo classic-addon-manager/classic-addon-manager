@@ -10,8 +10,8 @@ export function GetAddOns() {
   return window['go']['app']['App']['GetAddOns']();
 }
 
-export function GetAddonManifest(arg1) {
-  return window['go']['app']['App']['GetAddonManifest'](arg1);
+export function GetAddonManifest() {
+  return window['go']['app']['App']['GetAddonManifest']();
 }
 
 export function GetAddonManifests() {
