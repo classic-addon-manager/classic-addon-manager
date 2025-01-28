@@ -1,7 +1,8 @@
 <script lang="ts">
     import * as Avatar from "$lib/components/ui/avatar/index";
-    import {getUser, setUser, type User} from "$stores/UserStore.svelte";
+    import {getUser, setToken, setUser, type User} from "$stores/UserStore.svelte";
     import {onMount} from "svelte";
+    import {apiClient} from "../api";
 
     let isReady: boolean = $state(false);
     let user: User = $derived(getUser());
@@ -15,17 +16,10 @@
         const urlParams = new URLSearchParams(window.location.search);
         let token = urlParams.get('token') || localStorage.getItem('token');
         if (token) {
-            localStorage.setItem('token', token);
+            setToken(token);
         }
 
-        const resp = await fetch("https://aac.gaijin.dev/me", {
-            method: "GET",
-            // @ts-ignore
-            headers: {
-                "X-Token": token
-            }
-        });
-
+        const resp = await apiClient.get('/me');
         if (resp.status === 200) {
             let user = await resp.json();
             setUser(user);
@@ -77,9 +71,5 @@
                 </div>
             </div>
         </div>
-
-        <!-- <img src={`https://cdn.discordapp.com/avatars/${user.discord_id}/${user.avatar}.png`} alt="User Avatar"
-              class="h-12 w-12 rounded-full"/>
-         <span class="text-muted-foreground mt-44">{user.username}</span>-->
     {/if}
 {/if}
