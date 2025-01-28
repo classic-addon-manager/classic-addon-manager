@@ -1,4 +1,8 @@
 # Classic Addon Manager
+Support development of this project by buying me a ko-fi.
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/X8X219OKGE)
+
 <img align="center" src="https://github.com/user-attachments/assets/0804a15e-4f6e-4a0a-9400-c8aa73029a4c" width="700">
 <img align="center" src="https://github.com/user-attachments/assets/593b5b46-8cb7-4858-9764-2949968e699c" width="700">
 
