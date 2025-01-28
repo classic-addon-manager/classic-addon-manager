@@ -25,6 +25,7 @@ type AddonManifest struct {
 	Branch      string   `json:"branch"`
 	Tags        []string `json:"tags"`
 	Downloads   int      `json:"downloads"`
+	LikePercent *int8    `json:"like_percentage"`
 }
 
 func InstallAddon(manifest AddonManifest) (bool, error) {

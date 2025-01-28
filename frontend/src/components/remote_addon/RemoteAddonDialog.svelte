@@ -8,6 +8,9 @@
     import {toast} from "svelte-sonner";
     import {Button} from "$lib/components/ui/button";
     import {GithubIcon, BugIcon} from "lucide-svelte";
+    import Like from "lucide-svelte/icons/thumbs-up";
+    import Dislike from "lucide-svelte/icons/thumbs-down";
+    import {apiClient} from "../../api";
 
     let {
         open = $bindable(),
@@ -25,10 +28,13 @@
     let isInstalled = $state(false);
     let hasBanner = $state(false);
     let banner: string = $state('');
+    let rating = $state(0);
 
     onMount(async () => {
         isInstalled = await IsAddonInstalled(addon.name);
         hasBanner = await checkForBanner();
+
+
     });
 
     async function checkForBanner() {
@@ -73,6 +79,7 @@
     // Whenever the dialog is opened, fetch the latest release information
     $effect(() => {
         getRelease(open);
+        getMyRating(open);
     });
 
     function formatToLocalTime(dateString: string): string {
@@ -111,6 +118,39 @@
             onInstall(didInstall);
             isInstalled = true;
             open = false;
+        }
+    }
+
+    async function getMyRating(open: boolean) {
+        if (!open) return;
+        apiClient.get(`/addon/${addon.name}/my-rating`).then(async rateResponse => {
+            if (rateResponse.status === 200) {
+                const r = await rateResponse.json();
+                rating = r.data.rating;
+            }
+        }).catch(e => {
+            console.error('Failed to fetch rating', e);
+        });
+    }
+
+    async function handleRating(r: number) {
+        if (rating === r || r === 0) {
+            return;
+        }
+        rating = r;
+        const response = await apiClient.post(`/addon/${addon.name}/rate`, {
+            is_like: r === 1
+        });
+
+        if (response.status !== 200) {
+            toast.error('Could not rate addon, try again later');
+            return;
+        }
+
+        if (r === 1) {
+            toast.success('Addon rated', {description: `Liked ${addon.alias}`});
+        } else {
+            toast.success('Addon rated', {description: `Disliked ${addon.alias}`});
         }
     }
 </script>
@@ -174,10 +214,26 @@
                 <p class="whitespace-pre-wrap">{release?.body || 'No change log was provided by the addon'}</p>
             </Tabs.Content>
         </Tabs.Root>
-        <div class="flex">
+        <div class="flex justify-end gap-5">
+            <div class="flex gap-2 items-center">
+                <Button class="mt-2" variant="outline" onclick={() => handleRating(1)}>
+                    {#if rating === 1}
+                        <Like class="w-6 text-blue-500"/>
+                    {:else}
+                        <Like class="w-6"/>
+                    {/if}
+                </Button>
+                <Button class="mt-2" variant="outline" onclick={() => handleRating(-1)}>
+                    {#if rating === -1}
+                        <Dislike class="w-6 text-red-500"/>
+                    {:else}
+                        <Dislike class="w-6"/>
+                    {/if}
+                </Button>
+            </div>
             {#if !isInstalled}
                 <Button
-                        class="ml-auto mt-2"
+                        class="mt-2"
                         variant="default"
                         onclick={handleInstall}
                 >

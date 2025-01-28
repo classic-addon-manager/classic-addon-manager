@@ -15,7 +15,6 @@
     let openDialog = $state(false);
     let hasIcon = $state(false);
     let icon: string = $state('');
-    let hearted = $state(false);
 
     onMount(async () => {
         isInstalled = await IsAddonInstalled(addon.name);
@@ -94,38 +93,32 @@
                 <div class="text-foreground whitespace-nowrap">{addon.alias}</div>
                 <div class="flex items-center gap-1 text-muted-foreground">
                     <Download class="w-4 scale-90"/> {addon.downloads}
+
+                    {#if addon.like_percentage !== null}
+                        <Heart class="w-4 scale-90"/> {addon.like_percentage}%
+                    {/if}
                 </div>
             </div>
-
         </div>
+
         <div class="text-foreground font-light col-span-2">{addon.author}</div>
         <div class="text-foreground font-light col-span-2">{addon.tags.join(', ')}</div>
-        <div class="text-foreground col-span-1 ml-7">
+        <div class="text-foreground col-span-2 ml-7">
             <div class="flex gap-4">
-                <Button class="w-6 h-8" variant="outline" onclick={(ev) => {
-                    ev.stopPropagation();
-                    hearted = !hearted;
-                }}>
-                    {#if hearted}
-                        <Heart color="red" fill="red"/>
-                    {:else}
-                        <Heart/>
-                    {/if}
-                </Button>
                 {#if isInstalled}
                     <Button
                             variant="default"
-                            class="w-24 h-8 cursor-not-allowed"
+                            class="w-20 h-8 cursor-not-allowed"
                             disabled={true}
                     >
-                        <Download/>
+                        <Check/>
                     </Button>
                 {:else}
                     <Button
                             variant="default"
-                            class="w-24 h-8"
+                            class="w-20 h-8"
                     >
-                        <Download class="w-6"/>
+                        <Download/>
                     </Button>
                 {/if}
             </div>

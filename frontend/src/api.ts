@@ -15,27 +15,15 @@ export const apiClient = {
 }
 
 async function get(url: string): Promise<Response> {
-    const response = await fetch(API_URL + url,
+    return await fetch(API_URL + url,
         {method: 'GET', headers: DEFAULT_HEADERS}
     );
-
-    if (!response.ok) {
-        return Promise.reject(response);
-    }
-
-    return response;
 }
 
 async function post(url: string, data: object): Promise<Response> {
-    const response = await fetch(API_URL + url, {
+    return await fetch(API_URL + url, {
         method: 'POST',
         body: JSON.stringify(data),
         headers: DEFAULT_HEADERS
     });
-
-    if (!response.ok) {
-        return Promise.reject(response);
-    }
-
-    return response;
 }
