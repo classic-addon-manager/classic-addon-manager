@@ -19,6 +19,16 @@ body {
     background-color: #2E517E;
 }
 
+.fade-end {
+    --mask: linear-gradient(to right,
+    rgba(0, 0, 0, 1) 0, rgba(0, 0, 0, 1) 75%,
+    rgba(0, 0, 0, 0) 95%, rgba(0, 0, 0, 0) 0
+    ) 100% 50% / 100% 100% repeat-x;
+
+    -webkit-mask: var(--mask);
+    mask: var(--mask);
+}
+
 .app-flex-col {
     display: flex;
     flex-direction: column;

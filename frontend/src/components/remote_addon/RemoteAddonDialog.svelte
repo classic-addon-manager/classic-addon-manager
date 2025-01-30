@@ -11,6 +11,7 @@
     import Like from "lucide-svelte/icons/thumbs-up";
     import Dislike from "lucide-svelte/icons/thumbs-down";
     import {apiClient} from "../../api";
+    import {isAuthenticated} from "$stores/UserStore.svelte";
 
     let {
         open = $bindable(),
@@ -137,7 +138,6 @@
         if (rating === r || r === 0) {
             return;
         }
-        rating = r;
         const response = await apiClient.post(`/addon/${addon.name}/rate`, {
             is_like: r === 1
         });
@@ -146,6 +146,8 @@
             toast.error('Could not rate addon, try again later');
             return;
         }
+
+        rating = r;
 
         if (r === 1) {
             toast.success('Addon rated', {description: `Liked ${addon.alias}`});
@@ -215,22 +217,24 @@
             </Tabs.Content>
         </Tabs.Root>
         <div class="flex justify-end gap-5">
-            <div class="flex gap-2 items-center">
-                <Button class="mt-2" variant="outline" onclick={() => handleRating(1)}>
-                    {#if rating === 1}
-                        <Like class="w-6 text-blue-500"/>
-                    {:else}
-                        <Like class="w-6"/>
-                    {/if}
-                </Button>
-                <Button class="mt-2" variant="outline" onclick={() => handleRating(-1)}>
-                    {#if rating === -1}
-                        <Dislike class="w-6 text-red-500"/>
-                    {:else}
-                        <Dislike class="w-6"/>
-                    {/if}
-                </Button>
-            </div>
+            {#if isAuthenticated() }
+                <div class="flex gap-2 items-center">
+                    <Button class="mt-2" variant="outline" onclick={() => handleRating(1)}>
+                        {#if rating === 1}
+                            <Like class="w-6 text-blue-500"/>
+                        {:else}
+                            <Like class="w-6"/>
+                        {/if}
+                    </Button>
+                    <Button class="mt-2" variant="outline" onclick={() => handleRating(-1)}>
+                        {#if rating === -1}
+                            <Dislike class="w-6 text-red-500"/>
+                        {:else}
+                            <Dislike class="w-6"/>
+                        {/if}
+                    </Button>
+                </div>
+            {/if}
             {#if !isInstalled}
                 <Button
                         class="mt-2"

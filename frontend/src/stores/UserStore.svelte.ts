@@ -20,6 +20,10 @@ export function getUser(): User {
     return user;
 }
 
+export function isAuthenticated(): boolean {
+    return user.discord_id !== "";
+}
+
 export function getToken(): string {
     if (token === "") {
         token = localStorage.getItem('token') || "";
