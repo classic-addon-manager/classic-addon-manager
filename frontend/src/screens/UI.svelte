@@ -100,7 +100,12 @@
             </div>
 
             <div class="mx-auto mb-2 text-gray-300 text-opacity-40">
-                <span>v{packageJson.version} by Sami</span>
+                <span class="hover:text-blue-400 cursor-pointer transition-all" onclick={() => {
+                    // @ts-ignore
+                    window.runtime.BrowserOpenURL(
+                        `https://github.com/classic-addon-manager/classic-addon-manager/releases/tag/v${packageJson.version}`
+                    );
+                }}>v{packageJson.version} by Sami</span>
             </div>
         </div>
     </div>
