@@ -122,7 +122,7 @@
         }
     }
 
-    async function getMyRating(open: boolean) {
+    function getMyRating(open: boolean) {
         if (!open) return;
         apiClient.get(`/addon/${addon.name}/my-rating`).then(async rateResponse => {
             if (rateResponse.status === 200) {

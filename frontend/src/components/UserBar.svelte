@@ -14,9 +14,12 @@
 
     async function getAccount() {
         const urlParams = new URLSearchParams(window.location.search);
-        let token = urlParams.get('token') || localStorage.getItem('token');
-        if (token) {
+        let token = urlParams.get('t') || localStorage.getItem('token');
+        if (token && token != null) {
             setToken(token);
+        } else {
+            // No token, no user
+            return;
         }
 
         const resp = await apiClient.get('/me');
