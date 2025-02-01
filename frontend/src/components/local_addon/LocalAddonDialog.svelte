@@ -1,9 +1,14 @@
 <script lang="ts">
-    import * as Dialog from "$lib/components/ui/dialog/index.js";
-    import {Button} from "$lib/components/ui/button/index.js";
+    import * as Dialog from "$lib/components/ui/dialog/index";
+    import Like from "lucide-svelte/icons/thumbs-up";
+    import Dislike from "lucide-svelte/icons/thumbs-down";
+
+    import {Button} from "$lib/components/ui/button/index";
     import {addon as ad} from "../../../wailsjs/go/models";
     import addons from "../../addons";
     import {toast} from "svelte-sonner";
+    import {isAuthenticated} from "$stores/UserStore.svelte";
+    import {apiClient} from "../../api";
 
     let {
         open = $bindable(),
@@ -17,6 +22,11 @@
 
     let uninstallClicks = $state(0);
     let uninstallTimeout: any;
+    let rating = $state(0);
+
+    $effect(() => {
+        getMyRating(open);
+    });
 
     async function handleMatchAddon() {
         let manifest = await addons.getManifest(addon.name)
@@ -86,6 +96,40 @@
         });
         open = false;
     }
+
+    function getMyRating(open: boolean) {
+        if (!open || !isAuthenticated()) return;
+        apiClient.get(`/addon/${addon.name}/my-rating`).then(async rateResponse => {
+            if (rateResponse.status === 200) {
+                const r = await rateResponse.json();
+                rating = r.data.rating;
+            }
+        }).catch(e => {
+            console.error('Failed to fetch rating', e);
+        });
+    }
+
+    async function handleRating(r: number) {
+        if (rating === r || r === 0) {
+            return;
+        }
+        const response = await apiClient.post(`/addon/${addon.name}/rate`, {
+            is_like: r === 1
+        });
+
+        if (response.status !== 200) {
+            toast.error('Could not rate addon, try again later');
+            return;
+        }
+
+        rating = r;
+
+        if (r === 1) {
+            toast.success('Addon rated', {description: `Liked ${addon.alias}`});
+        } else {
+            toast.success('Addon rated', {description: `Disliked ${addon.alias}`});
+        }
+    }
 </script>
 
 <Dialog.Root {open} {onOpenChange}>
@@ -119,8 +163,29 @@
         </div>
         {#if addon.isManaged}
             <Dialog.Footer>
-                <Button type="button" variant="outline" onclick={handleReinstall}>Reinstall</Button>
-                <Button type="button" variant="destructive" onclick={handleUninstall}>Uninstall</Button>
+                {#if isAuthenticated() }
+                    <div class="flex gap-2 items-center mr-auto">
+                        <Button class="mt-2" variant="outline" onclick={() => handleRating(1)}>
+                            {#if rating === 1}
+                                <Like class="w-6 text-blue-500"/>
+                            {:else}
+                                <Like class="w-6"/>
+                            {/if}
+                        </Button>
+                        <Button class="mt-2" variant="outline" onclick={() => handleRating(-1)}>
+                            {#if rating === -1}
+                                <Dislike class="w-6 text-red-500"/>
+                            {:else}
+                                <Dislike class="w-6"/>
+                            {/if}
+                        </Button>
+                    </div>
+                {/if}
+
+                <div class="flex gap-2 items-end">
+                    <Button type="button" variant="outline" onclick={handleReinstall}>Reinstall</Button>
+                    <Button type="button" variant="destructive" onclick={handleUninstall}>Uninstall</Button>
+                </div>
             </Dialog.Footer>
         {/if}
     </Dialog.Content>

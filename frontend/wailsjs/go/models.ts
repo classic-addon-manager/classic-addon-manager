@@ -55,6 +55,8 @@ export namespace addon {
 	    repo: string;
 	    branch: string;
 	    tags: string[];
+	    downloads: number;
+	    like_percentage?: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new AddonManifest(source);
@@ -69,6 +71,8 @@ export namespace addon {
 	        this.repo = source["repo"];
 	        this.branch = source["branch"];
 	        this.tags = source["tags"];
+	        this.downloads = source["downloads"];
+	        this.like_percentage = source["like_percentage"];
 	    }
 	}
 

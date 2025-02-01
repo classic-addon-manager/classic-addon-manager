@@ -38,9 +38,9 @@
         isReady = true;
     });
 
-    async function getAddonManifest(ignoreCache: boolean = false) {
+    async function getAddonManifest() {
         let tmp = [];
-        for (let addon of await GoGetAddonManifest(ignoreCache)) {
+        for (let addon of await GoGetAddonManifest()) {
             tmp.push({
                 ...addon
             });
@@ -94,7 +94,7 @@
                     variant="secondary"
                     disabled={!isReady}
                     onclick={async() => {
-                        await getAddonManifest(true);
+                        await getAddonManifest();
                         toast.success('Addons refreshed');
                     }}
             >

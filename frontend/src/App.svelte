@@ -9,7 +9,6 @@
         await addons.populateAddonStore();
     });
 
-    // TODO: Add a way to reset addon settings file because it can contain parsing errors
 </script>
 
 <Toaster/>

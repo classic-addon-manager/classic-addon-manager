@@ -4,6 +4,10 @@
     import {onMount} from "svelte";
     import {IsAddonInstalled} from "../../wailsjs/go/app/App";
     import Blocks from "lucide-svelte/icons/blocks";
+    import Heart from "lucide-svelte/icons/heart";
+    import Download from "lucide-svelte/icons/download";
+    import Check from "lucide-svelte/icons/check";
+
     import RemoteAddonDialog from "./remote_addon/RemoteAddonDialog.svelte";
 
     let {addon}: { addon: ad.AddonManifest } = $props();
@@ -62,37 +66,51 @@
         onInstall={handleOnInstall}
 />
 
-<div class="flex items-center justify-around bg-muted/50 hover:bg-gray-400/20 aspect-video h-12 w-full rounded-lg cursor-pointer transition-all"
+<div class="flex items-center justify-around bg-muted/50 hover:bg-gray-400/20 aspect-video h-16 w-full rounded-lg cursor-pointer transition-all"
      onclick={() => openDialog = true}
 >
-    <div class="grid grid-cols-10 items-center justify-between bg-muted/50 aspect-video h-12 w-full rounded-lg">
-        <div class="flex gap-3 items-center col-span-4 overflow-hidden">
+    <div class="grid grid-cols-10 items-center justify-between bg-muted/50 aspect-video h-16 w-full rounded-lg">
+        <div class="flex gap-3 items-center col-span-4 fade-end overflow-hidden">
             {#if hasIcon}
                 <img class="ml-2 h-[38px] w-[38px] rounded-sm" src={icon} alt=""/>
             {:else}
                 <Blocks class="scale-75 opacity-50 flex-shrink-0 ml-2 h-[38px] w-[38px]"/>
             {/if}
-            <div class="text-foreground font-medium- whitespace-nowrap">{addon.alias}</div>
+
+            <div class="flex-col">
+                <div class="text-foreground whitespace-nowrap">{addon.alias}</div>
+                <div class="flex items-center gap-1 text-muted-foreground">
+                    <Download class="w-4 scale-90"/> {addon.downloads}
+
+                    {#if addon.like_percentage !== null}
+                        <Heart class="w-4 scale-90"/> {addon.like_percentage}%
+                    {/if}
+                </div>
+            </div>
         </div>
+
         <div class="text-foreground font-light col-span-2">{addon.author}</div>
         <div class="text-foreground font-light col-span-2">{addon.tags.join(', ')}</div>
-        <div class="text-foreground col-span-1 ml-7">
-            {#if isInstalled}
-                <Button
-                        variant="default"
-                        class="w-24 h-8 cursor-not-allowed"
-                        disabled={true}
-                >
-                    Installed
-                </Button>
-            {:else}
-                <Button
-                        variant="default"
-                        class="w-24 h-8"
-                >
-                    Install
-                </Button>
-            {/if}
+        <div class="text-foreground col-span-2 ml-7">
+            <div class="flex gap-4">
+                {#if isInstalled}
+                    <Button
+                            variant="default"
+                            class="w-20 h-8 cursor-not-allowed"
+                            disabled={true}
+                    >
+                        <Check/>
+                    </Button>
+                {:else}
+                    <Button
+                            variant="default"
+                            class="w-20 h-8"
+                    >
+                        <Download/>
+                    </Button>
+                {/if}
+            </div>
+
         </div>
     </div>
 </div>
