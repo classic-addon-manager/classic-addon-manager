@@ -34,8 +34,6 @@
     onMount(async () => {
         isInstalled = await IsAddonInstalled(addon.name);
         hasBanner = await checkForBanner();
-
-
     });
 
     async function checkForBanner() {
@@ -123,7 +121,7 @@
     }
 
     function getMyRating(open: boolean) {
-        if (!open) return;
+        if (!open || !isAuthenticated()) return;
         apiClient.get(`/addon/${addon.name}/my-rating`).then(async rateResponse => {
             if (rateResponse.status === 200) {
                 const r = await rateResponse.json();
