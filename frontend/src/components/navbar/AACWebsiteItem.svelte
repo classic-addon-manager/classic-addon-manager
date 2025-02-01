@@ -2,14 +2,12 @@
     import NavbarItem from "./NavbarItem.svelte";
 
     import Link from "lucide-svelte/icons/link";
+    import {BrowserOpenURL} from "../../../wailsjs/runtime";
 </script>
 
 <a
-    href="##"
-    onclick={() => {
-        // @ts-ignore
-        window.runtime.BrowserOpenURL("https://aa-classic.com");
-    }}
+        href="##"
+        onclick={() => BrowserOpenURL("https://aa-classic.com")}
 >
-    <NavbarItem name="AA Classic Website" Icon={Link} isActivatable={false} />
+    <NavbarItem name="AA Classic Website" Icon={Link} isActivatable={false}/>
 </a>

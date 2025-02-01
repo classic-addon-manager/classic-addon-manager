@@ -12,6 +12,7 @@
     import Dislike from "lucide-svelte/icons/thumbs-down";
     import {apiClient} from "../../api";
     import {isAuthenticated} from "$stores/UserStore.svelte";
+    import {BrowserOpenURL} from "../../../wailsjs/runtime";
 
     let {
         open = $bindable(),
@@ -170,10 +171,7 @@
                     <div class="flex gap-4">
                         <a href="javascript: void(0);"
                            class="text-muted-foreground text-sm hover:text-blue-500 transition duration-300 ease-in-out"
-                           onclick={() => {
-                            // @ts-ignore
-                            window.runtime.BrowserOpenURL(`https://github.com/${addon.repo}`);
-                        }}>
+                           onclick={() => BrowserOpenURL(`https://github.com/${addon.repo}`)}>
                             <div class="flex items-center">
                                 <GithubIcon class="w-4 h-4 mr-1"/>
                                 View code
@@ -181,10 +179,7 @@
                         </a>
                         <a href="javascript: void(0);"
                            class="text-muted-foreground text-sm hover:text-blue-500 transition duration-300 ease-in-out"
-                           onclick={() => {
-                            // @ts-ignore
-                            window.runtime.BrowserOpenURL(`https://github.com/${addon.repo}/issues/new`);
-                        }}>
+                           onclick={() => BrowserOpenURL(`https://github.com/${addon.repo}/issues/new`)}>
                             <div class="flex items-center">
                                 <BugIcon class="w-4 h-4 mr-1"/>
                                 Report issue

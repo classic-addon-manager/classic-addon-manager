@@ -8,6 +8,7 @@
     import Github from "lucide-svelte/icons/github";
     import {toast} from "svelte-sonner";
     import addons from "../../addons";
+    import {BrowserOpenURL} from "../../../wailsjs/runtime";
 
     let {
         contextTriggerArea,
@@ -50,24 +51,14 @@
         {#if addon.isManaged}
             <ContextMenu.Item
                     class="gap-3"
-                    onclick={() => {
-                    // @ts-ignore
-                    window.runtime.BrowserOpenURL(
-                        `https://github.com/${addon.repo}`,
-                    );
-                }}
+                    onclick={() => BrowserOpenURL(`https://github.com/${addon.repo}`)}
             >
                 <Github size={16}/>
                 View code
             </ContextMenu.Item>
             <ContextMenu.Item
                     class="gap-2"
-                    onclick={() => {
-                    // @ts-ignore
-                    window.runtime.BrowserOpenURL(
-                        `https://github.com/${addon.repo}/issues/new`,
-                    );
-                }}
+                    onclick={() => BrowserOpenURL(`https://github.com/${addon.repo}/issues/new`)}
             >
                 <Bug size={16}/>
                 Report issue
