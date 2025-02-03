@@ -99,7 +99,7 @@ func MoveAddonRelease(addonName string) bool {
 		}
 	}
 
-	err = os.Rename(filepath.Join(src, rootDir), filepath.Join(config.GetAddonDir(), addonName))
+	err = file.MoveDir(filepath.Join(src, rootDir), filepath.Join(config.GetAddonDir(), addonName))
 	if err != nil {
 		logger.Error("Error moving addon release:", err)
 		return false
