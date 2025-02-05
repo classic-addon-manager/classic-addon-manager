@@ -57,6 +57,7 @@ export namespace addon {
 	    tags: string[];
 	    downloads: number;
 	    like_percentage?: number;
+	    kofi?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new AddonManifest(source);
@@ -73,6 +74,7 @@ export namespace addon {
 	        this.tags = source["tags"];
 	        this.downloads = source["downloads"];
 	        this.like_percentage = source["like_percentage"];
+	        this.kofi = source["kofi"];
 	    }
 	}
 

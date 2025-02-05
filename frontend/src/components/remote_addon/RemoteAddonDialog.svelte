@@ -31,10 +31,12 @@
     let hasBanner = $state(false);
     let banner: string = $state('');
     let rating = $state(0);
+    let tabs = $state(getTabs());
 
     onMount(async () => {
         isInstalled = await IsAddonInstalled(addon.name);
         hasBanner = await checkForBanner();
+        tabs = getTabs();
     });
 
     async function checkForBanner() {
@@ -154,6 +156,21 @@
             toast.success('Addon rated', {description: `Disliked ${addon.alias}`});
         }
     }
+
+    function getTabs() {
+        if (addon.kofi) {
+            return [
+                {value: "description", label: "Description"},
+                {value: "changelog", label: "Changelog"},
+                {value: "kofi", label: "Support Author"},
+            ];
+        }
+        return [
+            {value: "description", label: "Description"},
+            {value: "changelog", label: "Changelog"},
+        ];
+    }
+
 </script>
 
 <Dialog.Root {open} {onOpenChange}>
@@ -190,10 +207,22 @@
             </Dialog.Title>
         </Dialog.Header>
         <Tabs.Root value="description" class="w-full">
-            <Tabs.List class="grid w-full grid-cols-2">
-                <Tabs.Trigger value="description">Description</Tabs.Trigger>
-                <Tabs.Trigger value="changelog">Changelog</Tabs.Trigger>
-            </Tabs.List>
+            <!-- So there was a weird issue causing grid-cols-2 to not work dynamically. This was the fix. -->
+            {#if tabs.length === 2}
+                <Tabs.List class="grid w-full grid-cols-2">
+                    {#each getTabs() as tab}
+                        <Tabs.Trigger value={tab.value}>{tab.label}</Tabs.Trigger>
+                    {/each}
+                </Tabs.List>
+            {/if}
+
+            {#if tabs.length === 3}
+                <Tabs.List class="grid w-full grid-cols-3">
+                    {#each getTabs() as tab}
+                        <Tabs.Trigger value={tab.value}>{tab.label}</Tabs.Trigger>
+                    {/each}
+                </Tabs.List>
+            {/if}
             <Tabs.Content value="description">
                 <div class="flex flex-1 flex-col max-h-[calc(100vh-30vh)] overflow-auto">
                     {#if hasBanner}
@@ -207,6 +236,21 @@
             <Tabs.Content value="changelog">
                 <p class="text-muted-foreground">Released {formatToLocalTime(release?.published_at)}</p>
                 <p class="whitespace-pre-wrap">{release?.body || 'No change log was provided by the addon'}</p>
+            </Tabs.Content>
+
+            <Tabs.Content value="kofi">
+                <p class="mb-2 text-sm text-center">Supporting add-on authors is the best way to show your support and
+                    motivate further development.</p>
+                <div class="flex">
+                    <Button
+                            class="mt-2 mx-auto"
+                            variant="default"
+                            onclick={() => BrowserOpenURL(`https://ko-fi.com/${addon.kofi}`)}
+                    >
+                        Support {addon.author} on Ko-fi
+                    </Button>
+                </div>
+
             </Tabs.Content>
         </Tabs.Root>
         <div class="flex justify-end gap-5">
