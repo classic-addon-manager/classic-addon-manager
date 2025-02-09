@@ -6,6 +6,7 @@
     import addons from "../../addons";
     import {toast} from "svelte-sonner";
     import {getUpdatesAvailableCount, setUpdatesAvailableCount} from "$stores/AddonStore.svelte";
+    import {formatToLocalTime} from "../../utils";
 
     let {
         open = $bindable(),
@@ -20,18 +21,6 @@
     } = $props();
 
     let isUpdating = $state(false);
-
-    function formatToLocalTime(dateString: string): string {
-        const date = new Date(dateString);
-        const options: Intl.DateTimeFormatOptions = {
-            hour: '2-digit',
-            minute: '2-digit',
-            day: '2-digit',
-            month: 'long',
-            year: 'numeric'
-        };
-        return date.toLocaleString(undefined, options).replace(',', '');
-    }
 
     async function handleUpdateClick() {
         isUpdating = true;

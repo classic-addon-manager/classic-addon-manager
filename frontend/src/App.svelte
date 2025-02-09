@@ -8,7 +8,6 @@
     onMount(async () => {
         await addons.populateAddonStore();
     });
-
 </script>
 
 <Toaster/>

@@ -9,12 +9,14 @@
     import Check from "lucide-svelte/icons/check";
 
     import RemoteAddonDialog from "./remote_addon/RemoteAddonDialog.svelte";
+    import {timeAgo} from "../utils";
 
     let {addon}: { addon: ad.AddonManifest } = $props();
     let isInstalled = $state(false);
     let openDialog = $state(false);
     let hasIcon = $state(false);
     let icon: string = $state('');
+    let isNew = timeAgo(addon.added_at) < 32;
 
     onMount(async () => {
         isInstalled = await IsAddonInstalled(addon.name);
@@ -71,11 +73,20 @@
 >
     <div class="grid grid-cols-10 items-center justify-between bg-muted/50 aspect-video h-16 w-full rounded-lg">
         <div class="flex gap-3 items-center col-span-4 fade-end overflow-hidden">
-            {#if hasIcon}
-                <img class="ml-2 h-[38px] w-[38px] rounded-sm" src={icon} alt=""/>
-            {:else}
-                <Blocks class="scale-75 opacity-50 flex-shrink-0 ml-2 h-[38px] w-[38px]"/>
-            {/if}
+            <div class="relative">
+                {#if hasIcon}
+                    <img class="ml-2 h-[38px] w-[38px] rounded-sm" src={icon} alt=""/>
+                {:else}
+                    <Blocks class="scale-75 opacity-50 flex-shrink-0 ml-2 h-[38px] w-[38px]"/>
+                {/if}
+
+                {#if isNew}
+                    <div class="opacity-90 absolute bottom-7 left-7 bg-red-500 text-white text-[9px] font-bold px-0.5 py-0.5 rounded">
+                        NEW
+                    </div>
+                {/if}
+            </div>
+
 
             <div class="flex-col">
                 <div class="text-foreground whitespace-nowrap">{addon.alias}</div>
@@ -110,7 +121,6 @@
                     </Button>
                 {/if}
             </div>
-
         </div>
     </div>
 </div>
