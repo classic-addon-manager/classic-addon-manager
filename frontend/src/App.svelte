@@ -10,5 +10,5 @@
     });
 </script>
 
-<Toaster/>
+<Toaster closeButton/>
 <UI/>

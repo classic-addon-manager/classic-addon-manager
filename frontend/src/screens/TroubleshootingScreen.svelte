@@ -5,7 +5,6 @@
     import {ScrollArea} from "$lib/components/ui/scroll-area/index";
     import {Badge} from "$lib/components/ui/badge/index";
     import {Button} from "$lib/components/ui/button/index";
-    import {toast} from "svelte-sonner";
     import {
         ResetAddonSettings as GoResetAddonSettings,
         UninstallAddon as GoUninstallAddon,
@@ -16,6 +15,7 @@
     import addons from "../addons";
     import {onMount} from "svelte";
     import {ChevronsUpDown} from "lucide-svelte";
+    import { toast } from "../utils";
 
     let issues: util.LogParseResult[] = $state([]);
     let issueCount = $derived.by(() => issues.length);
@@ -44,7 +44,9 @@
             await GoResetAddonSettings();
         } catch (e) {
             console.error("Failed to reset addon settings", e);
-            toast.error(`Failed to reset addon settings, reason: ${e}`, {duration: 6000});
+            toast.error(`Failed to reset addon settings, reason: ${e}`, {
+                duration: 6000,
+            });
             return;
         }
         toast.error("Addon settings have been reset, please restart the game");

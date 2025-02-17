@@ -5,7 +5,6 @@
     import {onMount} from "svelte";
     import addons from "../../addons.js";
     import {GetLatestAddonRelease as GoGetLatestRelease, IsAddonInstalled} from "../../../wailsjs/go/app/App";
-    import {toast} from "svelte-sonner";
     import {Button} from "$lib/components/ui/button";
     import {GithubIcon, BugIcon} from "lucide-svelte";
     import Like from "lucide-svelte/icons/thumbs-up";
@@ -13,6 +12,7 @@
     import {apiClient} from "../../api";
     import {isAuthenticated} from "$stores/UserStore.svelte";
     import {BrowserOpenURL} from "../../../wailsjs/runtime";
+    import { toast } from "../../utils";
 
     let {
         open = $bindable(),
@@ -116,7 +116,9 @@
         }
 
         if (didInstall) {
-            toast.success('Addon installed', {description: `${addon.alias} was installed`});
+            toast.success('Addon installed', {
+                description: `${addon.alias} was installed`
+            });
             onInstall(didInstall);
             isInstalled = true;
             open = false;
@@ -151,9 +153,13 @@
         rating = r;
 
         if (r === 1) {
-            toast.success('Addon rated', {description: `Liked ${addon.alias}`});
+            toast.success('Addon rated', {
+                description: `Liked ${addon.alias}`                
+            });
         } else {
-            toast.success('Addon rated', {description: `Disliked ${addon.alias}`});
+            toast.success('Addon rated', {
+                description: `Disliked ${addon.alias}`
+            });
         }
     }
 

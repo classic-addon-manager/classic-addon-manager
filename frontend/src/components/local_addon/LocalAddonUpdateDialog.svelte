@@ -4,9 +4,8 @@
     import {addon as ad, api} from "../../../wailsjs/go/models";
     import LoaderCircle from "lucide-svelte/icons/loader-circle";
     import addons from "../../addons";
-    import {toast} from "svelte-sonner";
     import {getUpdatesAvailableCount, setUpdatesAvailableCount} from "$stores/AddonStore.svelte";
-    import {formatToLocalTime} from "../../utils";
+    import {formatToLocalTime, toast} from "../../utils";
 
     let {
         open = $bindable(),
@@ -37,10 +36,12 @@
             return;
         }
         if (!didInstall) return;
-        toast.success('Addon updated', {
-            description: `${addon.alias} was updated to ${release.tag_name}`,
-            duration: 7000
-        });
+        toast.success('Addon updated', 
+            {
+                description: `${addon.alias} was updated to ${release.tag_name}`,
+                duration: 7000
+            }
+        );
         setUpdatesAvailableCount(getUpdatesAvailableCount() - 1);
         open = false;
     }

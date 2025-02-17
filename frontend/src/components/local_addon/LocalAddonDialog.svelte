@@ -6,9 +6,9 @@
     import {Button} from "$lib/components/ui/button/index";
     import {addon as ad} from "../../../wailsjs/go/models";
     import addons from "../../addons";
-    import {toast} from "svelte-sonner";
     import {isAuthenticated} from "$stores/UserStore.svelte";
     import {apiClient} from "../../api";
+    import { toast } from "../../utils";
 
     let {
         open = $bindable(),
@@ -45,16 +45,18 @@
             return;
         }
 
-        toast.success('Addon matched', {
-            description: `${addon.alias} was matched and will be managed by Classic Addon Manager`,
-            duration: 7000
-        });
+        toast.success('Addon matched',
+            {
+                description: `${addon.alias} was matched and will be managed by Classic Addon Manager`,
+                duration: 7000
+            }
+        );
         open = false;
     }
 
     async function handleUninstall() {
         if (uninstallClicks === 0) {
-            toast.info('Click again to uninstall');
+            toast.info('Click again to uninstall', {dismissable: true});
         }
         uninstallClicks++;
 
@@ -90,10 +92,9 @@
             return;
         }
         if (!didInstall) return;
-        toast.success('Addon reinstalled', {
-            description: `${addon.alias} was reinstalled`,
-            duration: 7000
-        });
+        toast.success('Addon reinstalled',
+            { description: `${addon.alias} was reinstalled`, duration: 7000 }
+        );
         open = false;
     }
 

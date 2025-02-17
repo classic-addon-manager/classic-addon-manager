@@ -9,7 +9,7 @@
     import RemoteAddon from "../components/RemoteAddon.svelte";
     import RemoteAddonSkeleton from "../components/remote_addon/RemoteAddonSkeleton.svelte";
     import {Button} from "$lib/components/ui/button";
-    import {toast} from "svelte-sonner";
+    import { toast } from "../utils";
 
     let isReady: boolean = $state(false);
     let searchPhrase: string = $state('');
@@ -39,8 +39,9 @@
     });
 
     async function getAddonManifest() {
-        let tmp = [];
+        let tmp: addon.AddonManifest[] = [];
         for (let addon of await GoGetAddonManifest()) {
+            // @ts-ignore
             tmp.push({
                 ...addon
             });

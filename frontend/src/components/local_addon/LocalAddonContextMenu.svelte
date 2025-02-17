@@ -6,9 +6,9 @@
     import AlertTriangle from "lucide-svelte/icons/alert-triangle";
     import Bug from "lucide-svelte/icons/bug";
     import Github from "lucide-svelte/icons/github";
-    import {toast} from "svelte-sonner";
     import addons from "../../addons";
     import {BrowserOpenURL} from "../../../wailsjs/runtime";
+    import { toast } from "../../utils";
 
     let {
         contextTriggerArea,
