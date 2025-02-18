@@ -5,7 +5,10 @@ Support development of this project by buying me a ko-fi.
 
 <img align="center" src="https://github.com/user-attachments/assets/a0fc4c09-5ecc-4b80-bae0-b77e6c93cb51" width="700">
 
-<img align="center" src="https://github.com/user-attachments/assets/99eb28cc-d708-4473-8b65-3d558db90df1" width="700">
+<img align="center" src="https://github.com/user-attachments/assets/eb4c6a8c-e9a5-43c0-80f1-01841599bf2e" width="700">
+
+![{831101AA-808E-4239-BF2C-A008C6424AA2}](https://github.com/user-attachments/assets/eb4c6a8c-e9a5-43c0-80f1-01841599bf2e)
+
 
 ## Development requirements
 You need to install the following dependencies for Wails to be operational.
