@@ -7,8 +7,6 @@ Support development of this project by buying me a ko-fi.
 
 <img align="center" src="https://github.com/user-attachments/assets/eb4c6a8c-e9a5-43c0-80f1-01841599bf2e" width="700">
 
-![{831101AA-808E-4239-BF2C-A008C6424AA2}](https://github.com/user-attachments/assets/eb4c6a8c-e9a5-43c0-80f1-01841599bf2e)
-
 
 ## Development requirements
 You need to install the following dependencies for Wails to be operational.
