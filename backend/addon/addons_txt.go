@@ -4,8 +4,9 @@ import (
 	"ClassicAddonManager/backend/config"
 	"ClassicAddonManager/backend/file"
 	"ClassicAddonManager/backend/logger"
-	"github.com/sqweek/dialog"
 	"path/filepath"
+
+	"github.com/sqweek/dialog"
 )
 
 var installedAddonNames []string
@@ -20,6 +21,15 @@ func ReadAddonsTxt() []string {
 		logger.Error("Error reading addons.txt:", err)
 		return nil
 	}
+
+	// Remove "AddonUpdateNotification" from lines if it exists
+	for i, line := range lines {
+		if line == "AddonUpdateNotification" {
+			lines = append(lines[:i], lines[i+1:]...)
+			break
+		}
+	}
+
 	installedAddonNames = lines
 	return lines
 }

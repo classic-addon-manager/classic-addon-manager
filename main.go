@@ -1,9 +1,12 @@
 package main
 
 import (
+	"ClassicAddonManager/backend/addon"
 	"ClassicAddonManager/backend/app"
 	"ClassicAddonManager/backend/config"
+
 	"embed"
+	"flag"
 	"os"
 
 	"github.com/sqweek/dialog"
@@ -17,10 +20,20 @@ import (
 var assets embed.FS
 
 func main() {
+	addonUpdateMode := flag.Bool("check-updates", false, "Run in headless mode to check for addon updates")
+	flag.Parse()
+
 	err := config.LoadConfig()
 	if err != nil {
 		dialog.Message("%s", err.Error()).Title("Classic Addon Manager Error").Error()
 		os.Exit(1)
+	}
+
+	if *addonUpdateMode {
+		addon.GenerateUpdateAddonLua(
+			addon.CheckForUpdates(),
+		)
+		os.Exit(0)
 	}
 
 	a := app.NewApp()
