@@ -32,8 +32,7 @@
 
     async function handleUnmanage() {
         console.debug("Unmanaging addon: ", addon.name);
-        let didUnmanage = await addons.unmanage(addon.name);
-        if (didUnmanage) {
+        if (await addons.unmanage(addon.name)) {
             console.debug("Unmanaged addon: ", addon.name);
             toast.success(`${addon.alias} was unmanaged`);
         } else {

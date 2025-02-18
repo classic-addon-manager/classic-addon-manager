@@ -9,7 +9,7 @@
     import RemoteAddon from "../components/RemoteAddon.svelte";
     import RemoteAddonSkeleton from "../components/remote_addon/RemoteAddonSkeleton.svelte";
     import {Button} from "$lib/components/ui/button";
-    import { toast } from "../utils";
+    import { timeAgo, toast } from "../utils";
 
     let isReady: boolean = $state(false);
     let searchPhrase: string = $state('');
@@ -56,8 +56,22 @@
                 tags.push({label: tag, value: tag});
             }
         }
-        // Sort addons alphabetically by name
-        tmp.sort((a, b) => a.name.localeCompare(b.name));
+
+        // Sort addons alphabetically by name and whether an addon is new or not
+        tmp.sort((a, b) => {
+            const aIsNew = timeAgo(a.added_at) < 32;
+            const bIsNew = timeAgo(b.added_at) < 32;
+            
+            if (aIsNew && !bIsNew) return -1;
+            if (!aIsNew && bIsNew) return 1;
+            
+            // Sort alphabetically within the same newness group
+            if (aIsNew === bIsNew) {
+                return a.name.localeCompare(b.name);
+            }
+            
+            return 0;
+        });
         tags.sort((a, b) => a.label.localeCompare(b.label));
         addons = tmp;
         searchPhrase = '';
