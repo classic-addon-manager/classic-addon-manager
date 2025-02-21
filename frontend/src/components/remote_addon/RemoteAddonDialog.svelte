@@ -180,7 +180,7 @@
 </script>
 
 <Dialog.Root {open} {onOpenChange}>
-    <Dialog.Content class="max-h-[90%]">
+    <Dialog.Content class="max-h-[90%] max-w-[60%]">
         <Dialog.Header>
             <Dialog.Title>
                 <div class="flex">
@@ -239,9 +239,9 @@
                     </div>
                 </div>
             </Tabs.Content>
-            <Tabs.Content value="changelog">
+            <Tabs.Content value="changelog" class="max-h-[50vh] overflow-auto">
                 <p class="text-muted-foreground">Released {formatToLocalTime(release?.published_at)}</p>
-                <p class="whitespace-pre-wrap">{release?.body || 'No change log was provided by the addon'}</p>
+                    <p class="whitespace-pre-wrap">{release?.body || 'No change log was provided by the addon'}</p>
             </Tabs.Content>
 
             <Tabs.Content value="kofi">
