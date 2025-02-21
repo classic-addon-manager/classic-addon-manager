@@ -1,8 +1,8 @@
 <script lang="ts">
-    import type {addon as ad} from "../../wailsjs/go/models.js";
+    import type {addon as ad} from "$lib/wails"
     import {Button} from "$lib/components/ui/button";
     import {onMount} from "svelte";
-    import {IsAddonInstalled} from "../../wailsjs/go/app/App";
+    import {IsAddonInstalled} from "$lib/wails";
     import Blocks from "lucide-svelte/icons/blocks";
     import Heart from "lucide-svelte/icons/heart";
     import Download from "lucide-svelte/icons/download";

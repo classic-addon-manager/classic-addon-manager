@@ -9,12 +9,11 @@
     import AddonsItem from "../components/navbar/AddonsItem.svelte";
     import AACWebsiteItem from "../components/navbar/AACWebsiteItem.svelte";
 
-    import {GetLatestApplicationRelease as GoGetLatestApplicationRelease} from "../../wailsjs/go/app/App";
+    import {GetLatestApplicationRelease as GoGetLatestApplicationRelease, BrowserOpenURL} from "$lib/wails";
 
     import {onMount} from "svelte";
     import TroubleshootingItem from "../components/navbar/TroubleshootingItem.svelte";
     import UserBar from "../components/UserBar.svelte";
-    import {BrowserOpenURL} from "../../wailsjs/runtime";
     import {getVersion} from "$stores/ApplicationStore.svelte";
 
     let updateAvailable = $state(false);

@@ -10,7 +10,7 @@ Support development of this project by buying me a ko-fi.
 
 ## Development requirements
 You need to install the following dependencies for Wails to be operational.
-    Go 1.20+
+    Go 1.24+
     NPM (Node 15+)
 Once that is done visit the following link to install the Wails CLI
 

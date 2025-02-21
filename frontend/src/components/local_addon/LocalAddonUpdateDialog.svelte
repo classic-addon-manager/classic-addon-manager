@@ -1,7 +1,7 @@
 <script lang="ts">
     import * as Dialog from "$lib/components/ui/dialog/index";
     import {Button} from "$lib/components/ui/button/index";
-    import {addon as ad, api} from "../../../wailsjs/go/models";
+    import {addon as ad, api} from "$lib/wails";
     import LoaderCircle from "lucide-svelte/icons/loader-circle";
     import addons from "../../addons";
     import {getUpdatesAvailableCount, setUpdatesAvailableCount} from "$stores/AddonStore.svelte";
@@ -36,7 +36,7 @@
             return;
         }
         if (!didInstall) return;
-        toast.success('Addon updated', 
+        toast.success('Addon updated',
             {
                 description: `${addon.alias} was updated to ${release.tag_name}`,
                 duration: 7000

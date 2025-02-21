@@ -13,7 +13,7 @@
     import LoaderCircle from "lucide-svelte/icons/loader-circle";
 
     import {getInstalledAddons} from "$stores/AddonStore.svelte";
-    import {addon} from "../../wailsjs/go/models";
+    import {addon} from "$lib/wails";
     import {setUpdatesAvailableCount} from "$stores/AddonStore.svelte";
 
     import LocalAddon from "../components/LocalAddon.svelte";

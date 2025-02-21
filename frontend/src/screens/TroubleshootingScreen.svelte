@@ -8,14 +8,15 @@
     import {
         ResetAddonSettings as GoResetAddonSettings,
         UninstallAddon as GoUninstallAddon,
-        DiagnoseIssues as GoDiagnoseIssues
-    } from "../../wailsjs/go/app/App.js";
+        DiagnoseIssues as GoDiagnoseIssues,
+        addon,
+        util
+    } from "$lib/wails";
     import {getInstalledAddons} from "$stores/AddonStore.svelte";
-    import {addon, util} from "../../wailsjs/go/models.js";
     import addons from "../addons";
     import {onMount} from "svelte";
     import {ChevronsUpDown} from "lucide-svelte";
-    import { toast } from "../utils";
+    import {toast} from "../utils";
 
     let issues: util.LogParseResult[] = $state([]);
     let issueCount = $derived.by(() => issues.length);

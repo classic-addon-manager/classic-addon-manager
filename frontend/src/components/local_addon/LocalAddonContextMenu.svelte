@@ -1,14 +1,14 @@
 <script lang="ts">
     import type {Snippet} from "svelte";
-    import {addon as ad} from "../../../wailsjs/go/models";
+    import {addon as ad} from "$lib/wails";
     import * as ContextMenu from "$lib/components/ui/context-menu/index.js";
     import Trash from "lucide-svelte/icons/trash";
     import AlertTriangle from "lucide-svelte/icons/alert-triangle";
     import Bug from "lucide-svelte/icons/bug";
     import Github from "lucide-svelte/icons/github";
     import addons from "../../addons";
-    import {BrowserOpenURL} from "../../../wailsjs/runtime";
-    import { toast } from "../../utils";
+    import {BrowserOpenURL} from "$lib/wails";
+    import {toast} from "../../utils";
 
     let {
         contextTriggerArea,

@@ -1,4 +1,4 @@
-import type {addon} from "../../wailsjs/go/models";
+import type {addon} from "$lib/wails";
 
 let installedAddons: Array<addon.Addon> = $state([]);
 let updatesAvailableCount: number = $state(0);

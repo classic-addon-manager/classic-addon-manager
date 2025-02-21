@@ -3,13 +3,13 @@
     import {Input} from "$lib/components/ui/input/index.js";
     import * as Select from "$lib/components/ui/select/index.js";
     import {onMount} from "svelte";
-    import {GetAddonManifest as GoGetAddonManifest} from "../../wailsjs/go/app/App";
-    import type {addon} from "../../wailsjs/go/models";
+    import {GetAddonManifest as GoGetAddonManifest} from "$lib/wails";
+    import type {addon} from "$lib/wails";
 
     import RemoteAddon from "../components/RemoteAddon.svelte";
     import RemoteAddonSkeleton from "../components/remote_addon/RemoteAddonSkeleton.svelte";
     import {Button} from "$lib/components/ui/button";
-    import { timeAgo, toast } from "../utils";
+    import {timeAgo, toast} from "../utils";
 
     let isReady: boolean = $state(false);
     let searchPhrase: string = $state('');
@@ -61,10 +61,10 @@
         tmp.sort((a, b) => {
             const aIsNew = timeAgo(a.added_at) < 32;
             const bIsNew = timeAgo(b.added_at) < 32;
-            
+
             if (aIsNew && !bIsNew) return -1;
             if (!aIsNew && bIsNew) return 1;
-            
+
             if (aIsNew && bIsNew) {
                 // Both are new, sort by how new they are (smaller timeAgo = newer)
                 const aTime = timeAgo(a.added_at);
@@ -73,7 +73,7 @@
                     return aTime - bTime;
                 }
             }
-            
+
             // If not new or same newness, sort alphabetically
             return a.name.localeCompare(b.name);
         });

@@ -4,9 +4,9 @@ import {
     InstallAddon as GoInstallAddon,
     GetAddonManifests as GoGetAddonManifests,
     UnmanageAddon as GoUnmanageAddon
-} from "../wailsjs/go//app/App";
+} from "$lib/wails"
 import {setAddons, getInstalledAddons} from "./stores/AddonStore.svelte";
-import type {addon} from "../wailsjs/go/models";
+import type {addon} from "$lib/wails";
 
 export default {
     populateAddonStore,

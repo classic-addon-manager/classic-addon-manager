@@ -4,11 +4,11 @@
     import Dislike from "lucide-svelte/icons/thumbs-down";
 
     import {Button} from "$lib/components/ui/button/index";
-    import {addon as ad} from "../../../wailsjs/go/models";
+    import {addon as ad} from "$lib/wails";
     import addons from "../../addons";
     import {isAuthenticated} from "$stores/UserStore.svelte";
     import {apiClient} from "../../api";
-    import { toast } from "../../utils";
+    import {toast} from "../../utils";
 
     let {
         open = $bindable(),
@@ -93,7 +93,7 @@
         }
         if (!didInstall) return;
         toast.success('Addon reinstalled',
-            { description: `${addon.alias} was reinstalled`, duration: 7000 }
+            {description: `${addon.alias} was reinstalled`, duration: 7000}
         );
         open = false;
     }

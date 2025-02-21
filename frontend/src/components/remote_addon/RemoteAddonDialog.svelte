@@ -1,18 +1,17 @@
 <script lang="ts">
     import * as Dialog from "$lib/components/ui/dialog/index";
     import * as Tabs from "$lib/components/ui/tabs/index";
-    import {addon as ad, api} from "../../../wailsjs/go/models";
+    import {addon as ad, api} from "$lib/wails";
     import {onMount} from "svelte";
     import addons from "../../addons.js";
-    import {GetLatestAddonRelease as GoGetLatestRelease, IsAddonInstalled} from "../../../wailsjs/go/app/App";
+    import {GetLatestAddonRelease as GoGetLatestRelease, IsAddonInstalled, BrowserOpenURL} from "$lib/wails";
     import {Button} from "$lib/components/ui/button";
     import {GithubIcon, BugIcon} from "lucide-svelte";
     import Like from "lucide-svelte/icons/thumbs-up";
     import Dislike from "lucide-svelte/icons/thumbs-down";
     import {apiClient} from "../../api";
     import {isAuthenticated} from "$stores/UserStore.svelte";
-    import {BrowserOpenURL} from "../../../wailsjs/runtime";
-    import { toast } from "../../utils";
+    import {toast} from "../../utils";
 
     let {
         open = $bindable(),
@@ -154,7 +153,7 @@
 
         if (r === 1) {
             toast.success('Addon rated', {
-                description: `Liked ${addon.alias}`                
+                description: `Liked ${addon.alias}`
             });
         } else {
             toast.success('Addon rated', {
@@ -241,7 +240,7 @@
             </Tabs.Content>
             <Tabs.Content value="changelog" class="max-h-[50vh] overflow-auto">
                 <p class="text-muted-foreground">Released {formatToLocalTime(release?.published_at)}</p>
-                    <p class="whitespace-pre-wrap">{release?.body || 'No change log was provided by the addon'}</p>
+                <p class="whitespace-pre-wrap">{release?.body || 'No change log was provided by the addon'}</p>
             </Tabs.Content>
 
             <Tabs.Content value="kofi">

@@ -2,7 +2,7 @@
     import NavbarItem from "./NavbarItem.svelte";
 
     import Link from "lucide-svelte/icons/link";
-    import {BrowserOpenURL} from "../../../wailsjs/runtime";
+    import {BrowserOpenURL} from "$lib/wails";
 </script>
 
 <a

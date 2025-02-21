@@ -1,22 +1,22 @@
 <script lang="ts">
-    import { onDestroy, onMount } from "svelte";
-    import { addon as ad, api } from "../../wailsjs/go/models";
-    import { addUpdateAvailableCount } from "$stores/AddonStore.svelte";
-    import { GetLatestAddonRelease as GoGetLatestRelease } from "../../wailsjs/go/app/App";
+    import {onDestroy, onMount} from "svelte";
+    import {addon as ad, api} from "$lib/wails";
+    import {addUpdateAvailableCount} from "$stores/AddonStore.svelte";
+    import {GetLatestAddonRelease as GoGetLatestRelease} from "$lib/wails";
     import LocalAddonContextMenu from "./local_addon/LocalAddonContextMenu.svelte";
     import LocalAddonDialog from "./local_addon/LocalAddonDialog.svelte";
     import LoaderCircle from "lucide-svelte/icons/loader-circle";
     import Download from "lucide-svelte/icons/download";
     import CheckMark from "lucide-svelte/icons/check";
     import ShieldQuestion from "lucide-svelte/icons/shield-question";
-    import { Badge } from "$lib/components/ui/badge";
+    import {Badge} from "$lib/components/ui/badge";
     import LocalAddonUpdateDialog from "./local_addon/LocalAddonUpdateDialog.svelte";
 
     interface Props {
         addon: ad.Addon;
     }
 
-    let { addon }: Props = $props();
+    let {addon}: Props = $props();
 
     let latestRelease: api.Release | undefined = $state();
     let isCheckingForUpdates = $state(false);
@@ -67,24 +67,24 @@
 </script>
 
 <LocalAddonDialog
-    {addon}
-    bind:open={openDialog}
-    onOpenChange={handleOpenDialogChange}
+        {addon}
+        bind:open={openDialog}
+        onOpenChange={handleOpenDialogChange}
 />
 
 {#if latestRelease}
     <LocalAddonUpdateDialog
-        {addon}
-        release={latestRelease}
-        bind:open={openUpdateDialog}
-        onOpenChange={handleOpenUpdateDialogChange}
+            {addon}
+            release={latestRelease}
+            bind:open={openUpdateDialog}
+            onOpenChange={handleOpenUpdateDialogChange}
     />
 {/if}
 
 {#snippet contextTriggerArea()}
     <div
-        class="grid grid-cols-4 p-2 hover:bg-muted/50 border-t transition-colors items-center text-sm"
-        onclick={() => (openDialog = true)}
+            class="grid grid-cols-4 p-2 hover:bg-muted/50 border-t transition-colors items-center text-sm"
+            onclick={() => (openDialog = true)}
     >
         <div class="font-medium">{addon.alias}</div>
         <div class="text-center">{addon.author}</div>
@@ -93,37 +93,37 @@
             {#if addon.isManaged}
                 {#if isCheckingForUpdates}
                     <div class="flex justify-center">
-                        <LoaderCircle size={20} class="mr-1 animate-spin" />
+                        <LoaderCircle size={20} class="mr-1 animate-spin"/>
                     </div>
                 {:else if latestRelease}
                     {#if latestRelease.published_at > addon.updatedAt}
                         <Badge
-                            class="py-1 cursor-pointer flex-shrink-0 flex-grow-0"
-                            variant="default"
-                            onclick={(e) => {
+                                class="py-1 cursor-pointer flex-shrink-0 flex-grow-0"
+                                variant="default"
+                                onclick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
                                 openUpdateDialog = true;
                             }}
                         >
-                            <Download size={14} class="mr-1" />
+                            <Download size={14} class="mr-1"/>
                             Update ({latestRelease.tag_name})
                         </Badge>
                     {:else}
                         <div class="flex justify-center">
-                            <CheckMark size={20} class="text-green-600 mr-2" />
+                            <CheckMark size={20} class="text-green-600 mr-2"/>
                             Up to date
                         </div>
                     {/if}
                 {:else}
                     <div class="flex justify-center">
-                        <CheckMark size={20} class="text-green-600 mr-2" />
+                        <CheckMark size={20} class="text-green-600 mr-2"/>
                         Up to date
                     </div>
                 {/if}
             {:else}
                 <Badge class="py-1 cursor-pointer" variant="warning">
-                    <ShieldQuestion size={14} class="mr-2" />
+                    <ShieldQuestion size={14} class="mr-2"/>
                     Not managed
                 </Badge>
             {/if}
@@ -131,4 +131,4 @@
     </div>
 {/snippet}
 
-<LocalAddonContextMenu {addon} {contextTriggerArea} />
+<LocalAddonContextMenu {addon} {contextTriggerArea}/>
