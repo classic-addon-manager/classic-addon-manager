@@ -1,6 +1,5 @@
 <script lang="ts">
     import aacLogo from "../assets/images/aac-logo-wide.png";
-    import packageJson from "../../package.json";
     import semver from "semver";
 
     import {Button} from "$lib/components/ui/button/index.js";
@@ -16,6 +15,7 @@
     import TroubleshootingItem from "../components/navbar/TroubleshootingItem.svelte";
     import UserBar from "../components/UserBar.svelte";
     import {BrowserOpenURL} from "../../wailsjs/runtime";
+    import {getVersion} from "$stores/ApplicationStore.svelte";
 
     let updateAvailable = $state(false);
     let updateInformation = $state({
@@ -39,7 +39,7 @@
     });
 
     function isNewerVersion(version: string): boolean {
-        return semver.gt(version, packageJson.version);
+        return semver.gt(version, getVersion());
     }
 </script>
 
@@ -97,7 +97,7 @@
 
             <div class="mx-auto mb-2 text-gray-300 text-opacity-40">
                 <span class="hover:text-blue-400 cursor-pointer transition-all"
-                      onclick={() => BrowserOpenURL(`https://github.com/classic-addon-manager/classic-addon-manager/releases/tag/v${packageJson.version}`)}>v{packageJson.version}
+                      onclick={() => BrowserOpenURL(`https://github.com/classic-addon-manager/classic-addon-manager/releases/tag/v${getVersion()}`)}>v{getVersion()}
                     by Sami</span>
             </div>
         </div>

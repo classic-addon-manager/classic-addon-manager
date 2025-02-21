@@ -1,11 +1,11 @@
-import packageJson from '../package.json';
 import {getToken} from "$stores/UserStore.svelte";
+import {getVersion} from "$stores/ApplicationStore.svelte";
 
 const API_URL = 'https://aac.gaijin.dev';
 let DEFAULT_HEADERS = {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
-    'X-Client': packageJson.version,
+    'X-Client': getVersion(),
     'X-Token': ''
 }
 

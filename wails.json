@@ -10,5 +10,9 @@
     "name": "Sami",
     "email": "asjur@proton.me"
   },
-  "devServer": "wails.localhost:80"
+  "devServer": "wails.localhost:80",
+  "info": {
+    "productName": "Classic Addon Manager",
+    "productVersion": "2.2.3"
+  }
 }

@@ -38,6 +38,10 @@ export function GetReleases(arg1) {
   return window['go']['app']['App']['GetReleases'](arg1);
 }
 
+export function GetVersion() {
+  return window['go']['app']['App']['GetVersion']();
+}
+
 export function InstallAddon(arg1) {
   return window['go']['app']['App']['InstallAddon'](arg1);
 }

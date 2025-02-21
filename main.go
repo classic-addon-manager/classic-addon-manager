@@ -4,6 +4,8 @@ import (
 	"ClassicAddonManager/backend/addon"
 	"ClassicAddonManager/backend/app"
 	"ClassicAddonManager/backend/config"
+	"ClassicAddonManager/backend/logger"
+	"encoding/json"
 
 	"embed"
 	"flag"
@@ -18,6 +20,9 @@ import (
 
 //go:embed all:frontend/dist
 var assets embed.FS
+
+//go:embed wails.json
+var wailsConfigData []byte
 
 func main() {
 	addonUpdateMode := flag.Bool("check-updates", false, "Run in headless mode to check for addon updates")
@@ -36,7 +41,18 @@ func main() {
 		os.Exit(0)
 	}
 
-	a := app.NewApp()
+	type AppInfo struct {
+		Info struct {
+			ProductVersion string `json:"productVersion"`
+		} `json:"info"`
+	}
+
+	var w AppInfo
+	if err := json.Unmarshal(wailsConfigData, &w); err != nil {
+		logger.Error("Error unmarshalling wails.json:", err)
+	}
+
+	a := app.NewApp(w.Info.ProductVersion)
 
 	err = wails.Run(&options.App{
 		Title:         "Classic Addon Manager",

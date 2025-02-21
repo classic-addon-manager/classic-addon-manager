@@ -7,8 +7,10 @@ import (
 	"ClassicAddonManager/backend/file"
 	"ClassicAddonManager/backend/github"
 	"ClassicAddonManager/backend/logger"
+	"ClassicAddonManager/backend/shared"
 	"ClassicAddonManager/backend/util"
 	"context"
+	_ "embed"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -26,7 +28,8 @@ type App struct {
 }
 
 // NewApp creates a new App application struct
-func NewApp() *App {
+func NewApp(version string) *App {
+	shared.Version = version
 	return &App{}
 }
 
@@ -95,6 +98,10 @@ func (a *App) Startup(ctx context.Context) {
 	if err != nil {
 		logger.Error("Error loading managed_addons.json:", err)
 	}
+}
+
+func (a *App) GetVersion() string {
+	return shared.Version
 }
 
 func (a *App) GetConfigString(key string) string {

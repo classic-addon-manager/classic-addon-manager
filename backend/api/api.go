@@ -1,7 +1,9 @@
 package api
 
+import "ClassicAddonManager/backend/shared"
+
 const apiUrl = "https://aac.gaijin.dev"
 
 func GetApiClientHeader() string {
-	return "Classic Addon Manager 2.2.2"
+	return "Classic Addon Manager " + shared.Version
 }

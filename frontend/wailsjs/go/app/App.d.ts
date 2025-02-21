@@ -23,6 +23,8 @@ export function GetLatestApplicationRelease():Promise<api.ApplicationRelease>;
 
 export function GetReleases(arg1:string):Promise<Array<github.GithubRelease>>;
 
+export function GetVersion():Promise<string>;
+
 export function InstallAddon(arg1:addon.AddonManifest):Promise<boolean>;
 
 export function IsAddonInstalled(arg1:string):Promise<boolean>;
