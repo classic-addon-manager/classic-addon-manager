@@ -65,12 +65,17 @@
             if (aIsNew && !bIsNew) return -1;
             if (!aIsNew && bIsNew) return 1;
             
-            // Sort alphabetically within the same newness group
-            if (aIsNew === bIsNew) {
-                return a.name.localeCompare(b.name);
+            if (aIsNew && bIsNew) {
+                // Both are new, sort by how new they are (smaller timeAgo = newer)
+                const aTime = timeAgo(a.added_at);
+                const bTime = timeAgo(b.added_at);
+                if (aTime !== bTime) {
+                    return aTime - bTime;
+                }
             }
             
-            return 0;
+            // If not new or same newness, sort alphabetically
+            return a.name.localeCompare(b.name);
         });
         tags.sort((a, b) => a.label.localeCompare(b.label));
         addons = tmp;
