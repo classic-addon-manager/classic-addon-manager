@@ -8,6 +8,7 @@ import (
 	"ClassicAddonManager/backend/util"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -39,12 +40,8 @@ func InstallAddon(manifest AddonManifest) (bool, error) {
 	logger.Info("Installing addon:" + manifest.Name + " from " + manifest.Repo)
 
 	zipName := manifest.Name + ".zip"
-	release, err := api.GetLatestAddonRelease(manifest.Name)
-	if err != nil {
-		return false, err
-	}
 
-	err = util.DownloadFile(release.ZipballUrl, filepath.Join(config.GetCacheDir(), zipName))
+	err := util.DownloadFile(api.ApiURL+fmt.Sprintf("/addon/%s/download", manifest.Name), filepath.Join(config.GetCacheDir(), zipName))
 	if err != nil {
 		return false, err
 	}
@@ -76,10 +73,14 @@ func InstallAddon(manifest AddonManifest) (bool, error) {
 		return false, nil
 	}
 
+	release, err := api.GetLatestAddonRelease(manifest.Name)
+	if err != nil {
+		return false, err
+	}
+
 	AddManagedAddon(manifest, release)
 
 	logger.Info(manifest.Name + " installed successfully")
-	api.SubmitDownload(manifest.Name)
 	return true, nil
 }
 

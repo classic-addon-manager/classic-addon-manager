@@ -12,7 +12,7 @@ import (
 )
 
 func GetLatestAddonRelease(name string) (Release, error) {
-	url := apiUrl + "/latest_release/" + name
+	url := ApiURL + "/latest_release/" + name
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -76,7 +76,7 @@ func GetLatestAddonRelease(name string) (Release, error) {
 }
 
 func GetLatestApplicationRelease() (ApplicationRelease, error) {
-	url := apiUrl + "/latest_application_release"
+	url := ApiURL + "/latest_application_release"
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -121,21 +121,4 @@ func GetLatestApplicationRelease() (ApplicationRelease, error) {
 	}
 
 	return release, nil
-}
-
-func SubmitDownload(name string) {
-	url := apiUrl + "/addon/" + name + "/download"
-	req, err := http.NewRequest("POST", url, nil)
-	if err != nil {
-		logger.Error("SubmitDownload Error:", err)
-		return
-	}
-	req.Header.Set("X-Client", GetApiClientHeader())
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		logger.Error("SubmitDownload Error:", err)
-		return
-	}
-	defer resp.Body.Close()
 }
