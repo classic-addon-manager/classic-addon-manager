@@ -12,6 +12,9 @@
     import {apiClient} from "../../api";
     import {isAuthenticated} from "$stores/UserStore.svelte";
     import {toast} from "../../utils";
+    import RemoteAddonReadme from "./RemoteAddonReadme.svelte";
+    import DOMPurify from "dompurify";
+    import {marked} from "marked";
 
     let {
         open = $bindable(),
@@ -29,6 +32,7 @@
     let isInstalled = $state(false);
     let hasBanner = $state(false);
     let banner: string = $state('');
+    let readme = $state('');
     let rating = $state(0);
     let tabs = $state(getTabs());
 
@@ -67,6 +71,19 @@
         return true;
     }
 
+    async function getReadme(open: boolean) {
+        if (!open) return;
+        const response = await fetch(`https://raw.githubusercontent.com/${addon.repo}/refs/heads/master/README.md`)
+        if (!response.ok) {
+            return;
+        }
+        marked.setOptions({
+            gfm: true,
+            // breaks: true,
+        });
+        readme = DOMPurify.sanitize(await marked.parse(await response.text()));
+    }
+
     async function getRelease(open: boolean) {
         if (!open) return;
         try {
@@ -81,6 +98,7 @@
     $effect(() => {
         getRelease(open);
         getMyRating(open);
+        getReadme(open);
     });
 
     function formatToLocalTime(dateString: string): string {
@@ -229,12 +247,16 @@
                 </Tabs.List>
             {/if}
             <Tabs.Content value="description">
-                <div class="flex flex-1 flex-col max-h-[calc(100vh-30vh)] overflow-auto">
+                <div class="flex flex-1 flex-col max-h-[calc(100vh-47vh)] overflow-auto">
                     {#if hasBanner}
                         <img class="max-h-[40svh] aspect-video object-fill" src={banner} alt=""/>
                     {/if}
                     <div>
-                        <p class="mt-4">{addon.description}</p>
+                        {#if readme === ''}
+                            <p class="mt-4">{addon.description}</p>
+                        {:else}
+                            <RemoteAddonReadme readme={readme}/>
+                        {/if}
                     </div>
                 </div>
             </Tabs.Content>
