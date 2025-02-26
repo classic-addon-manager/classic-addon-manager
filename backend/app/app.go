@@ -12,17 +12,16 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
-	"os"
-	"path/filepath"
-
 	"github.com/sqweek/dialog"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"golang.org/x/sys/windows/registry"
+	"os"
+	"path/filepath"
 )
 
 // App struct
 type App struct {
-	ctx             context.Context
+	Ctx             context.Context
 	installedAddons []addon.Addon
 	addonManifest   []addon.AddonManifest
 }
@@ -73,7 +72,7 @@ func writeDeeplink() {
 // Startup is called when the app starts. The context is saved
 // so we can call the runtime methods
 func (a *App) Startup(ctx context.Context) {
-	a.ctx = ctx
+	a.Ctx = ctx
 
 	writeDeeplink()
 
@@ -121,7 +120,7 @@ func (a *App) SetConfigBool(key string, value bool) {
 }
 
 func (a *App) SelectDirectory() string {
-	dir, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
+	dir, err := runtime.OpenDirectoryDialog(a.Ctx, runtime.OpenDialogOptions{
 		Title: "Select Directory",
 	})
 	if err != nil {

@@ -3,18 +3,24 @@
     import {getUser, setToken, setUser, type User} from "$stores/UserStore.svelte";
     import {onMount} from "svelte";
     import {apiClient} from "../api";
+    import {BrowserOpenURL, EventsOn} from "$lib/wails";
+    import {toast} from "../utils";
 
     let isReady: boolean = $state(false);
     let user: User = $derived(getUser());
 
     onMount(async () => {
+        EventsOn('authTokenReceived', async (token: string) => {
+            setToken(token);
+            await getAccount();
+            toast.success('Successfully signed in');
+        });
         await getAccount();
         isReady = true;
     });
 
     async function getAccount() {
-        const urlParams = new URLSearchParams(window.location.search);
-        let token = urlParams.get('t') || localStorage.getItem('token');
+        let token = localStorage.getItem('token');
         if (token && token != null) {
             setToken(token);
         } else {
@@ -42,7 +48,8 @@
     {#if user.discord_id === ''}
         <div class="mx-auto w-full">
             <a class="flex scale-[85%] items-center py-2 px-4 rounded-lg bg-[#5865F2] hover:bg-[#5865F2]/80 hover:text-white/80 transition-colors duration-300"
-               href="https://discord.com/oauth2/authorize?client_id=1331010099916836914&response_type=code&redirect_uri=https%3A%2F%2Faac.gaijin.dev%2Fauth%2Fdiscord%2Fcallback&scope=identify"
+               onclick={() => BrowserOpenURL('https://discord.com/oauth2/authorize?client_id=1331010099916836914&response_type=code&redirect_uri=https%3A%2F%2Faac.gaijin.dev%2Fauth%2Fdiscord%2Fcallback2&scope=identify')}
+               href="#"
             >
                 <svg viewBox="0 -28.5 256 256" class="h-7 w-7 fill-white hover:fill-white/80 mr-4">
                     <path
