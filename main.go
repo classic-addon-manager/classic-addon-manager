@@ -115,11 +115,7 @@ func startPipeServer(a *app.App) {
 		return
 	}
 	defer listener.Close()
-
-	runtime.EventsOn(a.Ctx, "wails:shutdown", func(optionalData ...interface{}) {
-		_ = listener.Close()
-		_ = os.Remove(pipeName)
-	})
+	defer os.Remove(pipeName)
 
 	for {
 		conn, err := listener.Accept()
