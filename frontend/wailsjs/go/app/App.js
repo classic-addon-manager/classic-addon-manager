@@ -66,6 +66,10 @@ export function SetConfigString(arg1, arg2) {
   return window['go']['app']['App']['SetConfigString'](arg1, arg2);
 }
 
+export function Startup(arg1) {
+  return window['go']['app']['App']['Startup'](arg1);
+}
+
 export function UninstallAddon(arg1) {
   return window['go']['app']['App']['UninstallAddon'](arg1);
 }

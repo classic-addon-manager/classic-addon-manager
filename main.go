@@ -5,6 +5,7 @@ import (
 	"ClassicAddonManager/backend/app"
 	"ClassicAddonManager/backend/config"
 	"ClassicAddonManager/backend/logger"
+	"context"
 	"embed"
 	"encoding/json"
 	"flag"
@@ -72,7 +73,6 @@ func main() {
 	}
 
 	a := app.NewApp(w.Info.ProductVersion)
-	go startPipeServer(a)
 
 	err = wails.Run(&options.App{
 		Title:         "Classic Addon Manager",
@@ -85,7 +85,11 @@ func main() {
 			Assets: assets,
 		},
 		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
-		OnStartup:        a.Startup,
+		OnStartup: func(ctx context.Context) {
+			a.Ctx = ctx
+			a.Startup(ctx)
+			go startPipeServer(a)
+		},
 		Bind: []interface{}{
 			a,
 		},
@@ -111,6 +115,11 @@ func startPipeServer(a *app.App) {
 		return
 	}
 	defer listener.Close()
+
+	runtime.EventsOn(a.Ctx, "wails:shutdown", func(optionalData ...interface{}) {
+		_ = listener.Close()
+		_ = os.Remove(pipeName)
+	})
 
 	for {
 		conn, err := listener.Accept()
@@ -144,6 +153,13 @@ func handlePipeConnection(conn net.Conn, a *app.App) {
 		token := parsedURL.Query().Get("t")
 		if token != "" {
 			logger.Info("Received authentication token")
+			if runtime.WindowIsMinimised(a.Ctx) {
+				runtime.WindowUnminimise(a.Ctx)
+			} else {
+				runtime.WindowMinimise(a.Ctx)
+				runtime.WindowUnminimise(a.Ctx)
+			}
+			runtime.WindowShow(a.Ctx)
 			runtime.EventsEmit(a.Ctx, "authTokenReceived", token)
 		} else {
 			logger.Warn("No token found in deeplink URL")

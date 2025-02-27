@@ -4,6 +4,7 @@ import {util} from '../models';
 import {addon} from '../models';
 import {api} from '../models';
 import {github} from '../models';
+import {context} from '../models';
 
 export function DiagnoseIssues():Promise<Array<util.LogParseResult>>;
 
@@ -36,6 +37,8 @@ export function SelectDirectory():Promise<string>;
 export function SetConfigBool(arg1:string,arg2:boolean):Promise<void>;
 
 export function SetConfigString(arg1:string,arg2:string):Promise<void>;
+
+export function Startup(arg1:context.Context):Promise<void>;
 
 export function UninstallAddon(arg1:string):Promise<boolean>;
 
