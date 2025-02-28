@@ -10,9 +10,9 @@
     import AACWebsiteItem from "../components/navbar/AACWebsiteItem.svelte";
 
     import {
-        BrowserOpenURL,
         ApplicationService
     } from "$lib/wails";
+    import {Browser} from "@wailsio/runtime"
 
     import {onMount} from "svelte";
     import TroubleshootingItem from "../components/navbar/TroubleshootingItem.svelte";
@@ -85,7 +85,7 @@
                             <Button
                                     size="sm"
                                     class="w-full"
-                                    onclick={() => BrowserOpenURL(updateInformation.url)}
+                                    onclick={() => Browser.OpenURL(updateInformation.url)}
                             >Download
                             </Button>
                         </Card.Content>
@@ -99,7 +99,7 @@
 
             <div class="mx-auto mb-2 text-gray-300 text-opacity-40">
                 <span class="hover:text-blue-400 cursor-pointer transition-all"
-                      onclick={() => BrowserOpenURL(`https://github.com/classic-addon-manager/classic-addon-manager/releases/tag/v${getVersion()}`)}>v{getVersion()}
+                      onclick={() => Browser.OpenURL(`https://github.com/classic-addon-manager/classic-addon-manager/releases/tag/v${getVersion()}`)}>v{getVersion()}
                     by Sami</span>
             </div>
         </div>

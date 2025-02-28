@@ -4,7 +4,9 @@
 
 import * as ApplicationService from "./applicationservice.js";
 import * as LocalAddonService from "./localaddonservice.js";
+import * as RemoteAddonService from "./remoteaddonservice.js";
 export {
     ApplicationService,
-    LocalAddonService
+    LocalAddonService,
+    RemoteAddonService
 };

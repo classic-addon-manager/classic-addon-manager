@@ -11,10 +11,10 @@ import {Call as $Call, Create as $Create} from "@wailsio/runtime";
 import * as addon$0 from "../addon/models.js";
 
 /**
- * @returns {Promise<addon$0.Addon[]> & { cancel(): void }}
+ * @returns {Promise<addon$0.AddonManifest[]> & { cancel(): void }}
  */
-export function GetAddOns() {
-    let $resultPromise = /** @type {any} */($Call.ByID(2878170703));
+export function GetAddonManifest() {
+    let $resultPromise = /** @type {any} */($Call.ByID(1299347432));
     let $typingPromise = /** @type {any} */($resultPromise.then(($result) => {
         return $$createType1($result);
     }));
@@ -23,23 +23,14 @@ export function GetAddOns() {
 }
 
 /**
- * @param {string} name
+ * @param {addon$0.AddonManifest} ad
  * @returns {Promise<boolean> & { cancel(): void }}
  */
-export function UninstallAddon(name) {
-    let $resultPromise = /** @type {any} */($Call.ByID(1232731120, name));
-    return $resultPromise;
-}
-
-/**
- * @param {string} name
- * @returns {Promise<boolean> & { cancel(): void }}
- */
-export function UnmanageAddon(name) {
-    let $resultPromise = /** @type {any} */($Call.ByID(3070706926, name));
+export function InstallAddon(ad) {
+    let $resultPromise = /** @type {any} */($Call.ByID(699642360, ad));
     return $resultPromise;
 }
 
 // Private type creation functions
-const $$createType0 = addon$0.Addon.createFrom;
+const $$createType0 = addon$0.AddonManifest.createFrom;
 const $$createType1 = $Create.Array($$createType0);

@@ -90,50 +90,6 @@ func (a *App) SelectDirectory() string {
 	return dir
 }
 
-func (a *App) GetAddOns() []addon.Addon {
-	return addon.GetAddons()
-}
-
-func (a *App) GetAddonManifest() []addon.AddonManifest {
-	return addon.GetAddonManifest()
-}
-
-func (a *App) InstallAddon(ad addon.AddonManifest) (bool, error) {
-	_, err := addon.InstallAddon(ad)
-	if err != nil {
-		logger.Error("Error installing addon:", err)
-		return false, err
-	}
-
-	ok := addon.AddToAddonsTxt(ad.Name)
-	if !ok {
-		logger.Warn(ad.Name + " - Error adding addon to addons.txt")
-	}
-
-	return ok, nil
-}
-
-func (a *App) UninstallAddon(name string) bool {
-	if addon.IsInstalled(name) == false {
-		return false
-	}
-
-	ok, err := file.RemoveDir(filepath.Join(config.GetAddonDir(), name))
-	if err != nil {
-		logger.Error("Error removing addon directory:", err)
-		return false
-	}
-	if !ok {
-		return false
-	}
-
-	return addon.RemoveManagedAddon(name) && addon.RemoveFromAddonsTxt(name)
-}
-
-func (a *App) UnmanageAddon(name string) bool {
-	return addon.RemoveManagedAddon(name)
-}
-
 func (a *App) IsAddonInstalled(name string) bool {
 	return addon.IsInstalled(name)
 }

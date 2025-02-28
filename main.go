@@ -64,6 +64,7 @@ func main() {
 		Services: []application.Service{
 			application.NewService(&services.LocalAddonService{}),
 			application.NewService(&services.ApplicationService{}),
+			application.NewService(&services.RemoteAddonService{}),
 		},
 	})
 
