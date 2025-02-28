@@ -1,21 +1,21 @@
 <script lang="ts">
     import type {Snippet} from "svelte";
-    import {addon as ad} from "$lib/wails";
     import * as ContextMenu from "$lib/components/ui/context-menu/index.js";
     import Trash from "lucide-svelte/icons/trash";
     import AlertTriangle from "lucide-svelte/icons/alert-triangle";
     import Bug from "lucide-svelte/icons/bug";
     import Github from "lucide-svelte/icons/github";
     import addons from "../../addons";
-    import {BrowserOpenURL} from "$lib/wails";
+    import type {Addon} from "$lib/wails";
     import {toast} from "../../utils";
+    import {Browser} from "@wailsio/runtime"
 
     let {
         contextTriggerArea,
         addon,
     }: {
         contextTriggerArea: Snippet;
-        addon: ad.Addon;
+        addon: Addon;
     } = $props();
 
     async function handleUninstall() {
@@ -50,14 +50,14 @@
         {#if addon.isManaged}
             <ContextMenu.Item
                     class="gap-3"
-                    onclick={() => BrowserOpenURL(`https://github.com/${addon.repo}`)}
+                    onclick={() => Browser.OpenURL(`https://github.com/${addon.repo}`)}
             >
                 <Github size={16}/>
                 View code
             </ContextMenu.Item>
             <ContextMenu.Item
                     class="gap-2"
-                    onclick={() => BrowserOpenURL(`https://github.com/${addon.repo}/issues/new`)}
+                    onclick={() => Browser.OpenURL(`https://github.com/${addon.repo}/issues/new`)}
             >
                 <Bug size={16}/>
                 Report issue

@@ -13,13 +13,13 @@
     import LoaderCircle from "lucide-svelte/icons/loader-circle";
 
     import {getInstalledAddons} from "$stores/AddonStore.svelte";
-    import {addon} from "$lib/wails";
+    import type {Addon} from "$lib/wails";
     import {setUpdatesAvailableCount} from "$stores/AddonStore.svelte";
 
     import LocalAddon from "../components/LocalAddon.svelte";
     import {onMount} from "svelte";
 
-    let localAddons: Array<addon.Addon> = $state([]);
+    let localAddons: Array<Addon> = $state([]);
     let isCheckingForUpdates = $state(false);
     onMount(() => {
         setUpdatesAvailableCount(0);

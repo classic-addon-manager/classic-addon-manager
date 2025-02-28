@@ -1,10 +1,11 @@
 <script lang="ts">
     import * as Dialog from "$lib/components/ui/dialog/index";
     import * as Tabs from "$lib/components/ui/tabs/index";
-    import {addon as ad, api} from "$lib/wails";
+    import type {AddonManifest, Release} from "$lib/wails";
     import {onMount} from "svelte";
-    import addons from "../../addons.js";
-    import {GetLatestAddonRelease as GoGetLatestRelease, IsAddonInstalled, BrowserOpenURL} from "$lib/wails";
+    import addons from "../../addons";
+    import {LocalAddonService, RemoteAddonService} from "$lib/wails";
+    import {Browser} from "@wailsio/runtime"
     import {Button} from "$lib/components/ui/button";
     import {GithubIcon, BugIcon} from "lucide-svelte";
     import Like from "lucide-svelte/icons/thumbs-up";
@@ -25,10 +26,10 @@
         open: boolean;
         onOpenChange: (open: boolean) => void;
         onInstall: (installed: boolean) => void;
-        addon: ad.AddonManifest;
+        addon: AddonManifest;
     } = $props();
 
-    let release: api.Release | undefined = $state();
+    let release: Release | undefined = $state();
     let isInstalled = $state(false);
     let hasBanner = $state(false);
     let banner: string = $state('');
@@ -37,7 +38,7 @@
     let tabs = $state(getTabs());
 
     onMount(async () => {
-        isInstalled = await IsAddonInstalled(addon.name);
+        isInstalled = await LocalAddonService.IsInstalled(addon.name);
         hasBanner = await checkForBanner();
         tabs = getTabs();
     });
@@ -87,7 +88,7 @@
     async function getRelease(open: boolean) {
         if (!open) return;
         try {
-            release = await GoGetLatestRelease(addon.name);
+            release = await RemoteAddonService.GetLatestRelease(addon.name);
         } catch (e) {
             toast.error(`Failed to fetch release information for ${addon.name}`);
             console.error(e);
@@ -211,7 +212,7 @@
                     <div class="flex gap-4">
                         <a href="javascript: void(0);"
                            class="text-muted-foreground text-sm hover:text-blue-500 transition duration-300 ease-in-out"
-                           onclick={() => BrowserOpenURL(`https://github.com/${addon.repo}`)}>
+                           onclick={() => Browser.OpenURL(`https://github.com/${addon.repo}`)}>
                             <div class="flex items-center">
                                 <GithubIcon class="w-4 h-4 mr-1"/>
                                 View code
@@ -219,7 +220,7 @@
                         </a>
                         <a href="javascript: void(0);"
                            class="text-muted-foreground text-sm hover:text-blue-500 transition duration-300 ease-in-out"
-                           onclick={() => BrowserOpenURL(`https://github.com/${addon.repo}/issues/new`)}>
+                           onclick={() => Browser.OpenURL(`https://github.com/${addon.repo}/issues/new`)}>
                             <div class="flex items-center">
                                 <BugIcon class="w-4 h-4 mr-1"/>
                                 Report issue
@@ -272,7 +273,7 @@
                     <Button
                             class="mt-2 mx-auto"
                             variant="default"
-                            onclick={() => BrowserOpenURL(`https://ko-fi.com/${addon.kofi}`)}
+                            onclick={() => Browser.OpenURL(`https://ko-fi.com/${addon.kofi}`)}
                     >
                         Support {addon.author} on Ko-fi
                     </Button>

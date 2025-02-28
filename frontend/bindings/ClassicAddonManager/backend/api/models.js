@@ -6,6 +6,10 @@
 // @ts-ignore: Unused imports
 import {Create as $Create} from "@wailsio/runtime";
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as time$0 from "../../../time/models.js";
+
 export class ApplicationRelease {
     /**
      * Creates a new ApplicationRelease instance.
@@ -40,3 +44,115 @@ export class ApplicationRelease {
         return new ApplicationRelease(/** @type {Partial<ApplicationRelease>} */($$parsedSource));
     }
 }
+
+export class Release {
+    /**
+     * Creates a new Release instance.
+     * @param {Partial<Release>} [$$source = {}] - The source object to create the Release.
+     */
+    constructor($$source = {}) {
+        if (!("zipball_url" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["zipball_url"] = "";
+        }
+        if (!("tag_name" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["tag_name"] = "";
+        }
+        if (!("body" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["body"] = "";
+        }
+        if (!("published_at" in $$source)) {
+            /**
+             * @member
+             * @type {time$0.Time}
+             */
+            this["published_at"] = null;
+        }
+        if (!("tag" in $$source)) {
+            /**
+             * @member
+             * @type {Tag}
+             */
+            this["tag"] = (new Tag());
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new Release instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {Release}
+     */
+    static createFrom($$source = {}) {
+        const $$createField4_0 = $$createType0;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("tag" in $$parsedSource) {
+            $$parsedSource["tag"] = $$createField4_0($$parsedSource["tag"]);
+        }
+        return new Release(/** @type {Partial<Release>} */($$parsedSource));
+    }
+}
+
+export class Tag {
+    /**
+     * Creates a new Tag instance.
+     * @param {Partial<Tag>} [$$source = {}] - The source object to create the Tag.
+     */
+    constructor($$source = {}) {
+        if (!("ref" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["ref"] = "";
+        }
+        if (!("sha" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["sha"] = "";
+        }
+        if (!("type" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["type"] = "";
+        }
+        if (!("url" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["url"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new Tag instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {Tag}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new Tag(/** @type {Partial<Tag>} */($$parsedSource));
+    }
+}
+
+// Private type creation functions
+const $$createType0 = Tag.createFrom;

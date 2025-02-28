@@ -1,8 +1,8 @@
 <script lang="ts">
     import {onDestroy, onMount} from "svelte";
-    import {addon as ad, api} from "$lib/wails";
+    import type {Addon, Release} from "$lib/wails";
     import {addUpdateAvailableCount} from "$stores/AddonStore.svelte";
-    import {GetLatestAddonRelease as GoGetLatestRelease} from "$lib/wails";
+    import {RemoteAddonService} from "$lib/wails";
     import LocalAddonContextMenu from "./local_addon/LocalAddonContextMenu.svelte";
     import LocalAddonDialog from "./local_addon/LocalAddonDialog.svelte";
     import LoaderCircle from "lucide-svelte/icons/loader-circle";
@@ -13,12 +13,12 @@
     import LocalAddonUpdateDialog from "./local_addon/LocalAddonUpdateDialog.svelte";
 
     interface Props {
-        addon: ad.Addon;
+        addon: Addon;
     }
 
     let {addon}: Props = $props();
 
-    let latestRelease: api.Release | undefined = $state();
+    let latestRelease: Release | undefined = $state();
     let isCheckingForUpdates = $state(false);
     let openDialog = $state(false);
     let openUpdateDialog = $state(false);
@@ -34,9 +34,9 @@
     async function handleCheckUpdates() {
         isCheckingForUpdates = true;
         console.log("Checking for updates for addon: ", addon.name);
-        let release: api.Release | undefined;
+        let release: Release | undefined;
         try {
-            release = await GoGetLatestRelease(addon.name);
+            release = await RemoteAddonService.GetLatestRelease(addon.name);
         } catch (e) {
             console.error("Failed to get release for addon: ", addon.name);
             isCheckingForUpdates = false;

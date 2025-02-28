@@ -9,6 +9,21 @@ import {Call as $Call, Create as $Create} from "@wailsio/runtime";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as addon$0 from "../addon/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as util$0 from "../util/models.js";
+
+/**
+ * @returns {Promise<util$0.LogParseResult[]> & { cancel(): void }}
+ */
+export function DiagnoseIssues() {
+    let $resultPromise = /** @type {any} */($Call.ByID(3592862068));
+    let $typingPromise = /** @type {any} */($resultPromise.then(($result) => {
+        return $$createType1($result);
+    }));
+    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
+    return $typingPromise;
+}
 
 /**
  * @returns {Promise<addon$0.Addon[]> & { cancel(): void }}
@@ -16,10 +31,27 @@ import * as addon$0 from "../addon/models.js";
 export function GetAddOns() {
     let $resultPromise = /** @type {any} */($Call.ByID(2878170703));
     let $typingPromise = /** @type {any} */($resultPromise.then(($result) => {
-        return $$createType1($result);
+        return $$createType3($result);
     }));
     $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
     return $typingPromise;
+}
+
+/**
+ * @param {string} name
+ * @returns {Promise<boolean> & { cancel(): void }}
+ */
+export function IsInstalled(name) {
+    let $resultPromise = /** @type {any} */($Call.ByID(1402407262, name));
+    return $resultPromise;
+}
+
+/**
+ * @returns {Promise<void> & { cancel(): void }}
+ */
+export function ResetSettings() {
+    let $resultPromise = /** @type {any} */($Call.ByID(2422655942));
+    return $resultPromise;
 }
 
 /**
@@ -41,5 +73,7 @@ export function UnmanageAddon(name) {
 }
 
 // Private type creation functions
-const $$createType0 = addon$0.Addon.createFrom;
+const $$createType0 = util$0.LogParseResult.createFrom;
 const $$createType1 = $Create.Array($$createType0);
+const $$createType2 = addon$0.Addon.createFrom;
+const $$createType3 = $Create.Array($$createType2);

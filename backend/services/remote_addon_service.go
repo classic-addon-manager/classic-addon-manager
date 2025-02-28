@@ -2,6 +2,7 @@ package services
 
 import (
 	"ClassicAddonManager/backend/addon"
+	"ClassicAddonManager/backend/api"
 	"ClassicAddonManager/backend/logger"
 )
 
@@ -24,4 +25,12 @@ func (s *RemoteAddonService) InstallAddon(ad addon.AddonManifest) (bool, error) 
 	}
 
 	return ok, nil
+}
+func (s *RemoteAddonService) GetLatestRelease(name string) (api.Release, error) {
+	release, err := api.GetLatestAddonRelease(name)
+	if err != nil {
+		logger.Error("Error getting latest release:", err)
+		return api.Release{}, err
+	}
+	return release, nil
 }

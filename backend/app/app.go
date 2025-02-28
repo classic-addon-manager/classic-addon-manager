@@ -2,13 +2,11 @@ package app
 
 import (
 	"ClassicAddonManager/backend/addon"
-	"ClassicAddonManager/backend/api"
 	"ClassicAddonManager/backend/config"
 	"ClassicAddonManager/backend/file"
 	"ClassicAddonManager/backend/github"
 	"ClassicAddonManager/backend/logger"
 	"ClassicAddonManager/backend/shared"
-	"ClassicAddonManager/backend/util"
 	"context"
 	_ "embed"
 	"encoding/json"
@@ -90,21 +88,8 @@ func (a *App) SelectDirectory() string {
 	return dir
 }
 
-func (a *App) IsAddonInstalled(name string) bool {
-	return addon.IsInstalled(name)
-}
-
 func (a *App) GetAddonManifests() []addon.AddonManifest {
 	return addon.GetAddonManifest()
-}
-
-func (a *App) GetLatestAddonRelease(name string) (api.Release, error) {
-	release, err := api.GetLatestAddonRelease(name)
-	if err != nil {
-		logger.Error("Error getting latest release:", err)
-		return api.Release{}, err
-	}
-	return release, nil
 }
 
 func (a *App) GetReleases(repo string) ([]github.GithubRelease, error) {
@@ -114,17 +99,4 @@ func (a *App) GetReleases(repo string) ([]github.GithubRelease, error) {
 		return []github.GithubRelease{}, err
 	}
 	return releases, nil
-}
-
-func (a *App) ResetAddonSettings() error {
-	err := addon.ResetAddonSettings()
-	if err != nil {
-		logger.Error("Error resetting addon settings:", err)
-		return err
-	}
-	return nil
-}
-
-func (a *App) DiagnoseIssues() ([]util.LogParseResult, error) {
-	return util.DiagnoseIssues()
 }
