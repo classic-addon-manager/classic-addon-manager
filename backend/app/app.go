@@ -3,16 +3,11 @@ package app
 import (
 	"ClassicAddonManager/backend/addon"
 	"ClassicAddonManager/backend/config"
-	"ClassicAddonManager/backend/file"
 	"ClassicAddonManager/backend/github"
 	"ClassicAddonManager/backend/logger"
 	"ClassicAddonManager/backend/shared"
 	"context"
 	_ "embed"
-	"encoding/json"
-	"path/filepath"
-
-	"github.com/sqweek/dialog"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
@@ -27,34 +22,6 @@ type App struct {
 func NewApp(version string) *App {
 	shared.Version = version
 	return &App{}
-}
-
-// Startup is called when the app starts. The context is saved
-// so we can call the runtime methods
-func (a *App) Startup(ctx context.Context) {
-	a.Ctx = ctx
-
-	if !file.FileExists(filepath.Join(config.GetAddonDir(), "addons.txt")) {
-		addon.CreateAddonsTxt()
-	}
-
-	if !file.FileExists(filepath.Join(config.GetDataDir(), "managed_addons.json")) {
-		jsonData, err := json.Marshal([]addon.Addon{})
-		if err != nil {
-			logger.Error("Error creating managed_addons.json:", err)
-			return
-		}
-		err = file.WriteJSON(filepath.Join(config.GetDataDir(), "managed_addons.json"), jsonData)
-		if err != nil {
-			dialog.Message("Error writing managed_addons.json: %s", err).Title("Classic Addon Manager Error").Error()
-			logger.Error("Error writing managed_addons.json:", err)
-		}
-	}
-
-	err := addon.LoadManagedAddonsFile()
-	if err != nil {
-		logger.Error("Error loading managed_addons.json:", err)
-	}
 }
 
 func (a *App) GetVersion() string {

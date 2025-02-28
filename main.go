@@ -3,15 +3,18 @@ package main
 import (
 	"ClassicAddonManager/backend/addon"
 	"ClassicAddonManager/backend/config"
+	"ClassicAddonManager/backend/file"
 	"ClassicAddonManager/backend/logger"
 	"ClassicAddonManager/backend/services"
 	"ClassicAddonManager/backend/shared"
 	"embed"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"net"
 	"net/url"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/Microsoft/go-winio"
@@ -72,6 +75,7 @@ func main() {
 		_ = event.Context()
 		writeDeeplink()
 		go startPipeServer(a)
+		startup()
 	})
 	shared.Version = "2.2.4"
 
@@ -195,4 +199,28 @@ func writeDeeplink() {
 	}
 
 	logger.Info("Deeplink key created successfully")
+}
+
+func startup() {
+	if !file.FileExists(filepath.Join(config.GetAddonDir(), "addons.txt")) {
+		addon.CreateAddonsTxt()
+	}
+
+	if !file.FileExists(filepath.Join(config.GetDataDir(), "managed_addons.json")) {
+		jsonData, err := json.Marshal([]addon.Addon{})
+		if err != nil {
+			logger.Error("Error creating managed_addons.json:", err)
+			return
+		}
+		err = file.WriteJSON(filepath.Join(config.GetDataDir(), "managed_addons.json"), jsonData)
+		if err != nil {
+			dialog.Message("Error writing managed_addons.json: %s", err).Title("Classic Addon Manager Error").Error()
+			logger.Error("Error writing managed_addons.json:", err)
+		}
+	}
+
+	err := addon.LoadManagedAddonsFile()
+	if err != nil {
+		logger.Error("Error loading managed_addons.json:", err)
+	}
 }
