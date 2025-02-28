@@ -2,33 +2,28 @@ package main
 
 import (
 	"ClassicAddonManager/backend/addon"
-	"ClassicAddonManager/backend/app"
 	"ClassicAddonManager/backend/config"
 	"ClassicAddonManager/backend/logger"
-	"context"
+	"ClassicAddonManager/backend/services"
+	"ClassicAddonManager/backend/shared"
 	"embed"
-	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/Microsoft/go-winio"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"net"
 	"net/url"
 	"os"
 	"time"
 
+	"github.com/Microsoft/go-winio"
+	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/events"
+	"golang.org/x/sys/windows/registry"
+
 	"github.com/sqweek/dialog"
-	"github.com/wailsapp/wails/v2"
-	"github.com/wailsapp/wails/v2/pkg/options"
-	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
-	"github.com/wailsapp/wails/v2/pkg/options/windows"
 )
 
 //go:embed all:frontend/dist
 var assets embed.FS
-
-//go:embed wails.json
-var wailsConfigData []byte
 
 const pipeName = `\\.\pipe\ClassicAddonManagerPipe`
 
@@ -61,20 +56,36 @@ func main() {
 		os.Exit(0)
 	}
 
-	type AppInfo struct {
-		Info struct {
-			ProductVersion string `json:"productVersion"`
-		} `json:"info"`
-	}
+	a := application.New(application.Options{
+		Name: "Classic Addon Manager",
+		Assets: application.AssetOptions{
+			Handler: application.AssetFileServerFS(assets),
+		},
+		Services: []application.Service{
+			application.NewService(&services.LocalAddonService{}),
+			application.NewService(&services.ApplicationService{}),
+		},
+	})
 
-	var w AppInfo
-	if err := json.Unmarshal(wailsConfigData, &w); err != nil {
-		logger.Error("Error unmarshalling wails.json:", err)
-	}
+	a.OnApplicationEvent(events.Common.ApplicationStarted, func(event *application.ApplicationEvent) {
+		_ = event.Context()
+		writeDeeplink()
+		go startPipeServer(a)
+	})
+	shared.Version = "2.2.4"
 
-	a := app.NewApp(w.Info.ProductVersion)
+	a.NewWebviewWindowWithOptions(application.WebviewWindowOptions{
+		Title:            "Classic Addon Manager",
+		Name:             "main",
+		Width:            950,
+		Height:           600,
+		MinHeight:        600,
+		MinWidth:         950,
+		DisableResize:    false,
+		BackgroundColour: application.NewRGBA(27, 38, 54, 1),
+	})
 
-	err = wails.Run(&options.App{
+	/* err = wails.Run(&options.App{
 		Title:         "Classic Addon Manager",
 		Width:         950,
 		Height:        600,
@@ -96,14 +107,16 @@ func main() {
 		Windows: &windows.Options{
 			DisablePinchZoom: true,
 		},
-	})
+	}) */
+
+	err = a.Run()
 
 	if err != nil {
 		println("Error:", err.Error())
 	}
 }
 
-func startPipeServer(a *app.App) {
+func startPipeServer(a *application.App) {
 	// Check if the pipe already exists and remove it
 	if _, err := os.Stat(pipeName); err == nil {
 		_ = os.Remove(pipeName)
@@ -128,7 +141,7 @@ func startPipeServer(a *app.App) {
 	}
 }
 
-func handlePipeConnection(conn net.Conn, a *app.App) {
+func handlePipeConnection(conn net.Conn, a *application.App) {
 	defer conn.Close()
 
 	var deeplink string
@@ -148,17 +161,61 @@ func handlePipeConnection(conn net.Conn, a *app.App) {
 	if parsedURL.Host == "auth" {
 		token := parsedURL.Query().Get("t")
 		if token != "" {
+			// FIXME: Handle focus
 			logger.Info("Received authentication token")
-			if runtime.WindowIsMinimised(a.Ctx) {
-				runtime.WindowUnminimise(a.Ctx)
+			mainWindow := application.Get().GetWindowByName("main")
+			if mainWindow.IsMinimised() {
+				mainWindow.UnMinimise()
 			} else {
-				runtime.WindowMinimise(a.Ctx)
-				runtime.WindowUnminimise(a.Ctx)
+				mainWindow.Minimise()
+				mainWindow.UnMinimise()
+				mainWindow.Focus()
 			}
-			runtime.WindowShow(a.Ctx)
-			runtime.EventsEmit(a.Ctx, "authTokenReceived", token)
+			mainWindow.EmitEvent("authTokenReceived", token)
 		} else {
 			logger.Warn("No token found in deeplink URL")
 		}
 	}
+}
+
+func writeDeeplink() {
+	protocol := "classicaddonmanager"
+	regPath := `Software\Classes\` + protocol
+
+	key, _, err := registry.CreateKey(registry.CURRENT_USER, regPath, registry.SET_VALUE)
+	if err != nil {
+		logger.Error("Failed to create registry key: %s", err)
+		return
+	}
+	defer key.Close()
+
+	if err := key.SetStringValue("", "URL:"+protocol); err != nil {
+		logger.Error("Failed to set registry value: %s", err)
+		return
+	}
+	if err := key.SetStringValue("URL Protocol", ""); err != nil {
+		logger.Error("Failed to set registry value: %s", err)
+		return
+	}
+
+	shellKey, _, err := registry.CreateKey(key, `shell\open\command`, registry.SET_VALUE)
+	if err != nil {
+		logger.Error("Failed to create registry key: %s", err)
+		return
+	}
+	defer shellKey.Close()
+
+	exePath, err := os.Executable()
+	if err != nil {
+		logger.Error("Failed to get executable path: %s", err)
+		return
+	}
+	// Sets current executable as the handler for the protocol
+	command := `"` + exePath + `" "%1"`
+	if err := shellKey.SetStringValue("", command); err != nil {
+		logger.Error("Failed to set registry value: %s", err)
+		return
+	}
+
+	logger.Info("Deeplink key created successfully")
 }

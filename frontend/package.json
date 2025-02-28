@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build:dev": "vite build --minify false --mode development",
+    "build": "vite build --mode production",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json"
   },
@@ -33,6 +34,7 @@
     "vite": "^5.4.12"
   },
   "dependencies": {
+    "@wailsio/runtime": "^3.0.0-alpha.66",
     "dompurify": "^3.2.4",
     "marked": "^15.0.7",
     "semver": "^7.6.3",

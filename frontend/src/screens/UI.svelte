@@ -9,7 +9,10 @@
     import AddonsItem from "../components/navbar/AddonsItem.svelte";
     import AACWebsiteItem from "../components/navbar/AACWebsiteItem.svelte";
 
-    import {GetLatestApplicationRelease as GoGetLatestApplicationRelease, BrowserOpenURL} from "$lib/wails";
+    import {
+        BrowserOpenURL,
+        ApplicationService
+    } from "$lib/wails";
 
     import {onMount} from "svelte";
     import TroubleshootingItem from "../components/navbar/TroubleshootingItem.svelte";
@@ -26,7 +29,7 @@
 
     onMount(async () => {
         try {
-            updateInformation = await GoGetLatestApplicationRelease();
+            updateInformation = await ApplicationService.GetLatestRelease();
         } catch (e) {
             console.error("Failed to get latest release: ", e);
             return;

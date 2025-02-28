@@ -12,11 +12,10 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"path/filepath"
+
 	"github.com/sqweek/dialog"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
-	"golang.org/x/sys/windows/registry"
-	"os"
-	"path/filepath"
 )
 
 // App struct
@@ -32,49 +31,10 @@ func NewApp(version string) *App {
 	return &App{}
 }
 
-func writeDeeplink() {
-	protocol := "classicaddonmanager"
-	regPath := `Software\Classes\` + protocol
-
-	key, _, err := registry.CreateKey(registry.CURRENT_USER, regPath, registry.SET_VALUE)
-	if err != nil {
-		logger.Error("Failed to create registry key: %s", err)
-		return
-	}
-	defer key.Close()
-
-	if err := key.SetStringValue("", "URL:"+protocol); err != nil {
-		logger.Error("Failed to set registry value: %s", err)
-		return
-	}
-	if err := key.SetStringValue("URL Protocol", ""); err != nil {
-		logger.Error("Failed to set registry value: %s", err)
-		return
-	}
-
-	shellKey, _, err := registry.CreateKey(key, `shell\open\command`, registry.SET_VALUE)
-	if err != nil {
-		logger.Error("Failed to create registry key: %s", err)
-		return
-	}
-	defer shellKey.Close()
-
-	// Sets current executable as the handler for the protocol
-	command := `"` + os.Args[0] + `" "%1"`
-	if err := shellKey.SetStringValue("", command); err != nil {
-		logger.Error("Failed to set registry value: %s", err)
-		return
-	}
-
-	logger.Info("Deeplink key created successfully")
-}
-
 // Startup is called when the app starts. The context is saved
 // so we can call the runtime methods
 func (a *App) Startup(ctx context.Context) {
 	a.Ctx = ctx
-
-	writeDeeplink()
 
 	if !file.FileExists(filepath.Join(config.GetAddonDir(), "addons.txt")) {
 		addon.CreateAddonsTxt()
@@ -198,15 +158,6 @@ func (a *App) GetReleases(repo string) ([]github.GithubRelease, error) {
 		return []github.GithubRelease{}, err
 	}
 	return releases, nil
-}
-
-func (a *App) GetLatestApplicationRelease() (api.ApplicationRelease, error) {
-	release, err := api.GetLatestApplicationRelease()
-	if err != nil {
-		logger.Error("Error getting latest application release:", err)
-		return api.ApplicationRelease{}, err
-	}
-	return release, nil
 }
 
 func (a *App) ResetAddonSettings() error {

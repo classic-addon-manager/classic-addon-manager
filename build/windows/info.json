@@ -1,15 +1,15 @@
 {
 	"fixed": {
-		"file_version": "{{.Info.ProductVersion}}"
+		"file_version": "2.2.4"
 	},
 	"info": {
 		"0000": {
-			"ProductVersion": "{{.Info.ProductVersion}}",
-			"CompanyName": "{{.Info.CompanyName}}",
-			"FileDescription": "{{.Info.ProductName}}",
-			"LegalCopyright": "{{.Info.Copyright}}",
-			"ProductName": "{{.Info.ProductName}}",
-			"Comments": "{{.Info.Comments}}"
+			"ProductVersion": "2.2.4",
+			"CompanyName": "Sami",
+			"FileDescription": "An addon manager for ArcheAge Classic",
+			"LegalCopyright": "(c) 2025, Sami",
+			"ProductName": "Classic Addon Manager",
+			"Comments": "Classic Addon Manager"
 		}
 	}
 }

@@ -5,4 +5,6 @@ node_modules
 frontend/dist
 frontend/.vscode
 .idea
+.task
 /ClassicAddonManager.exe
+/wails_windows_amd64.syso

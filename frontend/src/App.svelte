@@ -1,14 +1,15 @@
 <script lang="ts">
     import "./app.css";
+     import "@wailsio/runtime"
     import {Toaster} from "$lib/components/ui/sonner/index.js";
     import {onMount} from "svelte";
     import addons from "./addons";
     import UI from "./screens/UI.svelte";
     import {setVersion} from "$stores/ApplicationStore.svelte";
-    import {GetVersion as GoGetVersion} from "$lib/wails"
+    import {ApplicationService} from "$lib/wails"
 
     onMount(async () => {
-        setVersion(await GoGetVersion())
+        setVersion(await ApplicationService.GetVersion())
         await addons.populateAddonStore();
     });
 </script>

@@ -1,4 +1,5 @@
 import {
+    LocalAddonService,
     GetAddOns as GoGetAddOns,
     UninstallAddon as GoUninstallAddon,
     InstallAddon as GoInstallAddon,
@@ -42,8 +43,7 @@ async function install(manifest: addon.AddonManifest): Promise<boolean> {
 }
 
 async function populateAddonStore(): Promise<void> {
-    const addons = await GoGetAddOns();
-    setAddons(addons);
+    setAddons((await LocalAddonService.GetAddOns()));
 }
 
 async function uninstall(addon: string): Promise<boolean> {
