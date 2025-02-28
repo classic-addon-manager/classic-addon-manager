@@ -2,8 +2,9 @@
     import aacLogo from "../assets/images/aac-logo-wide.png";
     import semver from "semver";
 
-    import {Button} from "$lib/components/ui/button/index.js";
+    import {Button} from "$lib/components/ui/button/index";
     import * as Card from "$lib/components/ui/card/index";
+    import LoaderCircle from "lucide-svelte/icons/loader-circle";
     import {getActiveScreen} from "../stores/ScreenStore.svelte";
     import DashboardItem from "../components/navbar/DashboardItem.svelte";
     import AddonsItem from "../components/navbar/AddonsItem.svelte";
@@ -24,6 +25,7 @@
         version: "",
         url: "",
     });
+    let isUpdating = $state(false);
 
     let ActiveScreen = $derived.by(() => getActiveScreen())
 
@@ -78,15 +80,24 @@
                                 Version {updateInformation.version} is available.
                                 <br/>
                                 <br/>
-                                Click the button below to download it.
+                                Click the button below to update.
                             </Card.Description>
                         </Card.Header>
                         <Card.Content class="p-2 pt-0 md:p-4 md:pt-0">
                             <Button
                                     size="sm"
                                     class="w-full"
-                                    onclick={() => Browser.OpenURL(updateInformation.url)}
-                            >Download
+                                    onclick={() => {
+                                        isUpdating = true;
+                                        ApplicationService.SelfUpdate(updateInformation.url)
+                                    }}
+                            >
+                                {#if isUpdating}
+                                    <LoaderCircle class="mr-2 size-4 animate-spin"/>
+                                    Updating...
+                                {:else}
+                                    Update
+                                {/if}
                             </Button>
                         </Card.Content>
                     </Card.Root>

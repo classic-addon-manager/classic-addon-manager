@@ -30,5 +30,14 @@ export function GetVersion() {
     return $resultPromise;
 }
 
+/**
+ * @param {string} updateURL
+ * @returns {Promise<void> & { cancel(): void }}
+ */
+export function SelfUpdate(updateURL) {
+    let $resultPromise = /** @type {any} */($Call.ByID(1317176842, updateURL));
+    return $resultPromise;
+}
+
 // Private type creation functions
 const $$createType0 = api$0.ApplicationRelease.createFrom;
