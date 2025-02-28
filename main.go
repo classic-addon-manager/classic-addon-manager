@@ -85,30 +85,6 @@ func main() {
 		BackgroundColour: application.NewRGBA(27, 38, 54, 1),
 	})
 
-	/* err = wails.Run(&options.App{
-		Title:         "Classic Addon Manager",
-		Width:         950,
-		Height:        600,
-		MinHeight:     600,
-		MinWidth:      950,
-		DisableResize: false,
-		AssetServer: &assetserver.Options{
-			Assets: assets,
-		},
-		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
-		OnStartup: func(ctx context.Context) {
-			a.Ctx = ctx
-			a.Startup(ctx)
-			go startPipeServer(a)
-		},
-		Bind: []interface{}{
-			a,
-		},
-		Windows: &windows.Options{
-			DisablePinchZoom: true,
-		},
-	}) */
-
 	err = a.Run()
 
 	if err != nil {
