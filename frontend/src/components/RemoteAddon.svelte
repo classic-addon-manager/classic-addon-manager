@@ -1,8 +1,8 @@
 <script lang="ts">
-    import type {addon as ad} from "$lib/wails"
+    import type {AddonManifest} from "$lib/wails";
     import {Button} from "$lib/components/ui/button";
     import {onMount} from "svelte";
-    import {IsAddonInstalled} from "$lib/wails";
+    import {LocalAddonService} from "$lib/wails";
     import Blocks from "lucide-svelte/icons/blocks";
     import Heart from "lucide-svelte/icons/heart";
     import Download from "lucide-svelte/icons/download";
@@ -11,7 +11,7 @@
     import RemoteAddonDialog from "./remote_addon/RemoteAddonDialog.svelte";
     import {timeAgo} from "../utils";
 
-    let {addon}: { addon: ad.AddonManifest } = $props();
+    let {addon}: { addon: AddonManifest } = $props();
     let isInstalled = $state(false);
     let openDialog = $state(false);
     let hasIcon = $state(false);
@@ -19,7 +19,7 @@
     let isNew = timeAgo(addon.added_at) < 32;
 
     onMount(async () => {
-        isInstalled = await IsAddonInstalled(addon.name);
+        isInstalled = await LocalAddonService.IsInstalled(addon.name);
         hasIcon = await checkForIcon();
     });
 

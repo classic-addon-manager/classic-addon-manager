@@ -3,15 +3,16 @@
     import {getUser, setToken, setUser, type User} from "$stores/UserStore.svelte";
     import {onMount} from "svelte";
     import {apiClient} from "../api";
-    import {BrowserOpenURL, EventsOn} from "$lib/wails";
     import {toast} from "../utils";
+    import {Events, Browser} from "@wailsio/runtime";
+    import type { WailsEvent } from "node_modules/@wailsio/runtime/types/events";
 
     let isReady: boolean = $state(false);
     let user: User = $derived(getUser());
 
     onMount(async () => {
-        EventsOn('authTokenReceived', async (token: string) => {
-            setToken(token);
+        Events.On('authTokenReceived', async (event: WailsEvent) => {
+            setToken(event.data);
             await getAccount();
             toast.success('Successfully signed in');
         });
@@ -48,7 +49,7 @@
     {#if user.discord_id === ''}
         <div class="mx-auto w-full">
             <a class="flex scale-[85%] items-center py-2 px-4 rounded-lg bg-[#5865F2] hover:bg-[#5865F2]/80 hover:text-white/80 transition-colors duration-300"
-               onclick={() => BrowserOpenURL('https://discord.com/oauth2/authorize?client_id=1331010099916836914&response_type=code&redirect_uri=https%3A%2F%2Faac.gaijin.dev%2Fauth%2Fdiscord%2Fcallback2&scope=identify')}
+               onclick={() => Browser.OpenURL('https://discord.com/oauth2/authorize?client_id=1331010099916836914&response_type=code&redirect_uri=https%3A%2F%2Faac.gaijin.dev%2Fauth%2Fdiscord%2Fcallback2&scope=identify')}
                href="#"
             >
                 <svg viewBox="0 -28.5 256 256" class="h-7 w-7 fill-white hover:fill-white/80 mr-4">

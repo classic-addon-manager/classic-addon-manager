@@ -121,16 +121,6 @@ func SaveConfig() error {
 	return nil
 }
 
-func getUserDocumentsFolder() (string, error) {
-	userProfile := os.Getenv("USERPROFILE")
-	if userProfile == "" {
-		return "", errors.New("could not get user profile")
-	}
-	documentsFolder := filepath.Join(userProfile, "Documents")
-
-	return documentsFolder, nil
-}
-
 func GetCacheDir() string {
 	c, err := os.UserCacheDir()
 	if err != nil {

@@ -3,9 +3,8 @@
     import {Input} from "$lib/components/ui/input/index.js";
     import * as Select from "$lib/components/ui/select/index.js";
     import {onMount} from "svelte";
-    import {GetAddonManifest as GoGetAddonManifest} from "$lib/wails";
-    import type {addon} from "$lib/wails";
-
+    import type {AddonManifest} from "$lib/wails";
+    import {RemoteAddonService} from "$lib/wails";
     import RemoteAddon from "../components/RemoteAddon.svelte";
     import RemoteAddonSkeleton from "../components/remote_addon/RemoteAddonSkeleton.svelte";
     import {Button} from "$lib/components/ui/button";
@@ -13,7 +12,7 @@
 
     let isReady: boolean = $state(false);
     let searchPhrase: string = $state('');
-    let addons: addon.AddonManifest[] = $state([]);
+    let addons: AddonManifest[] = $state([]);
     let tags = [
         {label: 'All', value: 'all'},
     ];
@@ -39,8 +38,8 @@
     });
 
     async function getAddonManifest() {
-        let tmp: addon.AddonManifest[] = [];
-        for (let addon of await GoGetAddonManifest()) {
+        let tmp: AddonManifest[] = [];
+        for (let addon of await RemoteAddonService.GetAddonManifest()) {
             // @ts-ignore
             tmp.push({
                 ...addon

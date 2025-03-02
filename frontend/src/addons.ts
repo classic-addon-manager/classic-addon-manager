@@ -1,12 +1,9 @@
 import {
-    GetAddOns as GoGetAddOns,
-    UninstallAddon as GoUninstallAddon,
-    InstallAddon as GoInstallAddon,
-    GetAddonManifests as GoGetAddonManifests,
-    UnmanageAddon as GoUnmanageAddon
+    LocalAddonService,
 } from "$lib/wails"
 import {setAddons, getInstalledAddons} from "./stores/AddonStore.svelte";
-import type {addon} from "$lib/wails";
+import type {AddonManifest} from "$lib/wails";
+import {RemoteAddonService} from "$lib/wails";
 
 export default {
     populateAddonStore,
@@ -18,8 +15,8 @@ export default {
     unmanage
 }
 
-async function getManifest(name: string): Promise<addon.AddonManifest> {
-    const manifests = await GoGetAddonManifests();
+async function getManifest(name: string): Promise<AddonManifest> {
+    const manifests = await RemoteAddonService.GetAddonManifest();
     const m = manifests.find((m) => m.name === name);
     if (!m) {
         throw new Error("Addon not found");
@@ -28,12 +25,12 @@ async function getManifest(name: string): Promise<addon.AddonManifest> {
 }
 
 async function repoHasAddon(addon: string): Promise<boolean> {
-    const manifests = await GoGetAddonManifests();
+    const manifests = await RemoteAddonService.GetAddonManifest();
     return manifests.some((m) => m.name === addon);
 }
 
-async function install(manifest: addon.AddonManifest): Promise<boolean> {
-    const result = await GoInstallAddon(manifest);
+async function install(manifest: AddonManifest): Promise<boolean> {
+    const result = await RemoteAddonService.InstallAddon(manifest);
     if (result) {
         await populateAddonStore();
         return true;
@@ -42,12 +39,11 @@ async function install(manifest: addon.AddonManifest): Promise<boolean> {
 }
 
 async function populateAddonStore(): Promise<void> {
-    const addons = await GoGetAddOns();
-    setAddons(addons);
+    setAddons((await LocalAddonService.GetAddOns()));
 }
 
 async function uninstall(addon: string): Promise<boolean> {
-    const result = await GoUninstallAddon(addon);
+    const result = await LocalAddonService.UninstallAddon(addon);
     if (result) {
         await populateAddonStore();
         return true;
@@ -56,7 +52,7 @@ async function uninstall(addon: string): Promise<boolean> {
 }
 
 async function unmanage(addon: string): Promise<boolean> {
-    const result = await GoUnmanageAddon(addon);
+    const result = await LocalAddonService.UnmanageAddon(addon);
     if (result) {
         await populateAddonStore();
         return true;

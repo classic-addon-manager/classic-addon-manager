@@ -1,11 +1,11 @@
 <script lang="ts">
     import * as Dialog from "$lib/components/ui/dialog/index";
     import {Button} from "$lib/components/ui/button/index";
-    import {addon as ad, api} from "$lib/wails";
     import LoaderCircle from "lucide-svelte/icons/loader-circle";
     import addons from "../../addons";
     import {getUpdatesAvailableCount, setUpdatesAvailableCount} from "$stores/AddonStore.svelte";
     import {formatToLocalTime, toast} from "../../utils";
+    import type {Addon, Release} from "$lib/wails";
 
     let {
         open = $bindable(),
@@ -15,8 +15,8 @@
     }: {
         open: boolean;
         onOpenChange: (open: boolean) => void;
-        addon: ad.Addon;
-        release: api.Release;
+        addon: Addon;
+        release: Release;
     } = $props();
 
     let isUpdating = $state(false);

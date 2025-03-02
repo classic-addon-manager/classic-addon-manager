@@ -2,14 +2,18 @@
     import aacLogo from "../assets/images/aac-logo-wide.png";
     import semver from "semver";
 
-    import {Button} from "$lib/components/ui/button/index.js";
+    import {Button} from "$lib/components/ui/button/index";
     import * as Card from "$lib/components/ui/card/index";
+    import LoaderCircle from "lucide-svelte/icons/loader-circle";
     import {getActiveScreen} from "../stores/ScreenStore.svelte";
     import DashboardItem from "../components/navbar/DashboardItem.svelte";
     import AddonsItem from "../components/navbar/AddonsItem.svelte";
     import AACWebsiteItem from "../components/navbar/AACWebsiteItem.svelte";
 
-    import {GetLatestApplicationRelease as GoGetLatestApplicationRelease, BrowserOpenURL} from "$lib/wails";
+    import {
+        ApplicationService
+    } from "$lib/wails";
+    import {Browser} from "@wailsio/runtime"
 
     import {onMount} from "svelte";
     import TroubleshootingItem from "../components/navbar/TroubleshootingItem.svelte";
@@ -21,12 +25,13 @@
         version: "",
         url: "",
     });
+    let isUpdating = $state(false);
 
     let ActiveScreen = $derived.by(() => getActiveScreen())
 
     onMount(async () => {
         try {
-            updateInformation = await GoGetLatestApplicationRelease();
+            updateInformation = await ApplicationService.GetLatestRelease();
         } catch (e) {
             console.error("Failed to get latest release: ", e);
             return;
@@ -75,15 +80,24 @@
                                 Version {updateInformation.version} is available.
                                 <br/>
                                 <br/>
-                                Click the button below to download it.
+                                Click the button below to update.
                             </Card.Description>
                         </Card.Header>
                         <Card.Content class="p-2 pt-0 md:p-4 md:pt-0">
                             <Button
                                     size="sm"
                                     class="w-full"
-                                    onclick={() => BrowserOpenURL(updateInformation.url)}
-                            >Download
+                                    onclick={() => {
+                                        isUpdating = true;
+                                        ApplicationService.SelfUpdate(updateInformation.url)
+                                    }}
+                            >
+                                {#if isUpdating}
+                                    <LoaderCircle class="mr-2 size-4 animate-spin"/>
+                                    Updating...
+                                {:else}
+                                    Update
+                                {/if}
                             </Button>
                         </Card.Content>
                     </Card.Root>
@@ -96,7 +110,7 @@
 
             <div class="mx-auto mb-2 text-gray-300 text-opacity-40">
                 <span class="hover:text-blue-400 cursor-pointer transition-all"
-                      onclick={() => BrowserOpenURL(`https://github.com/classic-addon-manager/classic-addon-manager/releases/tag/v${getVersion()}`)}>v{getVersion()}
+                      onclick={() => Browser.OpenURL(`https://github.com/classic-addon-manager/classic-addon-manager/releases/tag/v${getVersion()}`)}>v{getVersion()}
                     by Sami</span>
             </div>
         </div>

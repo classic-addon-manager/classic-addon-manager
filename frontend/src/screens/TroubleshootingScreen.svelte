@@ -5,20 +5,15 @@
     import {ScrollArea} from "$lib/components/ui/scroll-area/index";
     import {Badge} from "$lib/components/ui/badge/index";
     import {Button} from "$lib/components/ui/button/index";
-    import {
-        ResetAddonSettings as GoResetAddonSettings,
-        UninstallAddon as GoUninstallAddon,
-        DiagnoseIssues as GoDiagnoseIssues,
-        addon,
-        util
-    } from "$lib/wails";
+    import type {Addon, LogParseResult} from "$lib/wails";
+    import {LocalAddonService} from "$lib/wails";
     import {getInstalledAddons} from "$stores/AddonStore.svelte";
     import addons from "../addons";
     import {onMount} from "svelte";
     import {ChevronsUpDown} from "lucide-svelte";
     import {toast} from "../utils";
 
-    let issues: util.LogParseResult[] = $state([]);
+    let issues: LogParseResult[] = $state([]);
     let issueCount = $derived.by(() => issues.length);
 
     let groupedIssues = $derived.by(() => {
@@ -37,12 +32,12 @@
     });
 
     onMount(async () => {
-        issues = await GoDiagnoseIssues();
+        issues = await LocalAddonService.DiagnoseIssues();
     });
 
     async function handleResetAddonSettings() {
         try {
-            await GoResetAddonSettings();
+            await LocalAddonService.ResetSettings();
         } catch (e) {
             console.error("Failed to reset addon settings", e);
             toast.error(`Failed to reset addon settings, reason: ${e}`, {
@@ -54,14 +49,14 @@
     }
 
     async function handleUninstallAllAddons() {
-        let ads: addon.Addon[] = getInstalledAddons();
+        let ads: Addon[] = getInstalledAddons();
         if (ads.length === 0) {
             toast.error("No addons to uninstall");
             return;
         }
         let uninstallCount = 0;
         for (let a of ads) {
-            let uninstalled = await GoUninstallAddon(a.name);
+            let uninstalled = await LocalAddonService.UninstallAddon(a.name);
             if (!uninstalled) {
                 toast.error(`Failed to uninstall addon ${a.alias}`);
                 return;
@@ -160,9 +155,9 @@
 
                                     </Collapsible.Content>
                                 </Collapsible.Root>
-                                {#each groupedIssues[addonName] as issue}
+                                <!--{#each groupedIssues[addonName] as issue}
 
-                                {/each}
+                                {/each}-->
                             {/each}
                         </ScrollArea>
 

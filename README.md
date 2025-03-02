@@ -14,15 +14,16 @@ You need to install the following dependencies for Wails to be operational.
     NPM (Node 15+)
 Once that is done visit the following link to install the Wails CLI
 
-https://wails.io/docs/gettingstarted/installation
+https://v3alpha.wails.io/getting-started/installatio
 
+_It's important to note that we are using the Wails v3 alpha version, please make sure you are installing the correct version._
 ## Live Development
 
-To run in live development mode, run `wails dev` in the project directory. This will run a Vite development
+To run in live development mode, run `wails3 dev` in the project directory. This will run a Vite development
 server that will provide very fast hot reload of your frontend changes. If you want to develop in a browser
 and have access to your Go methods, there is also a dev server that runs on http://localhost:34115. Connect
 to this in your browser, and you can call your Go code from devtools.
 
 ## Building
 
-To build a redistributable, production mode package, use `wails build`.
+To build a redistributable, production mode package, use `wails3 task build:prod`.

@@ -68,6 +68,23 @@
     #markdown-container :global(p) {
         @apply my-2;
     }
+
+    /* UL and OL need some margin */
+    #markdown-container :global(ul),
+    #markdown-container :global(ol) {
+        @apply my-5;
+    }
+
+    /* UL needs decorations */
+    #markdown-container :global(ul) {
+        @apply list-disc list-inside;
+    }
+
+    /* OL needs decorations */
+    #markdown-container :global(ol) {
+        @apply list-decimal list-inside;
+    }
+
 </style>
 
 <div id="markdown-container" class="max-w-[95%] mx-auto">

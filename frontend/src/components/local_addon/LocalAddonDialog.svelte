@@ -4,7 +4,7 @@
     import Dislike from "lucide-svelte/icons/thumbs-down";
 
     import {Button} from "$lib/components/ui/button/index";
-    import {addon as ad} from "$lib/wails";
+    import type {Addon} from "$lib/wails";
     import addons from "../../addons";
     import {isAuthenticated} from "$stores/UserStore.svelte";
     import {apiClient} from "../../api";
@@ -17,7 +17,7 @@
     }: {
         open: boolean;
         onOpenChange: (open: boolean) => void;
-        addon: ad.Addon;
+        addon: Addon;
     } = $props();
 
     let uninstallClicks = $state(0);
