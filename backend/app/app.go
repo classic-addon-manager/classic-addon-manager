@@ -4,7 +4,6 @@ import (
 	"ClassicAddonManager/backend/addon"
 	"ClassicAddonManager/backend/github"
 	"ClassicAddonManager/backend/logger"
-	"ClassicAddonManager/backend/shared"
 	"context"
 	_ "embed"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -15,10 +14,6 @@ type App struct {
 	Ctx             context.Context
 	installedAddons []addon.Addon
 	addonManifest   []addon.AddonManifest
-}
-
-func (a *App) GetVersion() string {
-	return shared.Version
 }
 
 func (a *App) SelectDirectory() string {

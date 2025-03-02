@@ -142,7 +142,6 @@ func handlePipeConnection(conn net.Conn, a *application.App) {
 	if parsedURL.Host == "auth" {
 		token := parsedURL.Query().Get("t")
 		if token != "" {
-			// FIXME: Handle focus
 			logger.Info("Received authentication token")
 			mainWindow := application.Get().GetWindowByName("main")
 			if mainWindow.IsMinimised() {
