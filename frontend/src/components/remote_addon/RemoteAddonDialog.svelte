@@ -74,7 +74,7 @@
 
     async function getReadme(open: boolean) {
         if (!open) return;
-        const response = await fetch(`https://raw.githubusercontent.com/${addon.repo}/refs/heads/master/README.md`)
+        const response = await fetch(`https://raw.githubusercontent.com/${addon.repo}/refs/heads/${addon.branch}/README.md`)
         if (!response.ok) {
             return;
         }
