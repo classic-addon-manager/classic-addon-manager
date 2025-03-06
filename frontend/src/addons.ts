@@ -19,7 +19,7 @@ async function getManifest(name: string): Promise<AddonManifest> {
     const manifests = await RemoteAddonService.GetAddonManifest();
     const m = manifests.find((m) => m.name === name);
     if (!m) {
-        throw new Error("Addon not found");
+        throw new Error("Addon not found: " + name);
     }
     return m;
 }

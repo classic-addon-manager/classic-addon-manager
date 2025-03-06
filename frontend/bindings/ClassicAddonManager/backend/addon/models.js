@@ -114,6 +114,13 @@ export class AddonManifest {
              */
             this["alias"] = "";
         }
+        if (!("dependencies" in $$source)) {
+            /**
+             * @member
+             * @type {string[]}
+             */
+            this["dependencies"] = [];
+        }
         if (!("description" in $$source)) {
             /**
              * @member
@@ -187,10 +194,14 @@ export class AddonManifest {
      * @returns {AddonManifest}
      */
     static createFrom($$source = {}) {
-        const $$createField6_0 = $$createType0;
+        const $$createField2_0 = $$createType0;
+        const $$createField7_0 = $$createType0;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("dependencies" in $$parsedSource) {
+            $$parsedSource["dependencies"] = $$createField2_0($$parsedSource["dependencies"]);
+        }
         if ("tags" in $$parsedSource) {
-            $$parsedSource["tags"] = $$createField6_0($$parsedSource["tags"]);
+            $$parsedSource["tags"] = $$createField7_0($$parsedSource["tags"]);
         }
         return new AddonManifest(/** @type {Partial<AddonManifest>} */($$parsedSource));
     }

@@ -6,7 +6,7 @@
 name: "classic-addon-manager"
 arch: ${GOARCH}
 platform: "linux"
-version: "2.2.4"
+version: "2.3.0"
 section: "default"
 priority: "extra"
 maintainer: ${GIT_COMMITTER_NAME} <${GIT_COMMITTER_EMAIL}>

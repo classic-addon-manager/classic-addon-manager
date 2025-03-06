@@ -1,10 +1,10 @@
 {
 	"fixed": {
-		"file_version": "2.2.4"
+		"file_version": "2.3.0"
 	},
 	"info": {
 		"0000": {
-			"ProductVersion": "2.2.4",
+			"ProductVersion": "2.3.0",
 			"CompanyName": "Sami",
 			"FileDescription": "An addon manager for ArcheAge Classic",
 			"LegalCopyright": "(c) 2025, Sami",
