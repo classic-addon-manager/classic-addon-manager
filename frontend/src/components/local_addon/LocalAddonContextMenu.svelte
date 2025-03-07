@@ -5,8 +5,9 @@
     import AlertTriangle from "lucide-svelte/icons/alert-triangle";
     import Bug from "lucide-svelte/icons/bug";
     import Github from "lucide-svelte/icons/github";
+    import FolderOpen from "lucide-svelte/icons/folder-open";
     import addons from "../../addons";
-    import type {Addon} from "$lib/wails";
+    import {LocalAddonService, type Addon} from "$lib/wails";
     import {toast} from "../../utils";
     import {Browser} from "@wailsio/runtime"
 
@@ -40,6 +41,15 @@
             toast.error(`Failed to unmanage ${addon.alias}`);
         }
     }
+
+    async function handleOpenDirectory() {
+        try {
+            await LocalAddonService.OpenDirectory(addon.name);
+        } catch (e) {
+            console.error("Failed to open directory: ", e);
+            toast.error(`Failed to open directory: ${e}`);
+        }
+    }
 </script>
 
 <ContextMenu.Root>
@@ -47,6 +57,10 @@
         {@render contextTriggerArea()}
     </ContextMenu.Trigger>
     <ContextMenu.Content>
+        <ContextMenu.Item class="gap-2" onclick={handleOpenDirectory}>
+            <FolderOpen size={16}/>
+            Open directory
+        </ContextMenu.Item>
         {#if addon.isManaged}
             <ContextMenu.Item
                     class="gap-3"

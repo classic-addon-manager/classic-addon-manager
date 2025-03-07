@@ -6,10 +6,15 @@ import (
 	"ClassicAddonManager/backend/file"
 	"ClassicAddonManager/backend/logger"
 	"ClassicAddonManager/backend/util"
+	"os/exec"
 	"path/filepath"
 )
 
 type LocalAddonService struct{}
+
+func (s *LocalAddonService) OpenDirectory(name string) error {
+	return exec.Command("explorer", filepath.Join(config.GetAddonDir(), name)).Start()
+}
 
 func (s *LocalAddonService) GetAddOns() []addon.Addon {
 	return addon.GetAddons()

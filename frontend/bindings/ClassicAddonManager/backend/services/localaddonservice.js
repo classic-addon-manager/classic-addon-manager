@@ -47,6 +47,15 @@ export function IsInstalled(name) {
 }
 
 /**
+ * @param {string} name
+ * @returns {Promise<void> & { cancel(): void }}
+ */
+export function OpenDirectory(name) {
+    let $resultPromise = /** @type {any} */($Call.ByID(1143175895, name));
+    return $resultPromise;
+}
+
+/**
  * @returns {Promise<void> & { cancel(): void }}
  */
 export function ResetSettings() {
