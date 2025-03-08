@@ -48,25 +48,29 @@ func ExtractAddonRelease(src string, dest string) error {
 			return err
 		}
 
-		dstFile, err := os.OpenFile(fPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
-		if err != nil {
+		if err := extractFile(f, fPath); err != nil {
 			return err
 		}
-
-		fileInArchive, err := f.Open()
-		if err != nil {
-			return err
-		}
-
-		if _, err := io.Copy(dstFile, fileInArchive); err != nil {
-			return err
-		}
-
-		_ = dstFile.Close()
-		_ = fileInArchive.Close()
 	}
 
 	return nil
+}
+
+func extractFile(f *zip.File, dest string) error {
+	fileInArchive, err := f.Open()
+	if err != nil {
+		return err
+	}
+	defer fileInArchive.Close()
+
+	dstFile, err := os.OpenFile(dest, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
+	if err != nil {
+		return err
+	}
+	defer dstFile.Close()
+
+	_, err = io.Copy(dstFile, fileInArchive)
+	return err
 }
 
 func MoveAddonRelease(addonName string) bool {

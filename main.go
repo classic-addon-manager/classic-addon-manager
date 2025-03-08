@@ -7,6 +7,7 @@ import (
 	"ClassicAddonManager/backend/logger"
 	"ClassicAddonManager/backend/services"
 	"ClassicAddonManager/backend/shared"
+
 	"embed"
 	"encoding/json"
 	"flag"
