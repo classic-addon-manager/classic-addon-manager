@@ -7,6 +7,8 @@ import (
 	"github.com/sqweek/dialog"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
 )
 
 var aacPath = "C:\\AAClassic\\Documents"
@@ -48,12 +50,39 @@ func detectAACPath() (string, error) {
 	}
 
 	var highestVersion string
+	re := regexp.MustCompile(`^(C:\\AAClassic)(\d*)$`)
+
 	for _, match := range matches {
 		if highestVersion == "" {
 			highestVersion = match
 			continue
 		}
-		if match > highestVersion {
+
+		// Extract base path and version suffix
+		currentMatch := re.FindStringSubmatch(match)
+		highestMatch := re.FindStringSubmatch(highestVersion)
+
+		// If paths don't match, fall back to lexicographical comparison
+		if currentMatch == nil || highestMatch == nil {
+			if match > highestVersion {
+				highestVersion = match
+			}
+			continue
+		}
+
+		// Convert suffix to int for comparison
+		currentNum := 0
+		if currentMatch[2] != "" {
+			currentNum, _ = strconv.Atoi(currentMatch[2])
+		}
+
+		highestNum := 0
+		if highestMatch[2] != "" {
+			highestNum, _ = strconv.Atoi(highestMatch[2])
+		}
+
+		// Compare numerically
+		if currentNum > highestNum {
 			highestVersion = match
 		}
 	}
