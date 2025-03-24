@@ -4,11 +4,12 @@ import (
 	"ClassicAddonManager/backend/logger"
 	"encoding/json"
 	"errors"
-	"github.com/mitchellh/mapstructure"
 	"io"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/mitchellh/mapstructure"
 )
 
 func GetLatestAddonRelease(name string) (Release, error) {
@@ -50,8 +51,8 @@ func GetLatestAddonRelease(name string) (Release, error) {
 		return Release{}, errors.New(apiResponse.Message)
 	}
 
-	data := apiResponse.Data.(map[string]interface{})
-	r := data["release"].(map[string]interface{})
+	data := apiResponse.Data.(map[string]any)
+	r := data["release"].(map[string]any)
 	release := Release{
 		ZipballUrl:  r["zipball_url"].(string),
 		TagName:     r["tag_name"].(string),
@@ -63,6 +64,10 @@ func GetLatestAddonRelease(name string) (Release, error) {
 	// Parse time from data.release.published_at
 	publishedAtStr := r["published_at"].(string)
 	release.PublishedAt, err = time.Parse(time.RFC3339, publishedAtStr)
+	if err != nil {
+		logger.Error("GetLatestAddonRelease Error:", err)
+		return Release{}, err
+	}
 
 	tag := Tag{}
 	err = mapstructure.Decode(data["tag"], &tag)
@@ -98,23 +103,23 @@ func GetLatestApplicationRelease() (ApplicationRelease, error) {
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		logger.Error("GetLatestAddonRelease Error:", err)
+		logger.Error("GetLatestApplicationRelease Error:", err)
 		return ApplicationRelease{}, err
 	}
 
 	var apiResponse ApiResponse
 
 	if err := json.Unmarshal(body, &apiResponse); err != nil {
-		logger.Error("GetLatestAddonRelease Error:", err)
+		logger.Error("GetLatestApplicationRelease Error:", err)
 		return ApplicationRelease{}, err
 	}
 
 	if !apiResponse.Status {
-		logger.Warn("GetLatestAddonRelease status false: " + apiResponse.Message)
+		logger.Warn("GetLatestApplicationRelease status false: " + apiResponse.Message)
 		return ApplicationRelease{}, errors.New(apiResponse.Message)
 	}
 
-	data := apiResponse.Data.(map[string]interface{})
+	data := apiResponse.Data.(map[string]any)
 	release := ApplicationRelease{
 		Version: data["version"].(string),
 		Url:     data["url"].(string),

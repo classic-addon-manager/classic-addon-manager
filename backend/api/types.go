@@ -3,9 +3,9 @@ package api
 import "time"
 
 type ApiResponse struct {
-	Status  bool        `json:"status"`
-	Message string      `json:"message"`
-	Data    interface{} `json:"data"`
+	Status  bool   `json:"status"`
+	Message string `json:"message"`
+	Data    any    `json:"data"`
 }
 
 type Release struct {
