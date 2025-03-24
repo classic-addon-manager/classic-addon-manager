@@ -102,25 +102,23 @@
 
         <div class="text-foreground font-light col-span-2">{addon.author}</div>
         <div class="text-foreground font-light col-span-2">{addon.tags.join(', ')}</div>
-        <div class="text-foreground col-span-2 ml-7">
-            <div class="flex gap-4">
-                {#if isInstalled}
-                    <Button
-                            variant="default"
-                            class="w-20 h-8 cursor-not-allowed"
-                            disabled={true}
-                    >
-                        <Check/>
-                    </Button>
-                {:else}
-                    <Button
-                            variant="default"
-                            class="w-20 h-8"
-                    >
-                        <Download/>
-                    </Button>
-                {/if}
-            </div>
+        <div class="text-foreground col-span-2 flex justify-center">
+            {#if isInstalled}
+                <Button
+                        variant="default"
+                        class="w-20 h-8 cursor-not-allowed"
+                        disabled={true}
+                >
+                    <Check/>
+                </Button>
+            {:else}
+                <Button
+                        variant="default"
+                        class="w-20 h-8"
+                >
+                    <Download/>
+                </Button>
+            {/if}
         </div>
     </div>
 </div>

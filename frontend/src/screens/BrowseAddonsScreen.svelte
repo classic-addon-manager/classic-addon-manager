@@ -134,7 +134,7 @@
         <div class="font-semibold mr-auto text-sm col-span-2">
             <h3>Tags</h3>
         </div>
-        <div class="font-semibold text-sm ml-auto col-span-1">
+        <div class="font-semibold text-sm text-center col-span-2">
             <h3>Status</h3>
         </div>
     </div>
