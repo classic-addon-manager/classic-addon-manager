@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/sqweek/dialog"
+	"golang.org/x/exp/slices"
 )
 
 var installedAddonNames []string
@@ -25,7 +26,7 @@ func ReadAddonsTxt() []string {
 	// Remove "AddonUpdateNotification" from lines if it exists
 	for i, line := range lines {
 		if line == "AddonUpdateNotification" {
-			lines = append(lines[:i], lines[i+1:]...)
+			lines = slices.Delete(lines, i, i+1)
 			break
 		}
 	}
@@ -69,7 +70,7 @@ func RemoveFromAddonsTxt(addonName string) bool {
 	lines := ReadAddonsTxt()
 	for i, line := range lines {
 		if line == addonName {
-			lines = append(lines[:i], lines[i+1:]...)
+			lines = slices.Delete(lines, i, i+1)
 			break
 		}
 	}
