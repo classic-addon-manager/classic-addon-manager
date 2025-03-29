@@ -91,7 +91,7 @@
         </div>
     </header>
 
-    <main class="flex-1 container px-4 py-6">
+    <main class="flex-1 container px-4 py-4 overflow-hidden">
         <div class="flex items-center justify-between mb-6">
             <h1 class="text-3xl font-bold tracking-tight">Dashboard</h1>
             {#if !isLoading}
@@ -107,7 +107,7 @@
                 <p class="text-muted-foreground">Loading addons...</p>
             </div>
         {:else if localAddons.length > 0}
-            <div class="rounded-lg border bg-card shadow-sm" transition:fade>
+            <div class="rounded-lg border bg-card shadow-sm max-h-[calc(100vh-10rem)] flex flex-col" transition:fade>
                 <div class="grid grid-cols-4 w-full p-2 border-b bg-muted/40">
                     <div class="font-medium text-sm text-muted-foreground">Name</div>
                     <div class="text-center font-medium text-sm text-muted-foreground">Author</div>
@@ -115,7 +115,7 @@
                     <div class="text-center font-medium text-sm text-muted-foreground">Status</div>
                 </div>
 
-                <div class="divide-y">
+                <div class="divide-y overflow-y-auto">
                     {#each filteredAddons as addon (addon.name)}
                         <div transition:fly={{ y: 20, duration: 300 }}>
                             <LocalAddon {addon}/>
