@@ -12,6 +12,8 @@
     import {onMount} from "svelte";
     import {ChevronsUpDown} from "lucide-svelte";
     import {toast} from "../utils";
+    import {slide} from "svelte/transition";
+    import {cubicOut} from "svelte/easing";
 
     let issues: LogParseResult[] = $state([]);
     let issueCount = $derived.by(() => issues.length);
@@ -69,102 +71,117 @@
     }
 </script>
 
-<header class="bg-muted/40 flex h-14 items-center gap-4 border-b px-4">
-    <div class="flex gap-2 w-full">
-        <p class="text-muted-foreground">Select the issue you are having</p>
+<header class="bg-muted/40 flex h-16 items-center gap-4 border-b px-6 shadow-sm">
+    <div class="flex flex-col gap-1">
+        <h1 class="text-xl font-semibold">Troubleshooting</h1>
+        <p class="text-sm text-muted-foreground">Select an option below to help resolve your issue</p>
     </div>
 </header>
 
-<main class=" h-[calc(100vh-4rem)] overflow-auto">
-    <div class="mt-2 mx-auto w-11/12">
-        <Accordion.Root type="single">
-            <Accordion.Item value="item-1">
-                <Accordion.Trigger>A specific addon doesn't work</Accordion.Trigger>
-                <Accordion.Content>
-                    <p>In the event that a specific addon does not work as it should, you should go to Dashboard
-                        right click the addon and select "Report issue".</p><br/>
-                    <p>This will open up a new issue on the addon's github repository where you can describe the
-                        problem. keep in mind that a github account is required to do so.</p>
-                </Accordion.Content
-                >
-            </Accordion.Item>
-            <Accordion.Item value="item-2">
-                <Accordion.Trigger>No addons are working</Accordion.Trigger>
-                <Accordion.Content>
-                    <p>In cases where all addons stop working, it is likely the result of a borked addon_settings
-                        file.</p><br/>
-                    <p>
-                        Below you can find two options, <span class="font-semibold text-green-400">consider first trying the option to reset your addon settings
-                        and try again</span>.
-                        If that doesn't solve your issue you may <span class="font-semibold text-red-400">click the other button which will uninstall all addons</span>
-                        and reset your addon_settings file.
-                        Once that is done you can reinstall your addons.
-                    </p>
-
-                    <Button class="mt-4" onclick={handleResetAddonSettings}>Reset addon settings</Button>
-                    <Button variant="destructive" class="mt-4 ml-2" onclick={handleUninstallAllAddons}>Uninstall all
-                        addons
-                    </Button>
-                </Accordion.Content>
-            </Accordion.Item>
-            <Accordion.Item value="item-3">
-                <Accordion.Trigger>Diagnostic
-                    {#if issueCount > 0}
-                        <div class="ml-auto mr-5 no-underline">
-                            <Badge variant="destructive">{issueCount} issues</Badge>
+<main class="h-[calc(100vh-4rem)] overflow-auto p-6">
+    <div class="mx-auto max-w-3xl">
+        <Accordion.Root type="single" class="space-y-4">
+            {#each [{id: 'item-1', title: 'Specific Addon Issue'}, {id: 'item-2', title: 'No Addons Are Working'}, {id: 'item-3', title: 'Diagnostic Results'}] as item}
+                <Accordion.Item value={item.id} class="border rounded-lg overflow-hidden">
+                    <Accordion.Trigger class="hover:bg-muted/50 transition-colors px-6 w-full [&[data-state=open]]:no-underline hover:no-underline no-underline">
+                        <div class="flex items-center gap-2 w-full">
+                            <span class="text-lg">{item.title}</span>
+                            {#if item.id === 'item-3'}
+                                {#if issueCount > 0}
+                                    <Badge variant="destructive" class="ml-auto mr-4">
+                                        {issueCount} {issueCount === 1 ? 'issue' : 'issues'} found
+                                    </Badge>
+                                {:else}
+                                    <Badge variant="successful" class="ml-auto">
+                                        No issues detected
+                                    </Badge>
+                                {/if}
+                            {/if}
                         </div>
-                    {:else}
-                        <div class="ml-auto mr-5 no-underline">
-                            <Badge variant="successful">
-                                No issues found
-                            </Badge>
-                        </div>
-                    {/if}
-                </Accordion.Trigger>
-                <Accordion.Content>
-                    {#if issueCount === 0}
-                        <p>No issues found, good job!</p>
-                    {:else}
-                        <ScrollArea class="rounded-md border p-4 border-zinc-700">
-                            {#each Object.keys(groupedIssues) as addonName}
-                                <Collapsible.Root class="space-y-2 py-2 hover:bg-zinc-900">
-                                    <Collapsible.Trigger class="w-full">
-                                        <div class="flex items-center justify-between space-x-4 px-4 cursor-pointer">
-                                            <div class="flex w-full">
-                                                <h4 class="text-sm font-semibold">{addonName === 'x2ui' ? 'Addon API' : addonName}</h4>
-                                                <div class="ml-auto no-underline">
-                                                    <Badge variant="destructive">{groupedIssues[addonName].length}
-                                                        issues
-                                                    </Badge>
-                                                </div>
-                                            </div>
-                                            <Button variant="ghost" size="sm" class="w-9 p-0">
-                                                <ChevronsUpDown/>
-                                                <span class="sr-only">Toggle</span>
-                                            </Button>
+                    </Accordion.Trigger>
+                    <Accordion.Content>
+                        {#if item.id === 'item-1'}
+                            <div transition:slide={{duration: 200, easing: cubicOut}} class="px-6 py-4 bg-muted/20">
+                                <div class="space-y-3">
+                                    <p class="text-muted-foreground">If a specific addon is not working as expected:</p>
+                                    <ol class="list-decimal list-inside space-y-2 text-muted-foreground">
+                                        <li>Go to the Dashboard</li>
+                                        <li>Right-click the problematic addon</li>
+                                        <li>Select "Report issue"</li>
+                                    </ol>
+                                    <div class="bg-muted/30 p-4 rounded-lg mt-4">
+                                        <p class="text-sm italic">Note: A GitHub account is required to report issues.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        {:else if item.id === 'item-2'}
+                            <div transition:slide={{duration: 200, easing: cubicOut}} class="px-6 py-4 bg-muted/20">
+                                <div class="space-y-4">
+                                    <p class="text-muted-foreground">When all addons stop working, it's typically due to a corrupted addon_settings file.</p>
+                                    
+                                    <div class="bg-muted/30 p-4 rounded-lg space-y-3">
+                                        <div class="flex items-start gap-2">
+                                            <div class="w-2 h-2 mt-2 rounded-full bg-green-400"></div>
+                                            <p class="flex-1"><span class="font-medium text-green-400">Recommended:</span> Try resetting your addon settings first</p>
                                         </div>
-                                    </Collapsible.Trigger>
-                                    <Collapsible.Content class="space-y-2 px-3 pb-1">
-                                        <!-- Issue content -->
-                                        {#each groupedIssues[addonName] as issue}
-                                            <div class="rounded-md border px-4 py-3 font-mono text-sm select-text">
-                                                {issue.error} in
-                                                <span class="font-semibold text-indigo-400 select-text">{issue.file}</span>
-                                            </div>
+                                        <div class="flex items-start gap-2">
+                                            <div class="w-2 h-2 mt-2 rounded-full bg-red-400"></div>
+                                            <p class="flex-1"><span class="font-medium text-red-400">Last resort:</span> Uninstall all addons and reset settings if the first option doesn't work</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex gap-3 mt-4">
+                                        <Button class="w-1/2" onclick={handleResetAddonSettings}>
+                                            Reset addon settings
+                                        </Button>
+                                        <Button variant="destructive" class="w-1/2" onclick={handleUninstallAllAddons}>
+                                            Uninstall all addons
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        {:else}
+                            <div transition:slide={{duration: 200, easing: cubicOut}} class="px-6 py-4 bg-muted/20">
+                                {#if issueCount === 0}
+                                    <div class="flex items-center justify-center py-8">
+                                        <p class="text-green-400 font-medium">No issues detected in your system! 🎉</p>
+                                    </div>
+                                {:else}
+                                    <ScrollArea class="rounded-lg border border-zinc-700">
+                                        {#each Object.keys(groupedIssues) as addonName}
+                                            <Collapsible.Root class="border-b border-zinc-700 last:border-0">
+                                                <Collapsible.Trigger class="w-full">
+                                                    <div class="flex items-center justify-between p-4 hover:bg-zinc-900/50 transition-colors">
+                                                        <div class="flex items-center gap-4 w-full">
+                                                            <h4 class="font-medium">{addonName === 'x2ui' ? 'Addon API' : addonName}</h4>
+                                                            <Badge variant="destructive" class="ml-auto mr-2">
+                                                                {groupedIssues[addonName].length} {groupedIssues[addonName].length === 1 ? 'issue' : 'issues'}
+                                                            </Badge>
+                                                        </div>
+                                                        <div class="transition-transform duration-200 data-[state=open]:rotate-180">
+                                                            <ChevronsUpDown size={20}/>
+                                                        </div>
+                                                    </div>
+                                                </Collapsible.Trigger>
+                                                <Collapsible.Content>
+                                                    <div transition:slide={{duration: 200, easing: cubicOut}} class="space-y-2 p-4 bg-zinc-900/30">
+                                                        {#each groupedIssues[addonName] as issue}
+                                                            <div class="rounded-md border border-zinc-700 px-4 py-3 font-mono text-sm bg-zinc-900/50">
+                                                                <p class="text-red-400 mb-1">Error: {issue.error}</p>
+                                                                <p class="text-zinc-400">File: <span class="text-indigo-400">{issue.file}</span></p>
+                                                            </div>
+                                                        {/each}
+                                                    </div>
+                                                </Collapsible.Content>
+                                            </Collapsible.Root>
                                         {/each}
-
-                                    </Collapsible.Content>
-                                </Collapsible.Root>
-                                <!--{#each groupedIssues[addonName] as issue}
-
-                                {/each}-->
-                            {/each}
-                        </ScrollArea>
-
-                    {/if}
-                </Accordion.Content>
-            </Accordion.Item>
+                                    </ScrollArea>
+                                {/if}
+                            </div>
+                        {/if}
+                    </Accordion.Content>
+                </Accordion.Item>
+            {/each}
         </Accordion.Root>
     </div>
-
 </main>
