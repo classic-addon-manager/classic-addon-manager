@@ -354,25 +354,25 @@
             {#if isAuthenticated()}
                 <div class="flex gap-2 items-center">
                     <Button
-                            class="mt-2"
+                            class="mt-2 transition-all duration-200 hover:scale-110 {rating === 1 ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-500' : ''}"
                             variant="outline"
                             onclick={() => handleRating(1)}
                     >
                         {#if rating === 1}
-                            <Like class="w-6 text-blue-500"/>
+                            <Like class="w-6 text-blue-500 transition-colors"/>
                         {:else}
-                            <Like class="w-6"/>
+                            <Like class="w-6 transition-colors hover:text-blue-500"/>
                         {/if}
                     </Button>
                     <Button
-                            class="mt-2"
+                            class="mt-2 transition-all duration-200 hover:scale-110 {rating === -1 ? 'bg-red-100 dark:bg-red-900/30 border-red-500' : ''}"
                             variant="outline"
                             onclick={() => handleRating(-1)}
                     >
                         {#if rating === -1}
-                            <Dislike class="w-6 text-red-500"/>
+                            <Dislike class="w-6 text-red-500 transition-colors"/>
                         {:else}
-                            <Dislike class="w-6"/>
+                            <Dislike class="w-6 transition-colors hover:text-red-500"/>
                         {/if}
                     </Button>
                 </div>
