@@ -1,5 +1,6 @@
 <script lang="ts">
     import * as Avatar from "$lib/components/ui/avatar/index";
+    import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index";
     import {getUser, setToken, setUser, type User} from "$stores/UserStore.svelte";
     import {onMount} from "svelte";
     import {apiClient} from "../api";
@@ -64,23 +65,38 @@
         </div>
 
     {:else}
-        <div class="ml-4 flex items-center justify-between">
-            <div class="flex items-center space-x-2">
-                <Avatar.Root>
-                    <Avatar.Image src={`https://cdn.discordapp.com/avatars/${user.discord_id}/${user.avatar}.png`}
-                                  alt={user.username}/>
-                    <Avatar.Fallback>N/A</Avatar.Fallback>
-                </Avatar.Root>
-                <div>
-                    <p class="text-sm font-medium leading-none">{user.username}</p>
-                    <p class="text-muted-foreground text-sm">
-                        <a href="javascript: void(0)" onclick={handleSignOut}
-                           class="hover:text-orange-500 transition-all">
-                            Sign out
-                        </a>
-                    </p>
-                </div>
-            </div>
+        <div class="w-full px-3">
+            <DropdownMenu.Root>
+                <DropdownMenu.Trigger class="w-full focus:outline-none">
+                    <div class="flex w-full items-center space-x-3 rounded-md bg-secondary/50 p-2 transition-all hover:bg-secondary">
+                        <Avatar.Root class="h-8 w-8">
+                            <Avatar.Image
+                                src={`https://cdn.discordapp.com/avatars/${user.discord_id}/${user.avatar}.png`}
+                                alt={user.username}
+                                class="h-full w-full object-cover"
+                            />
+                            <Avatar.Fallback class="text-xs">
+                                {user.username.substring(0, 2).toUpperCase()}
+                            </Avatar.Fallback>
+                        </Avatar.Root>
+                        <span class="text-sm font-medium flex-1 text-left">{user.username}</span>
+                    </div>
+                </DropdownMenu.Trigger>
+                <DropdownMenu.Content class="w-56">
+                    <DropdownMenu.Group>
+                        <DropdownMenu.Label>Account</DropdownMenu.Label>
+                        <DropdownMenu.Separator />
+                        <DropdownMenu.Item>
+                            <button
+                                class="w-full text-left cursor-pointer text-red-500"
+                                onclick={handleSignOut}
+                            >
+                                Sign out
+                            </button>
+                        </DropdownMenu.Item>
+                    </DropdownMenu.Group>
+                </DropdownMenu.Content>
+            </DropdownMenu.Root>
         </div>
     {/if}
 {/if}
