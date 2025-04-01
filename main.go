@@ -78,7 +78,7 @@ func main() {
 		go startPipeServer(a)
 		startup()
 	})
-	shared.Version = "2.3.3"
+	shared.Version = "2.3.4"
 
 	a.NewWebviewWindowWithOptions(application.WebviewWindowOptions{
 		Title:            "Classic Addon Manager",
@@ -104,7 +104,14 @@ func startPipeServer(a *application.App) {
 		_ = os.Remove(pipeName)
 	}
 
-	listener, err := winio.ListenPipe(pipeName, nil)
+	// Create a permissive security descriptor
+	// D:(A;;GA;;;WD) = Allow Everyone Generic All access
+	// (A;;GA;;;IU) = Allow Interactive Users Generic All access
+	pipeConfig := &winio.PipeConfig{
+		SecurityDescriptor: "D:(A;;GA;;;WD)(A;;GA;;;IU)",
+	}
+
+	listener, err := winio.ListenPipe(pipeName, pipeConfig)
 	if err != nil {
 		logger.Error("Error starting pipe server:", err)
 		return
