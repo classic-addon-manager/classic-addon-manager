@@ -142,21 +142,6 @@
 
     <main class="flex-1 overflow-auto">
         <div class="container px-4">
-            <div class="grid grid-cols-10 w-full py-4 text-muted-foreground font-medium border-b sticky top-0 bg-background z-20">
-                <div class="font-semibold text-sm col-span-4">
-                    <h3>Name</h3>
-                </div>
-                <div class="font-semibold text-sm col-span-2">
-                    <h3>Author</h3>
-                </div>
-                <div class="font-semibold text-sm col-span-2">
-                    <h3>Tags</h3>
-                </div>
-                <div class="font-semibold text-sm text-center col-span-2">
-                    <h3>Status</h3>
-                </div>
-            </div>
-
             {#if !isReady}
                 <div class="flex flex-1 flex-col gap-4 py-4 relative" in:fade>
                     <RemoteAddonSkeleton/>
