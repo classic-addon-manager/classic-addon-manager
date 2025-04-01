@@ -12,6 +12,7 @@
     import {GithubIcon, BugIcon} from "lucide-svelte";
     import Like from "lucide-svelte/icons/thumbs-up";
     import Dislike from "lucide-svelte/icons/thumbs-down";
+    import Heart from "lucide-svelte/icons/heart";
     import {apiClient} from "../../api";
     import {isAuthenticated} from "$stores/UserStore.svelte";
     import {toast} from "../../utils";
@@ -334,17 +335,17 @@
             </Tabs.Content>
 
             <Tabs.Content value="kofi">
-                <p class="mb-2 text-sm text-center">
-                    Supporting add-on authors is the best way to show your
-                    support and motivate further development.
-                </p>
-                <div class="flex">
+                <div class="flex flex-col items-center justify-center h-full p-6 text-center space-y-4">
+                    <Heart class="w-12 h-12 text-red-500 mb-2" />
+                    <p class="text-sm text-muted-foreground">
+                        Enjoying {addon.alias}? Show your appreciation and support future development by buying {addon.author} a coffee!
+                    </p>
                     <Button
-                            class="mt-2 mx-auto"
                             variant="default"
                             onclick={() =>
                             Browser.OpenURL(`https://ko-fi.com/${addon.kofi}`)}
                     >
+                        <Heart class="w-4 h-4 mr-2" />
                         Support {addon.author} on Ko-fi
                     </Button>
                 </div>
