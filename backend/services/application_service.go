@@ -44,6 +44,17 @@ func (s *ApplicationService) SelfUpdate(updateURL string) error {
 	// Download the new version
 	logger.Info(fmt.Sprintf("Downloading update from %s", updateURL))
 	newExePath := filepath.Join(tmpDir, "ClassicAddonManager.new.exe")
+
+	// Remove newExePath if it exists
+	if _, err := os.Stat(newExePath); err == nil {
+		err = os.Remove(newExePath)
+		if err != nil {
+			logger.Error("Error removing existing update file:", err)
+			return err
+		}
+		logger.Info("Removed existing update file")
+	}
+
 	err = util.DownloadFile(updateURL, newExePath)
 	if err != nil {
 		logger.Error("Error downloading update:", err)
