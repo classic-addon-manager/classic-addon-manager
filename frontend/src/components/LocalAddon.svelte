@@ -83,7 +83,7 @@
 
 {#snippet contextTriggerArea()}
     <div
-            class="grid grid-cols-4 p-2 hover:bg-muted/50 border-t transition-colors items-center text-sm"
+            class="cursor-pointer grid grid-cols-4 p-2 hover:bg-muted/50 border-t transition-colors items-center text-sm"
             onclick={() => (openDialog = true)}
     >
         <div class="font-medium">{addon.alias}</div>
