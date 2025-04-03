@@ -64,6 +64,28 @@
         ;
     }
 
+    /* Styling for pre blocks */
+    #markdown-container :global(pre) {
+        @apply
+        bg-neutral-900 /* Slightly darker background */
+        p-4           /* More padding */
+        my-4          /* Vertical margin */
+        overflow-x-auto
+        rounded-md    /* More rounded corners */
+        font-mono
+        text-muted-foreground
+        ;
+    }
+
+    /* Reset code styling when inside pre */
+    #markdown-container :global(pre code) {
+      @apply
+        bg-transparent /* Remove background */
+        p-0           /* Remove padding */
+        rounded-none  /* Remove rounded corners */
+        ;
+    }
+
     /* Each paragraph needs some margin */
     #markdown-container :global(p) {
         @apply my-2;

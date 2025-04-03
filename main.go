@@ -83,8 +83,8 @@ func main() {
 	a.NewWebviewWindowWithOptions(application.WebviewWindowOptions{
 		Title:            "Classic Addon Manager",
 		Name:             "main",
-		Width:            950,
-		Height:           600,
+		Width:            985,
+		Height:           640,
 		MinHeight:        600,
 		MinWidth:         950,
 		DisableResize:    false,

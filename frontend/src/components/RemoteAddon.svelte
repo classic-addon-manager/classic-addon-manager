@@ -1,35 +1,27 @@
 <script lang="ts">
     import type {AddonManifest} from "$lib/wails";
     import {Button} from "$lib/components/ui/button";
-    import {onMount} from "svelte";
-    import {LocalAddonService} from "$lib/wails";
     import Blocks from "lucide-svelte/icons/blocks";
     import Heart from "lucide-svelte/icons/heart";
     import Download from "lucide-svelte/icons/download";
     import Check from "lucide-svelte/icons/check";
 
-    import RemoteAddonDialog from "./remote_addon/RemoteAddonDialog.svelte";
     import {timeAgo} from "../utils";
 
-    let {addon}: { addon: AddonManifest } = $props();
-    let isInstalled = $state(false);
-    let openDialog = $state(false);
+    let {addon, isInstalled, onViewDetails}: {
+        addon: AddonManifest,
+        isInstalled: boolean,
+        onViewDetails: () => void;
+    } = $props();
     let hasIcon = $state(false);
     let icon: string = $state('');
     let isNew = timeAgo(addon.added_at) < 32;
 
-    onMount(async () => {
-        isInstalled = await LocalAddonService.IsInstalled(addon.name);
-        hasIcon = await checkForIcon();
+    $effect(() => {
+        hasIcon = false;
+        icon = '';
+        checkForIcon();
     });
-
-    function handleOpenDialogChange(o: boolean) {
-        openDialog = o;
-    }
-
-    function handleOnInstall(installed: boolean): void {
-        isInstalled = installed;
-    }
 
     async function checkForIcon() {
         const response = await fetch(`https://raw.githubusercontent.com/${addon.repo}/${addon.branch}/icon.png`);
@@ -57,19 +49,14 @@
             const blob = new Blob(chunks);
             icon = URL.createObjectURL(blob);
         }
+        // If we got this far (especially if reader was valid), assume success
+        hasIcon = true;
         return true;
     }
 </script>
 
-<RemoteAddonDialog
-        bind:open={openDialog}
-        {addon}
-        onOpenChange={handleOpenDialogChange}
-        onInstall={handleOnInstall}
-/>
-
 <div class="grid grid-cols-12 items-center gap-2 bg-muted/50 hover:bg-muted h-16 w-full rounded-lg cursor-pointer transition-colors px-3 py-2 group"
-     onclick={() => openDialog = true}
+     onclick={onViewDetails}
 >
     <!-- Left Section: Icon, Title, Stats-->
     <div class="flex items-center gap-3 col-span-5">

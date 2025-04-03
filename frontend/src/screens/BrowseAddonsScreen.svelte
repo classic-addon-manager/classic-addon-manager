@@ -6,32 +6,41 @@
     import * as Select from "$lib/components/ui/select/index.js";
     import {onMount} from "svelte";
     import type {AddonManifest} from "$lib/wails";
-    import {RemoteAddonService} from "$lib/wails";
+    import {LocalAddonService, RemoteAddonService} from "$lib/wails";
     import RemoteAddon from "../components/RemoteAddon.svelte";
     import RemoteAddonSkeleton from "../components/remote_addon/RemoteAddonSkeleton.svelte";
     import {Button} from "$lib/components/ui/button";
     import {timeAgo, toast} from "../utils";
     import {fade, fly} from 'svelte/transition';
+    import RemoteAddonDialog from "../components/remote_addon/RemoteAddonDialog.svelte";
+
+    type AddonListItem = {
+        manifest: AddonManifest;
+        isInstalled: boolean;
+    };
 
     let isReady: boolean = $state(false);
     let isRefreshing: boolean = $state(false);
     let searchPhrase: string = $state('');
-    let addons: AddonManifest[] = $state([]);
+    let addons: AddonListItem[] = $state([]);
     let tags = [
         {label: 'All', value: 'all'},
     ];
 
     let selectedTag: string = $state('all');
+    let isDialogOpen: boolean = $state(false);
+    let selectedAddonForDialog: AddonManifest | null = $state(null);
+
     const triggerContent = $derived(
         tags.find((t) => t.value === selectedTag)?.label ?? "Select a tag"
     );
 
     const filteredAddons = $derived.by(() => {
-        return addons.filter(addon => {
-            if (selectedTag != 'all' && !addon.tags.includes(selectedTag)) {
+        return addons.filter(item => {
+            if (selectedTag != 'all' && !item.manifest.tags.includes(selectedTag)) {
                 return false;
             }
-            return addon.alias.toLowerCase().includes(searchPhrase.toLowerCase()) || addon.description.toLowerCase().includes(searchPhrase.toLowerCase());
+            return item.manifest.alias.toLowerCase().includes(searchPhrase.toLowerCase()) || item.manifest.description.toLowerCase().includes(searchPhrase.toLowerCase());
         });
     });
 
@@ -41,38 +50,48 @@
     });
 
     async function loadAddons() {
-        let tmp: AddonManifest[] = [];
-        for (let addon of await RemoteAddonService.GetAddonManifest()) {
-            tmp.push({
-                ...addon
-            });
-            for (let tag of addon.tags) {
-                if (tag == 'Example' || tags.find(t => t.value == tag)) {
-                    continue;
-                }
-                tags.push({label: tag, value: tag});
-            }
-        }
+        const manifests = await RemoteAddonService.GetAddonManifest();
+        const installStatusPromises = manifests.map(m => LocalAddonService.IsInstalled(m.name));
+        const installStatuses = await Promise.all(installStatusPromises);
 
-        // Sort addons alphabetically by name and whether an addon is new or not
+        let tmp: AddonListItem[] = manifests.map((manifest, index) => ({
+            manifest,
+            isInstalled: installStatuses[index]
+        }));
+
+        const uniqueTags = new Set<string>();
+        manifests.forEach(manifest => {
+            manifest.tags.forEach(tag => {
+                if (tag !== 'Example') {
+                    uniqueTags.add(tag);
+                }
+            });
+        });
+
+        const sortedTags = Array.from(uniqueTags).sort((a, b) => a.localeCompare(b));
+        tags = [
+            {label: 'All', value: 'all'},
+            ...sortedTags.map(tag => ({ label: tag, value: tag }))
+        ];
+
         tmp.sort((a, b) => {
-            const aIsNew = timeAgo(a.added_at) < 32;
-            const bIsNew = timeAgo(b.added_at) < 32;
+            const aIsNew = timeAgo(a.manifest.added_at) < 32;
+            const bIsNew = timeAgo(b.manifest.added_at) < 32;
 
             if (aIsNew && !bIsNew) return -1;
             if (!aIsNew && bIsNew) return 1;
 
             if (aIsNew && bIsNew) {
-                const aTime = timeAgo(a.added_at);
-                const bTime = timeAgo(b.added_at);
+                const aTime = new Date(a.manifest.added_at).getTime();
+                const bTime = new Date(b.manifest.added_at).getTime();
                 if (aTime !== bTime) {
-                    return aTime - bTime;
+                    return bTime - aTime;
                 }
             }
 
-            return a.name.localeCompare(b.name);
+            return a.manifest.name.localeCompare(b.manifest.name);
         });
-        tags.sort((a, b) => a.label.localeCompare(b.label));
+
         addons = tmp;
         searchPhrase = '';
     }
@@ -96,6 +115,36 @@
         } finally {
             isRefreshing = false;
         }
+    }
+
+    function viewAddonDetails(addonToView: AddonManifest) {
+        selectedAddonForDialog = addonToView;
+        isDialogOpen = true;
+    }
+
+    function closeDialog() {
+        isDialogOpen = false;
+        setTimeout(() => {
+            selectedAddonForDialog = null;
+        }, 300);
+    }
+
+    function handleInstallSuccess(installedManifest: AddonManifest) {
+        addons = addons.map(item =>
+            item.manifest.name === installedManifest.name
+                ? { ...item, isInstalled: true }
+                : item
+        );
+        closeDialog();
+    }
+
+    function handleUninstallSuccess(uninstalledManifest: AddonManifest) {
+        addons = addons.map(item =>
+            item.manifest.name === uninstalledManifest.name
+                ? { ...item, isInstalled: false }
+                : item
+        );
+        closeDialog();
     }
 </script>
 
@@ -164,9 +213,13 @@
                 </div>
             {:else}
                 <div class="flex flex-1 flex-col gap-4 py-4">
-                    {#each filteredAddons as addon(addon.name)}
+                    {#each filteredAddons as item (item.manifest.name)}
                         <div in:fly={{y: 20, duration: 200}}>
-                            <RemoteAddon {addon}/>
+                            <RemoteAddon
+                                addon={item.manifest}
+                                isInstalled={item.isInstalled}
+                                onViewDetails={() => viewAddonDetails(item.manifest)}
+                            />
                         </div>
                     {/each}
                 </div>
@@ -174,6 +227,17 @@
         </div>
     </main>
 </div>
+
+{#if selectedAddonForDialog}
+<RemoteAddonDialog
+    bind:open={isDialogOpen}
+    addon={selectedAddonForDialog}
+    onOpenChange={(o) => { if (!o) closeDialog(); }}
+    onInstall={handleInstallSuccess}
+    onViewDependency={viewAddonDetails}
+    onUninstall={handleUninstallSuccess}
+/>
+{/if}
 
 <style>
     /* Add smooth transitions */
