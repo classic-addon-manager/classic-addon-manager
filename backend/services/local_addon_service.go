@@ -2,6 +2,7 @@ package services
 
 import (
 	"ClassicAddonManager/backend/addon"
+	"ClassicAddonManager/backend/api"
 	"ClassicAddonManager/backend/config"
 	"ClassicAddonManager/backend/file"
 	"ClassicAddonManager/backend/logger"
@@ -38,7 +39,13 @@ func (s *LocalAddonService) UninstallAddon(name string) bool {
 		return false
 	}
 
-	return addon.RemoveManagedAddon(name) && addon.RemoveFromAddonsTxt(name)
+	wasRemoved := addon.RemoveManagedAddon(name) && addon.RemoveFromAddonsTxt(name)
+
+	if wasRemoved {
+		api.UnsubscribeFromAddon(name)
+	}
+
+	return wasRemoved
 }
 
 func (s *LocalAddonService) UnmanageAddon(name string) bool {
