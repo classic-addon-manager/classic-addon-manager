@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -115,71 +114,4 @@ func GetAddonManifest() []AddonManifest {
 	logger.Info("Retrieved " + strconv.Itoa(len(manifests)) + " addon manifests from remote source")
 
 	return manifests
-}
-
-// GetAddonManifestLocal This function used to be called however it should be transformed into a fallback if the HTTP call fails
-func GetAddonManifestLocal(ignoreCache bool) []AddonManifest {
-	cacheDir := config.GetCacheDir()
-	manifestPath := filepath.Join(cacheDir, "addons.json")
-	// Check if manifest exists
-	if !file.FileExists(manifestPath) {
-		err := downloadManifest(manifestPath)
-		if err != nil {
-			return []AddonManifest{} // TODO: handle error, should show something to the frontend
-
-		}
-	}
-
-	// Check if manifest is outdated
-	t, err := file.GetModifiedTime(manifestPath)
-	if err != nil {
-		return []AddonManifest{} // TODO: handle error, should show something to the frontend
-	}
-
-	// If more than 60 minutes old, download new manifest
-	if ignoreCache || time.Since(t) > time.Minute*60 {
-		err = downloadManifest(manifestPath)
-		if err != nil {
-			return []AddonManifest{} // TODO: handle error, should show something to the frontend
-		}
-	}
-
-	manifests, err := parseAddonManifest(manifestPath)
-	if err != nil {
-		return []AddonManifest{} // TODO: handle error, should show something to the frontend
-	}
-
-	return manifests
-}
-
-func parseAddonManifest(filePath string) ([]AddonManifest, error) {
-	f, err := os.Open(filePath)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	byteValue, err := io.ReadAll(f)
-	if err != nil {
-		return nil, err
-	}
-
-	var manifests []AddonManifest
-	err = json.Unmarshal(byteValue, &manifests)
-	if err != nil {
-		return nil, err
-	}
-
-	return manifests, nil
-}
-
-func downloadManifest(manifestPath string) error {
-	err := util.DownloadFile(
-		"https://github.com/classic-addon-manager/addons/releases/latest/download/addons.json",
-		manifestPath,
-	)
-	if err != nil {
-		return err
-	}
-	return nil
 }

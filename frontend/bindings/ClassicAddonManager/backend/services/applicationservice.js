@@ -39,5 +39,14 @@ export function SelfUpdate(updateURL) {
     return $resultPromise;
 }
 
+/**
+ * @param {string} token
+ * @returns {Promise<void> & { cancel(): void }}
+ */
+export function SetAuthToken(token) {
+    let $resultPromise = /** @type {any} */($Call.ByID(3930936982, token));
+    return $resultPromise;
+}
+
 // Private type creation functions
 const $$createType0 = api$0.ApplicationRelease.createFrom;

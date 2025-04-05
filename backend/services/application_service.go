@@ -9,7 +9,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 )
+
+var authMutex = &sync.Mutex{}
 
 type ApplicationService struct {
 }
@@ -25,6 +28,12 @@ func (s *ApplicationService) GetLatestRelease() (api.ApplicationRelease, error) 
 		return api.ApplicationRelease{}, err
 	}
 	return release, nil
+}
+
+func (s *ApplicationService) SetAuthToken(token string) {
+	authMutex.Lock()
+	shared.AuthToken = token
+	authMutex.Unlock()
 }
 
 func (s *ApplicationService) SelfUpdate(updateURL string) error {

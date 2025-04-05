@@ -1,3 +1,5 @@
+import {ApplicationService} from "$lib/wails";
+
 export type User = {
     username: string,
     avatar: string,
@@ -28,10 +30,14 @@ export function getToken(): string {
     if (token === "") {
         token = localStorage.getItem('token') || "";
     }
+    if (token != "") {
+        ApplicationService.SetAuthToken(token);
+    }
     return token;
 }
 
 export function setToken(newToken: string) {
     token = newToken;
     localStorage.setItem('token', token);
+    ApplicationService.SetAuthToken(newToken);
 }
