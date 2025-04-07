@@ -13,9 +13,15 @@
 
     onMount(async () => {
         Events.On('authTokenReceived', async (event: WailsEvent) => {
-            setToken(event.data);
-            await getAccount();
-            toast.success('Successfully signed in');
+            const token = Array.isArray(event.data) ? event.data[0] : event.data;
+            if (typeof token === 'string') {
+                setToken(token);
+                await getAccount();
+                toast.success('Successfully signed in');
+            } else {
+                console.error('Received unexpected data type for auth token:', event.data);
+                toast.error('Failed to process sign-in token.');
+            }
         });
         await getAccount();
         isReady = true;
