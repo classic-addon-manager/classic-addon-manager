@@ -1,7 +1,7 @@
 <script lang="ts">
     import * as Avatar from "$lib/components/ui/avatar/index";
     import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index";
-    import {getUser, setToken, setUser, type User} from "$stores/UserStore.svelte";
+    import {clearUserState, getUser, setToken, setUser, type User} from "$stores/UserStore.svelte";
     import {onMount} from "svelte";
     import {apiClient} from "../api";
     import {toast} from "../utils";
@@ -38,8 +38,7 @@
     }
 
     function handleSignOut() {
-        localStorage.removeItem('token');
-        setUser({discord_id: '', username: '', avatar: ''});
+        clearUserState();
         setTimeout(() => {
             window.location.href = '/';
         }, 100);
