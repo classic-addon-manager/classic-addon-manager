@@ -41,11 +41,6 @@
             return;
         }
         if (!release) {
-            console.error("Failed to get release for addon: ", addon.name);
-            isCheckingForUpdates = false;
-            return;
-        }
-        if (!release) {
             console.error("No release found for addon: ", addon.name);
             return;
         }
