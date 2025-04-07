@@ -11,7 +11,7 @@
     import ShieldQuestion from "lucide-svelte/icons/shield-question";
     import {Badge} from "$lib/components/ui/badge";
     import LocalAddonUpdateDialog from "./local_addon/LocalAddonUpdateDialog.svelte";
-    import { safeCall } from "src/utils";
+    import { safeCall } from "../utils";
 
     interface Props {
         addon: Addon;
