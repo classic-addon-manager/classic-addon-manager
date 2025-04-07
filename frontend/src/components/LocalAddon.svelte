@@ -42,6 +42,7 @@
         }
         if (!release) {
             console.error("No release found for addon: ", addon.name);
+            isCheckingForUpdates = false;
             return;
         }
         latestRelease = release;
