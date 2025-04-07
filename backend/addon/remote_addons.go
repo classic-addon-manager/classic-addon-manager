@@ -5,6 +5,7 @@ import (
 	"ClassicAddonManager/backend/config"
 	"ClassicAddonManager/backend/file"
 	"ClassicAddonManager/backend/logger"
+	"ClassicAddonManager/backend/shared"
 	"ClassicAddonManager/backend/util"
 	"encoding/json"
 	"errors"
@@ -13,25 +14,9 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"time"
 )
 
-type AddonManifest struct {
-	Name         string    `json:"name"`
-	Alias        string    `json:"alias"`
-	Dependencies []string  `json:"dependencies"`
-	Description  string    `json:"description"`
-	Author       string    `json:"author"`
-	Repo         string    `json:"repo"`
-	Branch       string    `json:"branch"`
-	Tags         []string  `json:"tags"`
-	Downloads    int       `json:"downloads"`
-	LikePercent  *int8     `json:"like_percentage"`
-	Kofi         *string   `json:"kofi,omitempty"`
-	AddedAt      time.Time `json:"added_at"`
-}
-
-func InstallAddon(manifest AddonManifest) (bool, error) {
+func InstallAddon(manifest shared.AddonManifest) (bool, error) {
 	if !file.FileExists(filepath.Join(config.GetAddonDir(), "addons.txt")) {
 		logger.Info("addons.txt not found in AAC path, creating it.")
 		CreateAddonsTxt()
@@ -85,30 +70,30 @@ func InstallAddon(manifest AddonManifest) (bool, error) {
 }
 
 // GetAddonManifest https://aac.gaijin.dev/addons
-func GetAddonManifest() []AddonManifest {
+func GetAddonManifest() []shared.AddonManifest {
 	req, err := http.NewRequest("GET", "https://aac.gaijin.dev/addons", nil)
 	if err != nil {
 		logger.Error("GetAddonManifest Error:", err)
-		return []AddonManifest{}
+		return []shared.AddonManifest{}
 	}
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
 		logger.Error("GetAddonManifest Error:", err)
-		return []AddonManifest{}
+		return []shared.AddonManifest{}
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
 		logger.Error("GetAddonManifest Error: Status Code", errors.New(strconv.Itoa(resp.StatusCode)))
-		return []AddonManifest{}
+		return []shared.AddonManifest{}
 	}
 
-	var manifests []AddonManifest
+	var manifests []shared.AddonManifest
 	if err := json.NewDecoder(resp.Body).Decode(&manifests); err != nil {
 		logger.Error("GetAddonManifest Error:", err)
-		return []AddonManifest{}
+		return []shared.AddonManifest{}
 	}
 
 	logger.Info("Retrieved " + strconv.Itoa(len(manifests)) + " addon manifests from remote source")

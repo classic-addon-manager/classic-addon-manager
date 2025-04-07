@@ -76,3 +76,17 @@ export let toast = {
         t.info(message, opts);
     }
 }
+
+/**
+ * Wraps a function call or Promise in a try/catch block and returns a tuple [result, error] similar to Go.
+ * @param fn The function or Promise to execute.
+ * @returns A Promise that resolves to a tuple [result, error].
+ */
+export async function safeCall<T>(fn: (() => T) | (() => Promise<T>) | Promise<T>): Promise<[T | null, any | null]> {
+    try {
+        const result = typeof fn === 'function' ? await fn() : await fn;
+        return [result, null];
+    } catch (error) {
+        return [null, error];
+    }
+}

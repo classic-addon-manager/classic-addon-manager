@@ -5,6 +5,7 @@ import (
 	"ClassicAddonManager/backend/config"
 	"ClassicAddonManager/backend/file"
 	"ClassicAddonManager/backend/logger"
+	"ClassicAddonManager/backend/shared"
 	"encoding/json"
 	"errors"
 	"os"
@@ -67,7 +68,7 @@ func IsInstalled(name string) bool {
 	return false
 }
 
-func AddManagedAddon(manifest AddonManifest, release api.Release) {
+func AddManagedAddon(manifest shared.AddonManifest, release api.Release) {
 	addon := Addon{
 		Name:        manifest.Name,
 		Description: manifest.Description,

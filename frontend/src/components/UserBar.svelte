@@ -1,12 +1,13 @@
 <script lang="ts">
     import * as Avatar from "$lib/components/ui/avatar/index";
     import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index";
-    import {clearUserState, getUser, setToken, setUser, type User} from "$stores/UserStore.svelte";
+    import {clearUserState, getUser, isAuthenticated, setToken, setUser, type User} from "$stores/UserStore.svelte";
     import {onMount} from "svelte";
     import {apiClient} from "../api";
     import {toast} from "../utils";
     import {Events, Browser} from "@wailsio/runtime";
     import type { WailsEvent } from "node_modules/@wailsio/runtime/types/events";
+    import addons from "../addons";
 
     let isReady: boolean = $state(false);
     let user: User = $derived(getUser());
@@ -25,6 +26,12 @@
         });
         await getAccount();
         isReady = true;
+    });
+
+    $effect(() => {
+        if (isAuthenticated()) {
+            addons.getSubscribedAddons();
+        }
     });
 
     async function getAccount() {

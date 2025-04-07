@@ -4,6 +4,7 @@ import {
 import {setAddons, getInstalledAddons} from "./stores/AddonStore.svelte";
 import type {AddonManifest} from "$lib/wails";
 import {RemoteAddonService} from "$lib/wails";
+import { safeCall, toast } from "./utils";
 
 export default {
     populateAddonStore,
@@ -12,7 +13,8 @@ export default {
     repoHasAddon,
     getManifest,
     getInstalledAddons,
-    unmanage
+    unmanage,
+    getSubscribedAddons
 }
 
 async function getManifest(name: string): Promise<AddonManifest> {
@@ -58,4 +60,40 @@ async function unmanage(addon: string): Promise<boolean> {
         return true;
     }
     return false;
+}
+
+async function getSubscribedAddons() {
+    const [ads, err] = await safeCall<AddonManifest[]>(RemoteAddonService.GetSubscribedAddons());
+    if(err) {
+        toast.error("Error getting subscribed addons");
+        console.error("Error getting subscribed addons", err);
+        return;
+    }
+
+    if(!ads) {
+        return;
+    }
+
+    let installed = 0;
+
+    for(const addon of ads) {
+        const [is_installed, err] = await safeCall<boolean>(LocalAddonService.IsInstalled(addon.name));
+        if(err) {
+            console.error("Error checking if addon is installed", err);
+            toast.error("Error occurred while checking if addon is installed: " + err);
+            continue;
+        }
+
+        if(is_installed) {
+            continue;
+        }
+
+        if(await install(addon)) {
+            installed++;
+        }
+    }
+
+    if(installed > 0) {
+        toast.success("Addons restored", {description: `${installed} addons were restored from the server!`});
+    }
 }

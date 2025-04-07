@@ -8,13 +8,13 @@ import {Call as $Call, Create as $Create} from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as addon$0 from "../addon/models.js";
+import * as api$0 from "../api/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as api$0 from "../api/models.js";
+import * as shared$0 from "../shared/models.js";
 
 /**
- * @returns {Promise<addon$0.AddonManifest[]> & { cancel(): void }}
+ * @returns {Promise<shared$0.AddonManifest[]> & { cancel(): void }}
  */
 export function GetAddonManifest() {
     let $resultPromise = /** @type {any} */($Call.ByID(1299347432));
@@ -39,7 +39,19 @@ export function GetLatestRelease(name) {
 }
 
 /**
- * @param {addon$0.AddonManifest} ad
+ * @returns {Promise<shared$0.AddonManifest[]> & { cancel(): void }}
+ */
+export function GetSubscribedAddons() {
+    let $resultPromise = /** @type {any} */($Call.ByID(3294691374));
+    let $typingPromise = /** @type {any} */($resultPromise.then(($result) => {
+        return $$createType1($result);
+    }));
+    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
+    return $typingPromise;
+}
+
+/**
+ * @param {shared$0.AddonManifest} ad
  * @returns {Promise<boolean> & { cancel(): void }}
  */
 export function InstallAddon(ad) {
@@ -48,6 +60,6 @@ export function InstallAddon(ad) {
 }
 
 // Private type creation functions
-const $$createType0 = addon$0.AddonManifest.createFrom;
+const $$createType0 = shared$0.AddonManifest.createFrom;
 const $$createType1 = $Create.Array($$createType0);
 const $$createType2 = api$0.Release.createFrom;
