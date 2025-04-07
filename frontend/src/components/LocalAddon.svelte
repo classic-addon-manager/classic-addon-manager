@@ -11,6 +11,7 @@
     import ShieldQuestion from "lucide-svelte/icons/shield-question";
     import {Badge} from "$lib/components/ui/badge";
     import LocalAddonUpdateDialog from "./local_addon/LocalAddonUpdateDialog.svelte";
+    import { safeCall } from "src/utils";
 
     interface Props {
         addon: Addon;
@@ -33,11 +34,13 @@
 
     async function handleCheckUpdates() {
         isCheckingForUpdates = true;
-        console.log("Checking for updates for addon: ", addon.name);
-        let release: Release | undefined;
-        try {
-            release = await RemoteAddonService.GetLatestRelease(addon.name);
-        } catch (e) {
+        const [release, err] = await safeCall<Release|undefined>(RemoteAddonService.GetLatestRelease(addon.name));
+        if(err) {
+            console.error("Failed to get release for addon: ", addon.name);
+            isCheckingForUpdates = false;
+            return;
+        }
+        if (!release) {
             console.error("Failed to get release for addon: ", addon.name);
             isCheckingForUpdates = false;
             return;
