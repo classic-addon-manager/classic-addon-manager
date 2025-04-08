@@ -35,9 +35,9 @@
   },
   "dependencies": {
     "@wailsio/runtime": "^3.0.0-alpha.66",
-    "dompurify": "^3.2.4",
-    "marked": "^15.0.7",
-    "semver": "^7.6.3",
+    "dompurify": "^3.2.5",
+    "marked": "^15.0.8",
+    "semver": "^7.7.1",
     "tailwindcss-animate": "^1.0.7"
   }
 }
