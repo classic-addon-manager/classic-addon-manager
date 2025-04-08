@@ -6,7 +6,7 @@
     import Download from "lucide-svelte/icons/download";
     import Check from "lucide-svelte/icons/check";
 
-    import {timeAgo} from "../utils";
+    import {timeAgo, safeCall} from "../utils";
 
     let {addon, isInstalled, onViewDetails}: {
         addon: AddonManifest,
@@ -34,13 +34,18 @@
             const chunks = [];
             let done = false;
             while (!done) {
-                let result;
-                try {
-                    result = await reader.read();
-                } catch (e) {
-                    console.error("Error reading image:", e);
+                const [result, error] = await safeCall(reader.read());
+                if (error) {
+                    console.error("Error reading image:", error);
                     return false;
                 }
+
+                if (!result) {
+                    // Should not happen if error is null, but satisfy TS
+                    done = true;
+                    continue;
+                }
+
                 done = result.done;
                 if (result.value) {
                     chunks.push(result.value);

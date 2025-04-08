@@ -11,6 +11,7 @@
     import AACWebsiteItem from "../components/navbar/AACWebsiteItem.svelte";
 
     import {
+    ApplicationRelease,
         ApplicationService
     } from "$lib/wails";
     import {Browser} from "@wailsio/runtime"
@@ -19,6 +20,7 @@
     import TroubleshootingItem from "../components/navbar/TroubleshootingItem.svelte";
     import UserBar from "../components/UserBar.svelte";
     import {getVersion} from "$stores/ApplicationStore.svelte";
+    import {safeCall} from "../utils";
 
     let updateAvailable = $state(false);
     let updateInformation = $state({
@@ -30,15 +32,16 @@
     let ActiveScreen = $derived.by(() => getActiveScreen())
 
     onMount(async () => {
-        try {
-            updateInformation = await ApplicationService.GetLatestRelease();
-        } catch (e) {
-            console.error("Failed to get latest release: ", e);
+        const [releaseInfo, error] = await safeCall<ApplicationRelease>(ApplicationService.GetLatestRelease);
+        if (error) {
+            console.error("Failed to get latest release: ", error);
             return;
         }
-
-        if (isNewerVersion(updateInformation.version)) {
-            updateAvailable = true;
+        if (releaseInfo) {
+            updateInformation = releaseInfo;
+            if (isNewerVersion(updateInformation.version)) {
+                updateAvailable = true;
+            }
         }
     });
 

@@ -14,6 +14,7 @@
     import {toast} from "../utils";
     import {slide} from "svelte/transition";
     import {cubicOut} from "svelte/easing";
+    import {safeCall} from "../utils";
 
     let issues: LogParseResult[] = $state([]);
     let issueCount = $derived.by(() => issues.length);
@@ -38,11 +39,10 @@
     });
 
     async function handleResetAddonSettings() {
-        try {
-            await LocalAddonService.ResetSettings();
-        } catch (e) {
-            console.error("Failed to reset addon settings", e);
-            toast.error(`Failed to reset addon settings, reason: ${e}`, {
+        const [, error] = await safeCall(LocalAddonService.ResetSettings);
+        if (error) {
+            console.error("Failed to reset addon settings", error);
+            toast.error(`Failed to reset addon settings, reason: ${error}`, {
                 duration: 6000,
             });
             return;

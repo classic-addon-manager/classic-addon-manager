@@ -11,6 +11,7 @@
     import RemoteAddonSkeleton from "../components/remote_addon/RemoteAddonSkeleton.svelte";
     import {Button} from "$lib/components/ui/button";
     import {timeAgo, toast} from "../utils";
+    import {safeCall} from "../utils";
     import {fade, fly} from 'svelte/transition';
     import RemoteAddonDialog from "../components/remote_addon/RemoteAddonDialog.svelte";
 
@@ -102,19 +103,21 @@
         isRefreshing = true;
         const startTime = Date.now();
         
-        try {
-            await loadAddons();
-            
-            // Only add artificial delay when manually refreshing
-            const elapsedTime = Date.now() - startTime;
-            if (elapsedTime < 500) {
-                await new Promise(resolve => setTimeout(resolve, 500 - elapsedTime));
-            }
-            
-            toast.success('Addons refreshed');
-        } finally {
-            isRefreshing = false;
+        const [, error] = await safeCall(loadAddons);
+        if(error) {
+            console.error("Failed to refresh addons", error);
+            toast.error(`Failed to refresh addons: ${error}`);
+            return;
         }
+        
+        // Only add artificial delay when manually refreshing
+        const elapsedTime = Date.now() - startTime;
+        if (elapsedTime < 500) {
+            await new Promise(resolve => setTimeout(resolve, 500 - elapsedTime));
+        }
+        
+        toast.success('Addons refreshed');
+        isRefreshing = false;
     }
 
     function viewAddonDetails(addonToView: AddonManifest) {

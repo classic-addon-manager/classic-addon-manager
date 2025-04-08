@@ -8,8 +8,8 @@
     import addons from "../../addons";
     import {isAuthenticated} from "$stores/UserStore.svelte";
     import {apiClient} from "../../api";
-    import {toast} from "../../utils";
-    import {RemoteAddonService} from "$lib/wails";
+    import {toast, safeCall} from "../../utils";
+    import {AddonManifest, RemoteAddonService} from "$lib/wails";
     import LocalAddonUpdateDialog from "./LocalAddonUpdateDialog.svelte";
 
     let {
@@ -40,26 +40,32 @@
     });
 
     async function checkForUpdates() {
-        try {
-            latestRelease = await RemoteAddonService.GetLatestRelease(addon.name);
-        } catch (e) {
-            console.error("Failed to get release for addon: ", addon.name);
+        const [release, error] = await safeCall<Release>(() => RemoteAddonService.GetLatestRelease(addon.name));
+        if (error) {
+            console.error("Failed to get release for addon: ", addon.name, error);
+            return; 
+        }
+        if (release) {
+            latestRelease = release;
         }
     }
 
     async function handleMatchAddon() {
-        let manifest = await addons.getManifest(addon.name)
-        if (!manifest) {
-            console.error('Failed to get manifest, this should not happen...')
+        const [manifest, manifestError] = await safeCall<AddonManifest>(() => addons.getManifest(addon.name));
+        if (manifestError || !manifest) {
+            console.error('Failed to get manifest:', manifestError);
+            toast.error(`Failed to get manifest: ${manifestError || 'Unknown error'}`);
             return;
         }
 
-        try {
-            await addons.install(manifest)
-        } catch (e: any) {
-            if (e.toString().includes('no release found')) {
-                // TODO: Show error message
-                // dialogErrorMsg = "No release found for this addon.";
+        const [installError] = await safeCall<boolean>(() => addons.install(manifest));
+        if (installError) {
+            const errorString = String(installError);
+            if (errorString.includes('no release found')) {
+                toast.error("No release found for this addon.");
+            } else {
+                console.error("Failed to install addon during match:", installError);
+                toast.error(`Failed to match addon: ${errorString.substring(0,100)}`);
             }
             return;
         }
@@ -99,17 +105,18 @@
     }
 
     async function handleReinstall() {
-        let didInstall = false;
-        try {
-            didInstall = await addons.install(await addons.getManifest(addon.name))
-        } catch (e: any) {
-            if (e.toString().includes('no release found')) {
+        const [manifest, manifestError] = await safeCall<AddonManifest>(() => addons.getManifest(addon.name));
+        
+        if(manifestError || !manifest) {
+            if (manifestError.toString().includes('no release found')) {
                 toast.error('No release found for this addon');
             } else {
-                toast.error('Failed to update addon');
+                toast.error('Failed to reinstall addon');
             }
-            return;
+            return;           
         }
+        
+        let didInstall: boolean = await addons.install(manifest)
         if (!didInstall) return;
         toast.success('Addon reinstalled',
             {description: `${addon.alias} was reinstalled`, duration: 7000}

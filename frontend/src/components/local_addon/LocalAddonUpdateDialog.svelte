@@ -4,7 +4,7 @@
     import LoaderCircle from "lucide-svelte/icons/loader-circle";
     import addons from "../../addons";
     import {getUpdatesAvailableCount, setUpdatesAvailableCount} from "$stores/AddonStore.svelte";
-    import {formatToLocalTime, toast} from "../../utils";
+    import {formatToLocalTime, toast, safeCall} from "../../utils";
     import type {Addon, Release} from "$lib/wails";
 
     let {
@@ -23,19 +23,30 @@
 
     async function handleUpdateClick() {
         isUpdating = true;
-        let didInstall = false;
-        try {
-            didInstall = await addons.install(await addons.getManifest(addon.name))
-        } catch (e: any) {
-            if (e.toString().includes('no release found')) {
+        
+        const updateOperation = async () => {
+            const manifest = await addons.getManifest(addon.name);
+            if (!manifest) throw new Error('Manifest not found');
+            return await addons.install(manifest);
+        };
+
+        const [didInstall, error] = await safeCall(updateOperation);
+
+        if (error) {
+            const errorString = String(error); 
+            if (errorString.includes('no release found')) {
                 toast.error('No release found for this addon');
             } else {
-                toast.error('Failed to update addon');
+                console.error("Failed to update addon:", error);
+                toast.error(`Failed to update addon: ${errorString.substring(0, 100)}`);
             }
             isUpdating = false;
             return;
         }
+        
+        isUpdating = false; 
         if (!didInstall) return;
+        
         toast.success('Addon updated',
             {
                 description: `${addon.alias} was updated to ${release.tag_name}`,
