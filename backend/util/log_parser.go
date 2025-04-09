@@ -21,52 +21,43 @@ func parseLogFile() ([]LogParseResult, error) {
 		return nil, err
 	}
 
-	luaRegex, err := regexp.Compile(`\[Lua Error\].*/Addon/(.+\.lua:\d+): (.+)`)
-	if err != nil {
-		return nil, err
-	}
-	addonRegex, err := regexp.Compile(`\/Addon\/([^:]+:\d+):\s*\[Script Error\]\s*(.*)`)
-	if err != nil {
-		return nil, err
-	}
-	apiRegex, err := regexp.Compile(`@.*?/x2ui/addons/([^:]+:\d+):\s*\[Script Error\]\s*(.*)`)
-	if err != nil {
-		return nil, err
+	// Define patterns with their corresponding type and addon name extraction logic
+	patterns := []struct {
+		regex    *regexp.Regexp
+		errType  string
+		getAddon func(string) string
+	}{
+		{
+			regex:    regexp.MustCompile(`\[Lua Error].*/Addon/(.+\.lua:\d+): (.+)`),
+			errType:  "lua",
+			getAddon: func(file string) string { return strings.Split(file, "/")[0] },
+		},
+		{
+			regex:    regexp.MustCompile(`/Addon/([^:]+:\d+):\s*\[Script Error\]\s*(.*)`),
+			errType:  "addon",
+			getAddon: func(file string) string { return strings.Split(file, "/")[0] },
+		},
+		{
+			regex:    regexp.MustCompile(`@.*?/x2ui/addons/([^:]+:\d+):\s*\[Script Error]\s*(.*)`),
+			errType:  "api",
+			getAddon: func(file string) string { return "x2ui" },
+		},
 	}
 
 	lines := strings.Split(string(data), "\n")
-
-	var results = make([]LogParseResult, 0)
+	var results []LogParseResult
 
 	for _, line := range lines {
-		if luaRegex.MatchString(line) {
-			matches := luaRegex.FindStringSubmatch(line)
-			addonName := strings.Split(matches[1], "/")
-			results = append(results, LogParseResult{
-				Type:  "lua",
-				Addon: addonName[0],
-				File:  matches[1],
-				Error: matches[2],
-			})
-		}
-		if addonRegex.MatchString(line) {
-			matches := addonRegex.FindStringSubmatch(line)
-			addonName := strings.Split(matches[1], "/")
-			results = append(results, LogParseResult{
-				Type:  "addon",
-				Addon: addonName[0],
-				File:  matches[1],
-				Error: matches[2],
-			})
-		}
-		if apiRegex.MatchString(line) {
-			matches := apiRegex.FindStringSubmatch(line)
-			results = append(results, LogParseResult{
-				Type:  "api",
-				Addon: "x2ui",
-				File:  matches[1],
-				Error: matches[2],
-			})
+		for _, p := range patterns {
+			if matches := p.regex.FindStringSubmatch(line); matches != nil {
+				results = append(results, LogParseResult{
+					Type:  p.errType,
+					Addon: p.getAddon(matches[1]),
+					File:  matches[1],
+					Error: matches[2],
+				})
+				break
+			}
 		}
 	}
 
