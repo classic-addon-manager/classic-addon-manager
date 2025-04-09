@@ -134,8 +134,7 @@ func handlePipeConnection(conn net.Conn, a *application.App) {
 	defer conn.Close()
 
 	var deeplink string
-	_, err := fmt.Fscanln(conn, &deeplink)
-	if err != nil {
+	if _, err := fmt.Fscanln(conn, &deeplink); err != nil {
 		logger.Error("Error reading from pipe:", err)
 		return
 	}
@@ -151,7 +150,7 @@ func handlePipeConnection(conn net.Conn, a *application.App) {
 		token := parsedURL.Query().Get("t")
 		if token != "" {
 			logger.Info("Received authentication token")
-			mainWindow := application.Get().GetWindowByName("main")
+			mainWindow := a.GetWindowByName("main")
 			if mainWindow.IsMinimised() {
 				mainWindow.UnMinimise()
 			} else {
