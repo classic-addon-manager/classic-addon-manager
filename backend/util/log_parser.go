@@ -33,7 +33,7 @@ func parseLogFile() ([]LogParseResult, error) {
 			getAddon: func(file string) string { return strings.Split(file, "/")[0] },
 		},
 		{
-			regex:    regexp.MustCompile(`/Addon/([^:]+:\d+):\s*\[Script Error\]\s*(.*)`),
+			regex:    regexp.MustCompile(`/Addon/([^:]+:\d+):\s*\[Script Error]\s*(.*)`),
 			errType:  "addon",
 			getAddon: func(file string) string { return strings.Split(file, "/")[0] },
 		},
