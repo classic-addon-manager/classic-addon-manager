@@ -1,16 +1,41 @@
 <script lang="ts">
     import * as Avatar from "$lib/components/ui/avatar/index";
     import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index";
+    import {Button} from "$lib/components/ui/button";
+    import * as Dialog from "$lib/components/ui/dialog/index";
     import {clearUserState, getUser, isAuthenticated, setToken, setUser, type User} from "$stores/UserStore.svelte";
     import {onMount} from "svelte";
     import {apiClient} from "../api";
     import {toast} from "../utils";
     import {Events, Browser} from "@wailsio/runtime";
-    import type { WailsEvent } from "node_modules/@wailsio/runtime/types/events";
+    import type {WailsEvent} from "node_modules/@wailsio/runtime/types/events";
     import addons from "../addons";
 
     let isReady: boolean = $state(false);
     let user: User = $derived(getUser());
+    let chatOpen: boolean = $state(false);
+    let chatMessage: string = $state('');
+    let chatHistory: { role: 'user' | 'assistant', content: string }[] = $state([]);
+    let isWaitingForResponse: boolean = $state(false);
+    let chatContainer: HTMLDivElement;
+    let messageInput: HTMLInputElement;
+
+    $effect(() => {
+        if (chatHistory.length > 0) {
+            setTimeout(() => {
+                chatContainer?.scrollTo({
+                    top: chatContainer.scrollHeight,
+                    behavior: 'smooth'
+                });
+            }, 100);
+        }
+    });
+
+    $effect(() => {
+        if (!isWaitingForResponse && messageInput && chatOpen) {
+            setTimeout(() => messageInput?.focus(), 0);
+        }
+    });
 
     onMount(async () => {
         Events.On('authTokenReceived', async (event: WailsEvent) => {
@@ -56,13 +81,54 @@
             window.location.href = '/';
         }, 100);
     }
+
+    function handleChatOpen() {
+        chatOpen = true;
+        setTimeout(() => messageInput?.focus(), 100);
+    }
+
+    function handleChatClose() {
+        chatOpen = false;
+    }
+
+    async function sendMessage() {
+        if (!chatMessage.trim() || isWaitingForResponse) return;
+
+        // Add user message to chat history
+        chatHistory = [...chatHistory, {role: 'user', content: chatMessage}];
+
+        // Clear input field
+        const userMessage = chatMessage;
+        chatMessage = '';
+        
+        // Set loading state
+        isWaitingForResponse = true;
+
+        // Simulate AI response (in a real app, this would call an API)
+        try {
+            setTimeout(() => {
+                chatHistory = [...chatHistory, {
+                    role: 'assistant',
+                    content: `Thanks for your question: "${userMessage}". This is a simulated AI response. In a real implementation, this would connect to an AI service.`
+                }];
+                isWaitingForResponse = false;
+            }, 1000);
+        } catch (error) {
+            // If there's an error, add an error message to the chat
+            chatHistory = [...chatHistory, {
+                role: 'assistant',
+                content: 'Sorry, I encountered an error processing your request.'
+            }];
+            isWaitingForResponse = false;
+        }
+    }
 </script>
 
 {#if isReady}
-    {#if user.discord_id === ''}
+    {#if !isAuthenticated()}
         <div class="mx-auto w-full">
             <a class="flex scale-[85%] items-center py-2 px-4 rounded-lg bg-[#5865F2] hover:bg-[#5865F2]/80 hover:text-white/80 transition-colors duration-300"
-               onclick={() => Browser.OpenURL('https://discord.com/oauth2/authorize?client_id=1331010099916836914&response_type=code&redirect_uri=https%3A%2F%2Faac.gaijin.dev%2Fauth%2Fdiscord%2Fcallback2&scope=identify')}
+               onclick={(e) => { e.preventDefault(); Browser.OpenURL('https://discord.com/oauth2/authorize?client_id=1331010099916836914&response_type=code&redirect_uri=https%3A%2F%2Faac.gaijin.dev%2Fauth%2Fdiscord%2Fcallback2&scope=identify'); }}
                href="#"
             >
                 <svg viewBox="0 -28.5 256 256" class="h-7 w-7 fill-white hover:fill-white/80 mr-4">
@@ -77,15 +143,32 @@
         </div>
 
     {:else}
-        <div class="w-full px-3">
+        <div class="w-full px-3 space-y-2">
+            <!-- Ask Question Button -->
+            <Button
+                    variant="secondary"
+                    class="w-full flex items-center justify-center gap-2 bg-secondary/30"
+                    onclick={handleChatOpen}
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                     class="lucide lucide-message-circle-question">
+                    <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>
+                    <path d="M10 8.5a2.5 2.5 0 0 1 4 2 2.5 2.5 0 0 1-2.5 2.5"/>
+                    <path d="M12 16h.01"/>
+                </svg>
+                Ask a friendly Daru
+            </Button>
+
+            <!-- User Profile -->
             <DropdownMenu.Root>
                 <DropdownMenu.Trigger class="w-full focus:outline-none">
-                    <div class="flex w-full items-center space-x-3 rounded-md bg-secondary/50 p-2 transition-all hover:bg-secondary">
+                    <div class="flex w-full items-center space-x-3 rounded-md bg-secondary/30 p-2 transition-all hover:bg-secondary">
                         <Avatar.Root class="h-8 w-8">
                             <Avatar.Image
-                                src={`https://cdn.discordapp.com/avatars/${user.discord_id}/${user.avatar}.png`}
-                                alt={user.username}
-                                class="h-full w-full object-cover"
+                                    src={`https://cdn.discordapp.com/avatars/${user.discord_id}/${user.avatar}.png`}
+                                    alt={user.username}
+                                    class="h-full w-full object-cover"
                             />
                             <Avatar.Fallback class="text-xs">
                                 {user.username.substring(0, 2).toUpperCase()}
@@ -97,11 +180,11 @@
                 <DropdownMenu.Content class="w-56">
                     <DropdownMenu.Group>
                         <DropdownMenu.Label>Account</DropdownMenu.Label>
-                        <DropdownMenu.Separator />
+                        <DropdownMenu.Separator/>
                         <DropdownMenu.Item>
                             <button
-                                class="w-full text-left cursor-pointer text-red-500"
-                                onclick={handleSignOut}
+                                    class="w-full text-left cursor-pointer text-red-500"
+                                    onclick={handleSignOut}
                             >
                                 Sign out
                             </button>
@@ -112,3 +195,135 @@
         </div>
     {/if}
 {/if}
+
+<!-- Chat Dialog -->
+<Dialog.Root bind:open={chatOpen}>
+    <Dialog.Portal>
+        <Dialog.Overlay class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" />
+        <Dialog.Content
+                class="fixed left-[50%] top-[50%] z-50 w-[calc(100%-2rem)] max-w-2xl translate-x-[-50%] translate-y-[-50%] gap-0 border bg-background shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-xl overflow-hidden">
+            <div class="flex max-h-[calc(100vh-4rem)] h-[650px] flex-col">
+                <!-- Header -->
+                <div class="border-b border-border/40 px-4 sm:px-6 py-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <Dialog.Title class="text-lg font-medium leading-none">AI Assistant</Dialog.Title>
+                            <Dialog.Description class="mt-2 text-sm text-muted-foreground">
+                                Get instant help with your questions
+                            </Dialog.Description>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chat Area -->
+                <div 
+                    bind:this={chatContainer}
+                    class="flex-1 overflow-y-auto p-4 sm:p-6 scrollbar-thin scrollbar-thumb-secondary scrollbar-track-secondary/20">
+                    <div class="h-full">
+                        {#if chatHistory.length === 0}
+                            <div class="h-full flex flex-col items-center justify-center space-y-4 text-center">
+                                <div class="rounded-full bg-primary/10 p-4">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" 
+                                         stroke="currentColor" stroke-width="2" class="h-6 w-6 text-primary">
+                                        <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>
+                                        <path d="M10 8.5a2.5 2.5 0 0 1 4 2 2.5 2.5 0 0 1-2.5 2.5"/>
+                                        <path d="M12 16h.01"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-semibold">Welcome to AI Assistant</h3>
+                                    <p class="text-sm text-muted-foreground mt-1">
+                                        Ask me anything about addons, configurations, or general questions.
+                                    </p>
+                                </div>
+                            </div>
+                        {:else}
+                            <div class="space-y-6">
+                                {#each chatHistory as message, i (message.content + i)}
+                                    <div class="flex items-start gap-3 px-4 {message.role === 'user' ? 'justify-end' : ''}">
+                                        {#if message.role === 'assistant'}
+                                            <div class="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full bg-primary/10">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" 
+                                                     stroke="currentColor" stroke-width="2" class="text-primary">
+                                                    <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>
+                                                    <path d="M10 8.5a2.5 2.5 0 0 1 4 2 2.5 2.5 0 0 1-2.5 2.5"/>
+                                                    <path d="M12 16h.01"/>
+                                                </svg>
+                                            </div>
+                                        {/if}
+                                        <div class="flex flex-col gap-2">
+                                            <div class="inline-block rounded-lg px-3 py-1.5 text-sm
+                                                {message.role === 'user' 
+                                                    ? 'bg-primary text-primary-foreground' 
+                                                    : 'bg-muted/50'}"
+                                            >
+                                                {message.content}
+                                            </div>
+                                        </div>
+                                        {#if message.role === 'user'}
+                                            <div class="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full bg-secondary">
+                                                <Avatar.Root class="h-full w-full">
+                                                    <Avatar.Image
+                                                        src={`https://cdn.discordapp.com/avatars/${user.discord_id}/${user.avatar}.png`}
+                                                        alt={user.username}
+                                                        class="h-full w-full object-cover"
+                                                    />
+                                                    <Avatar.Fallback class="text-xs">
+                                                        {user.username.substring(0, 2).toUpperCase()}
+                                                    </Avatar.Fallback>
+                                                </Avatar.Root>
+                                            </div>
+                                        {/if}
+                                    </div>
+                                {/each}
+                                <div class="h-1"></div>
+                            </div>
+                        {/if}
+                    </div>
+                </div>
+
+                <!-- Input Area -->
+                <div class="border-t bg-background p-3 sm:p-4">
+                    <form
+                        class="flex items-center gap-2"
+                        onsubmit={(e) => { e.preventDefault(); sendMessage(); }}
+                    >
+                        <div class="relative flex-1">
+                            <input
+                                bind:this={messageInput}
+                                type="text"
+                                bind:value={chatMessage}
+                                placeholder={isWaitingForResponse ? "Consulting the Daru merchants about addons..." : "Type your question..."}
+                                disabled={isWaitingForResponse}
+                                autofocus
+                                class="w-full rounded-full border bg-muted/30 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 pr-10 disabled:opacity-50"
+                            />
+                            <Button
+                                type="submit"
+                                size="icon"
+                                class="absolute right-1.5 top-1/2 -translate-y-1/2 transform rounded-full p-1.5 hover:bg-primary/10 transition-colors duration-200 disabled:opacity-50"
+                                variant="ghost"
+                                disabled={!chatMessage.trim() || isWaitingForResponse}
+                            >
+                                {#if isWaitingForResponse}
+                                    <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                {:else}
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" 
+                                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" 
+                                         class="text-primary">
+                                        <path d="m22 2-7 20-4-9-9-4Z"/>
+                                        <path d="M22 2 11 13"/>
+                                    </svg>
+                                {/if}
+                                <span class="sr-only">Send Message</span>
+                            </Button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </Dialog.Content>
+    </Dialog.Portal>
+</Dialog.Root>
