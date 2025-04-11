@@ -244,7 +244,7 @@
                                 {#each chatHistory as message, i (message.content + i)}
                                     <div class="flex items-start gap-3 px-4 {message.role === 'user' ? 'justify-end' : ''}">
                                         {#if message.role === 'assistant'}
-                                            <div class="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full bg-primary/10 overflow-hidden">
+                                            <div class="flex h-9 w-9 shrink-0 select-none items-center justify-center rounded-full bg-primary/10 overflow-hidden">
                                                 <img src={supportDaruAlt} alt="Daru Assistant" class="w-full h-full object-cover" />
                                             </div>
                                         {/if}
@@ -258,7 +258,7 @@
                                             </div>
                                         </div>
                                         {#if message.role === 'user'}
-                                            <div class="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full bg-secondary">
+                                            <div class="flex h-9 w-9 shrink-0 select-none items-center justify-center rounded-full bg-secondary">
                                                 <Avatar.Root class="h-full w-full">
                                                     <Avatar.Image
                                                         src={`https://cdn.discordapp.com/avatars/${user.discord_id}/${user.avatar}.png`}
@@ -273,6 +273,24 @@
                                         {/if}
                                     </div>
                                 {/each}
+                                
+                                {#if isWaitingForResponse}
+                                    <div class="flex items-start gap-3 px-4">
+                                        <div class="flex h-9 w-9 shrink-0 select-none items-center justify-center rounded-full bg-primary/10 overflow-hidden">
+                                            <img src={supportDaruAlt} alt="Daru Assistant" class="w-full h-full object-cover" />
+                                        </div>
+                                        <div class="flex flex-col gap-2">
+                                            <div class="inline-block rounded-lg px-3 py-1.5 text-sm bg-muted/50">
+                                                <div class="flex gap-1.5 items-center min-w-[2rem] min-h-[1.25rem]">
+                                                    <span class="w-1.5 h-1.5 bg-current rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                                                    <span class="w-1.5 h-1.5 bg-current rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                                                    <span class="w-1.5 h-1.5 bg-current rounded-full animate-bounce"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {/if}
+                                
                                 <div class="h-1"></div>
                             </div>
                         {/if}
@@ -290,7 +308,7 @@
                                 bind:this={messageInput}
                                 type="text"
                                 bind:value={chatMessage}
-                                placeholder={isWaitingForResponse ? "Consulting the Daru merchants about addons..." : "Ask your question, the Darus won't judge..."}
+                                placeholder={isWaitingForResponse ? "Consulting the Daru merchants..." : "Ask your question, the Darus won't judge..."}
                                 disabled={isWaitingForResponse}
                                 autofocus
                                 class="w-full rounded-full border bg-muted/30 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 pr-10 disabled:opacity-50"
