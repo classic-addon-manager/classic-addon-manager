@@ -10,6 +10,8 @@
     import {Events, Browser} from "@wailsio/runtime";
     import type {WailsEvent} from "node_modules/@wailsio/runtime/types/events";
     import addons from "../addons";
+    import supportDaru from "../assets/images/support_daru.webp";
+    import supportDaruAlt from "../assets/images/support_daru_alt_sm.webp";
 
     let isReady: boolean = $state(false);
     let user: User = $derived(getUser());
@@ -207,9 +209,9 @@
                 <div class="border-b border-border/40 px-4 sm:px-6 py-4">
                     <div class="flex items-center justify-between">
                         <div>
-                            <Dialog.Title class="text-lg font-medium leading-none">AI Assistant</Dialog.Title>
+                            <Dialog.Title class="text-lg font-medium leading-none">Daru Informational Network</Dialog.Title>
                             <Dialog.Description class="mt-2 text-sm text-muted-foreground">
-                                Get instant help with your questions
+                              The Darus have information, if you have coin.     
                             </Dialog.Description>
                         </div>
                     </div>
@@ -221,20 +223,20 @@
                     class="flex-1 overflow-y-auto p-4 sm:p-6 scrollbar-thin scrollbar-thumb-secondary scrollbar-track-secondary/20">
                     <div class="h-full">
                         {#if chatHistory.length === 0}
-                            <div class="h-full flex flex-col items-center justify-center space-y-4 text-center">
-                                <div class="rounded-full bg-primary/10 p-4">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" 
-                                         stroke="currentColor" stroke-width="2" class="h-6 w-6 text-primary">
-                                        <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>
-                                        <path d="M10 8.5a2.5 2.5 0 0 1 4 2 2.5 2.5 0 0 1-2.5 2.5"/>
-                                        <path d="M12 16h.01"/>
-                                    </svg>
-                                </div>
-                                <div>
-                                    <h3 class="text-lg font-semibold">Welcome to AI Assistant</h3>
-                                    <p class="text-sm text-muted-foreground mt-1">
-                                        Ask me anything about addons, configurations, or general questions.
-                                    </p>
+                            <div class="h-full flex flex-col items-center justify-center space-y-6 text-center px-4">
+                                <div class="space-y-6 max-h-full">
+                                    <img 
+                                        src={supportDaru} 
+                                        alt="Support Daru" 
+                                        class="w-[35vh] h-[35vh] max-w-[280px] max-h-[280px] min-w-[160px] min-h-[160px] object-contain mx-auto drop-shadow-lg hover:scale-105 transition-transform duration-300" 
+                                    />
+                                    <div>
+                                        <h3 class="text-xl font-semibold text-primary mb-2">Welcome to Daru's Help Desk!</h3>
+                                        <p class="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
+                                            I'm your friendly Daru assistant, ready to help with all your addon needs. 
+                                            Feel free to ask me anything!
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         {:else}
@@ -242,13 +244,8 @@
                                 {#each chatHistory as message, i (message.content + i)}
                                     <div class="flex items-start gap-3 px-4 {message.role === 'user' ? 'justify-end' : ''}">
                                         {#if message.role === 'assistant'}
-                                            <div class="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full bg-primary/10">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" 
-                                                     stroke="currentColor" stroke-width="2" class="text-primary">
-                                                    <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>
-                                                    <path d="M10 8.5a2.5 2.5 0 0 1 4 2 2.5 2.5 0 0 1-2.5 2.5"/>
-                                                    <path d="M12 16h.01"/>
-                                                </svg>
+                                            <div class="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full bg-primary/10 overflow-hidden">
+                                                <img src={supportDaruAlt} alt="Daru Assistant" class="w-full h-full object-cover" />
                                             </div>
                                         {/if}
                                         <div class="flex flex-col gap-2">
@@ -293,7 +290,7 @@
                                 bind:this={messageInput}
                                 type="text"
                                 bind:value={chatMessage}
-                                placeholder={isWaitingForResponse ? "Consulting the Daru merchants about addons..." : "Type your question..."}
+                                placeholder={isWaitingForResponse ? "Consulting the Daru merchants about addons..." : "Ask your question, the Darus won't judge..."}
                                 disabled={isWaitingForResponse}
                                 autofocus
                                 class="w-full rounded-full border bg-muted/30 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 pr-10 disabled:opacity-50"
