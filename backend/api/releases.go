@@ -131,18 +131,16 @@ func GetLatestApplicationRelease() (ApplicationRelease, error) {
 
 // GetLatestReleasesBulk fetches the latest release information for multiple addons via a single POST request.
 func GetLatestReleasesBulk(names []string) (map[string]Release, error) {
-	releasesMap := make(map[string]Release)
-
 	// Prepare the request body
 	requestBody, err := json.Marshal(map[string][]string{
 		"addons": names,
 	})
 	if err != nil {
 		logger.Error("GetLatestReleasesBulk Error marshaling request body:", err)
-		return nil, err // Return error if JSON marshaling fails
+		return nil, err
 	}
 
-	// Create the POST request
+	// Create and send the POST request
 	url := ApiURL + "/latest_releases"
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(requestBody))
 	if err != nil {
@@ -152,7 +150,6 @@ func GetLatestReleasesBulk(names []string) (map[string]Release, error) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Client", GetApiClientHeader())
 
-	// Send the request
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -161,109 +158,53 @@ func GetLatestReleasesBulk(names []string) (map[string]Release, error) {
 	}
 	defer resp.Body.Close()
 
+	// Handle non-200 responses
 	if resp.StatusCode != 200 {
+		bodyBytes, _ := io.ReadAll(resp.Body)
 		errMsg := "GetLatestReleasesBulk Error: Status Code " + strconv.Itoa(resp.StatusCode)
-		bodyBytes, readErr := io.ReadAll(resp.Body)
-		if readErr == nil && len(bodyBytes) > 0 {
+		if len(bodyBytes) > 0 {
 			errMsg += " Body: " + string(bodyBytes)
 		}
-		logger.Error(errMsg, errors.New("unexpected status code: "+strconv.Itoa(resp.StatusCode)))
+		logger.Error(errMsg, errors.New("unexpected status code"))
 		return nil, errors.New("failed to fetch bulk releases, status: " + strconv.Itoa(resp.StatusCode))
 	}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		logger.Error("GetLatestReleasesBulk Error reading response body:", err)
-		return nil, err
+	// Parse the API response
+	var apiResponse struct {
+		Status  bool   `json:"status"`
+		Message string `json:"message"`
+		Data    map[string]struct {
+			Release struct {
+				ZipballUrl  string    `json:"zipball_url"`
+				TagName     string    `json:"tag_name"`
+				Body        string    `json:"body"`
+				PublishedAt time.Time `json:"published_at"`
+			} `json:"release"`
+			Tag Tag `json:"tag"`
+		} `json:"data"`
 	}
 
-	// Unmarshal the API response
-	var apiResponse ApiResponse
-	if err := json.Unmarshal(body, &apiResponse); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&apiResponse); err != nil {
 		logger.Error("GetLatestReleasesBulk Error unmarshaling response:", err)
 		return nil, err
 	}
 
-	// Check API response status
 	if !apiResponse.Status {
 		logger.Warn("GetLatestReleasesBulk API status false: " + apiResponse.Message)
 		return nil, errors.New(apiResponse.Message)
 	}
 
-	// Process the data field, expecting map[string]any where keys are addon names
-	responseData, ok := apiResponse.Data.(map[string]any)
-	if !ok {
-		errMsg := "GetLatestReleasesBulk Error: could not cast response data to map[string]any"
-		logger.Error(errMsg, errors.New("type assertion failed"))
-		return nil, errors.New(errMsg)
+	// Convert the response data into the expected format
+	releases := make(map[string]Release)
+	for name, data := range apiResponse.Data {
+		releases[name] = Release{
+			ZipballUrl:  data.Release.ZipballUrl,
+			TagName:     data.Release.TagName,
+			Body:        data.Release.Body,
+			PublishedAt: data.Release.PublishedAt,
+			Tag:         data.Tag,
+		}
 	}
 
-	// Iterate through the response data and decode each addon's release info
-	for name, releaseDataAny := range responseData {
-		releaseDataMap, ok := releaseDataAny.(map[string]any)
-		if !ok {
-			logger.Warn("Skipping addon " + name + ": could not cast release data to map[string]any")
-			continue // Skip this entry if data format is unexpected
-		}
-
-		// Check for nested "release" and "tag" structure like in GetLatestAddonRelease
-		releaseSubMapAny, releaseOk := releaseDataMap["release"]
-		tagSubMapAny, tagOk := releaseDataMap["tag"]
-
-		if !releaseOk || !tagOk {
-			logger.Warn("Skipping addon " + name + ": missing 'release' or 'tag' key in response data")
-			continue
-		}
-
-		releaseSubMap, releaseMapOk := releaseSubMapAny.(map[string]any)
-		tagSubMap, tagMapOk := tagSubMapAny.(map[string]any)
-
-		if !releaseMapOk || !tagMapOk {
-			logger.Warn("Skipping addon " + name + ": could not cast 'release' or 'tag' data to map[string]any")
-			continue
-		}
-
-		var release Release
-		// Decode the release sub-map using mapstructure
-		decoderConfigRelease := &mapstructure.DecoderConfig{
-			Result: &release,
-			// Add hook to parse time string correctly from the "release" sub-map
-			DecodeHook: mapstructure.ComposeDecodeHookFunc(
-				mapstructure.StringToTimeHookFunc(time.RFC3339),
-			),
-			TagName: "json", // Assuming the API response uses JSON tags if Release struct has them
-		}
-		decoderRelease, err := mapstructure.NewDecoder(decoderConfigRelease)
-		if err != nil {
-			logger.Error("GetLatestReleasesBulk Error creating mapstructure decoder for release "+name+":", err)
-			continue // Skip on decoder error
-		}
-
-		if err := decoderRelease.Decode(releaseSubMap); err != nil {
-			logger.Error("GetLatestReleasesBulk Error decoding release sub-map for "+name+":", err)
-			continue // Skip this addon if decoding fails
-		}
-
-		// Decode the tag sub-map
-		var tag Tag
-		decoderConfigTag := &mapstructure.DecoderConfig{
-			Result:  &tag,
-			TagName: "json", // Assuming Tag struct also uses json tags
-		}
-		decoderTag, err := mapstructure.NewDecoder(decoderConfigTag)
-		if err != nil {
-			logger.Error("GetLatestReleasesBulk Error creating mapstructure decoder for tag "+name+":", err)
-			continue
-		}
-		if err := decoderTag.Decode(tagSubMap); err != nil {
-			logger.Error("GetLatestReleasesBulk Error decoding tag sub-map for "+name+":", err)
-			continue
-		}
-
-		release.Tag = tag // Assign the decoded tag to the release
-
-		releasesMap[name] = release
-	}
-
-	return releasesMap, nil
+	return releases, nil
 }
