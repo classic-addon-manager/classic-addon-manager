@@ -1,8 +1,6 @@
 <script lang="ts">
     import {onDestroy, onMount} from "svelte";
     import type {Addon, Release} from "$lib/wails";
-    import {addUpdateAvailableCount} from "$stores/AddonStore.svelte";
-    import {RemoteAddonService} from "$lib/wails";
     import LocalAddonContextMenu from "./local_addon/LocalAddonContextMenu.svelte";
     import LocalAddonDialog from "./local_addon/LocalAddonDialog.svelte";
     import LoaderCircle from "lucide-svelte/icons/loader-circle";
@@ -11,7 +9,7 @@
     import ShieldQuestion from "lucide-svelte/icons/shield-question";
     import {Badge} from "$lib/components/ui/badge";
     import LocalAddonUpdateDialog from "./local_addon/LocalAddonUpdateDialog.svelte";
-    import { safeCall } from "../utils";
+    import { getLatestReleasesMap, getIsCheckingForUpdates } from "$stores/AddonStore.svelte";
 
     interface Props {
         addon: Addon;
@@ -19,8 +17,9 @@
 
     let {addon}: Props = $props();
 
-    let latestRelease: Release | undefined = $state();
-    let isCheckingForUpdates = $state(false);
+    let latestRelease = $derived(getLatestReleasesMap().get(addon.name));
+    let isChecking = $derived(getIsCheckingForUpdates());
+
     let openDialog = $state(false);
     let openUpdateDialog = $state(false);
 
@@ -31,38 +30,6 @@
     function handleOpenUpdateDialogChange(o: boolean) {
         openUpdateDialog = o;
     }
-
-    async function handleCheckUpdates() {
-        isCheckingForUpdates = true;
-        const [release, err] = await safeCall<Release|undefined>(RemoteAddonService.GetLatestRelease(addon.name));
-        if(err) {
-            console.error("Failed to get release for addon: ", addon.name);
-            isCheckingForUpdates = false;
-            return;
-        }
-        if (!release) {
-            console.error("No release found for addon: ", addon.name);
-            isCheckingForUpdates = false;
-            return;
-        }
-        latestRelease = release;
-        isCheckingForUpdates = false;
-
-        if (release.published_at > addon.updatedAt) {
-            addUpdateAvailableCount();
-        }
-    }
-
-    onMount(async () => {
-        if (addon.isManaged) {
-            document.addEventListener("check-updates", handleCheckUpdates);
-            await handleCheckUpdates();
-        }
-    });
-
-    onDestroy(() => {
-        document.removeEventListener("check-updates", handleCheckUpdates);
-    });
 </script>
 
 <LocalAddonDialog
@@ -90,7 +57,7 @@
         <div class="text-center">{addon.version}</div>
         <div class="text-center">
             {#if addon.isManaged}
-                {#if isCheckingForUpdates}
+                {#if isChecking}
                     <div class="flex justify-center">
                         <LoaderCircle size={20} class="mr-1 animate-spin"/>
                     </div>

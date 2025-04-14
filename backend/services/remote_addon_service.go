@@ -37,6 +37,15 @@ func (s *RemoteAddonService) GetLatestRelease(name string) (api.Release, error) 
 	return release, nil
 }
 
+func (s *RemoteAddonService) CheckAddonUpdatesBulk(names []string) (map[string]api.Release, error) {
+	releases, err := api.GetLatestReleasesBulk(names)
+	if err != nil {
+		logger.Error("Service: Error from GetLatestReleasesBulk:", err)
+		return nil, err
+	}
+	return releases, nil
+}
+
 func (s *RemoteAddonService) GetSubscribedAddons() ([]shared.AddonManifest, error) {
 	return api.GetSubscribedAddons()
 }

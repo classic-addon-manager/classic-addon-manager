@@ -14,12 +14,25 @@ import * as api$0 from "../api/models.js";
 import * as shared$0 from "../shared/models.js";
 
 /**
+ * @param {string[]} names
+ * @returns {Promise<{ [_: string]: api$0.Release }> & { cancel(): void }}
+ */
+export function CheckAddonUpdatesBulk(names) {
+    let $resultPromise = /** @type {any} */($Call.ByID(3854680777, names));
+    let $typingPromise = /** @type {any} */($resultPromise.then(($result) => {
+        return $$createType1($result);
+    }));
+    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
+    return $typingPromise;
+}
+
+/**
  * @returns {Promise<shared$0.AddonManifest[]> & { cancel(): void }}
  */
 export function GetAddonManifest() {
     let $resultPromise = /** @type {any} */($Call.ByID(1299347432));
     let $typingPromise = /** @type {any} */($resultPromise.then(($result) => {
-        return $$createType1($result);
+        return $$createType3($result);
     }));
     $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
     return $typingPromise;
@@ -32,7 +45,7 @@ export function GetAddonManifest() {
 export function GetLatestRelease(name) {
     let $resultPromise = /** @type {any} */($Call.ByID(3922659715, name));
     let $typingPromise = /** @type {any} */($resultPromise.then(($result) => {
-        return $$createType2($result);
+        return $$createType0($result);
     }));
     $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
     return $typingPromise;
@@ -44,7 +57,7 @@ export function GetLatestRelease(name) {
 export function GetSubscribedAddons() {
     let $resultPromise = /** @type {any} */($Call.ByID(3294691374));
     let $typingPromise = /** @type {any} */($resultPromise.then(($result) => {
-        return $$createType1($result);
+        return $$createType3($result);
     }));
     $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
     return $typingPromise;
@@ -60,6 +73,7 @@ export function InstallAddon(ad) {
 }
 
 // Private type creation functions
-const $$createType0 = shared$0.AddonManifest.createFrom;
-const $$createType1 = $Create.Array($$createType0);
-const $$createType2 = api$0.Release.createFrom;
+const $$createType0 = api$0.Release.createFrom;
+const $$createType1 = $Create.Map($Create.Any, $$createType0);
+const $$createType2 = shared$0.AddonManifest.createFrom;
+const $$createType3 = $Create.Array($$createType2);

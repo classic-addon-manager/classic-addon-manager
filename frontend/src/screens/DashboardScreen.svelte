@@ -8,26 +8,35 @@
     import {Input} from "$lib/components/ui/input/index.js";
     import {setActiveNavbar} from "$stores/NavbarStore.svelte";
     import LoaderCircle from "lucide-svelte/icons/loader-circle";
-    import {getInstalledAddons} from "$stores/AddonStore.svelte";
+    import {
+        getInstalledAddons,
+        getIsCheckingForUpdates,
+        performBulkUpdateCheck,
+    } from "$stores/AddonStore.svelte";
     import type {Addon} from "$lib/wails";
-    import {setUpdatesAvailableCount} from "$stores/AddonStore.svelte";
     import LocalAddon from "../components/LocalAddon.svelte";
-    import {onMount} from "svelte";
     import { fade, fly } from 'svelte/transition';
 
     let searchName: string = $state("");
     let localAddons: Array<Addon> = $state([]);
-    let isCheckingForUpdates = $state(false);
     let isLoading = $state(true);
+    let initialCheckDone = $state(false);
 
-    onMount(() => {
-        setUpdatesAvailableCount(0);
-    });
+    let addonsAreLoaded = $derived(getInstalledAddons().length > 0);
+
+    let isCheckingForUpdates = $derived(getIsCheckingForUpdates());
 
     $effect(() => {
         isLoading = true;
         localAddons = getInstalledAddons();
         isLoading = false;
+    });
+
+    $effect(() => {
+        if (addonsAreLoaded && !initialCheckDone) {
+            performBulkUpdateCheck();
+            initialCheckDone = true;
+        }
     });
 
     let filteredAddons = $derived.by(() => {
@@ -38,19 +47,6 @@
             return addon.name.toLowerCase().includes(searchName.toLowerCase());
         });
     });
-
-    function checkForUpdates(): void {
-        if (isCheckingForUpdates) {
-            return;
-        }
-        setUpdatesAvailableCount(0);
-        isCheckingForUpdates = true;
-        const event = new CustomEvent("check-updates");
-        document.dispatchEvent(event);
-        setTimeout(() => {
-            isCheckingForUpdates = false;
-        }, 1000);
-    }
 </script>
 
 <div class="flex flex-col h-screen bg-background">
@@ -73,7 +69,7 @@
             <div class="flex items-center justify-center">
                 <Button 
                     variant="outline" 
-                    onclick={checkForUpdates} 
+                    onclick={performBulkUpdateCheck} 
                     disabled={isCheckingForUpdates || isLoading}
                     class="transition-all duration-200 hover:shadow-md min-w-[160px]"
                 >
