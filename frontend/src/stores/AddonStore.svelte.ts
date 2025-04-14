@@ -37,43 +37,37 @@ export async function performBulkUpdateCheck(): Promise<void> {
     }
 
     isCheckingForUpdates = true;
-    let newUpdatesCount = 0;
-
     try {
         const managedAddons = installedAddons.filter(addon => addon.isManaged);
         const addonNames = managedAddons.map(addon => addon.name);
 
+        // Reset state if no managed addons
         if (addonNames.length === 0) {
             latestReleasesMap = new Map();
             updatesAvailableCount = 0;
-        } else {
-            const [releases, err] = await safeCall(RemoteAddonService.CheckAddonUpdatesBulk(addonNames));
-
-            if (err || !releases) {
-                console.error("[AddonStore] Failed to perform bulk update check:", err);
-                latestReleasesMap = new Map();
-            } else {
-                const releasesFrontendMap = new Map<string, Release>();
-                for (const name in releases) {
-                    if (Object.prototype.hasOwnProperty.call(releases, name)) {
-                        releasesFrontendMap.set(name, releases[name]);
-                    }
-                }
-                latestReleasesMap = releasesFrontendMap;
-
-                managedAddons.forEach(addon => {
-                    const latestRelease = latestReleasesMap.get(addon.name);
-                    if (latestRelease && latestRelease.published_at > addon.updatedAt) {
-                        newUpdatesCount++;
-                    }
-                });
-            }
+            return;
         }
+
+        // Get updates and handle potential errors
+        const [releases, err] = await safeCall(RemoteAddonService.CheckAddonUpdatesBulk(addonNames));
+        if (err || !releases) {
+            console.error("[AddonStore] Failed to perform bulk update check:", err);
+            latestReleasesMap = new Map();
+            updatesAvailableCount = 0;
+            return;
+        }
+
+        // Create map of latest releases and count updates
+        latestReleasesMap = new Map(Object.entries(releases));
+        updatesAvailableCount = managedAddons.reduce((count, addon) => {
+            const latestRelease = latestReleasesMap.get(addon.name);
+            return latestRelease?.published_at > addon.updatedAt ? count + 1 : count;
+        }, 0);
     } catch (error) {
         console.error("[AddonStore] Unexpected error caught in performBulkUpdateCheck:", error);
         latestReleasesMap = new Map();
+        updatesAvailableCount = 0;
     } finally {
-        updatesAvailableCount = newUpdatesCount;
         isCheckingForUpdates = false;
     }
 }
