@@ -100,6 +100,13 @@ export class AddonManifest {
              */
             this["added_at"] = null;
         }
+        if (/** @type {any} */(false)) {
+            /**
+             * @member
+             * @type {string | null | undefined}
+             */
+            this["warning"] = null;
+        }
 
         Object.assign(this, $$source);
     }
