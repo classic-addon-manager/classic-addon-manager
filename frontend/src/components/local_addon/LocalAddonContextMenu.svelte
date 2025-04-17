@@ -19,26 +19,20 @@
         addon: Addon;
     } = $props();
 
-    async function handleUninstall() {
-        console.debug("Uninstalling addon: ", addon.name);
-        let didUninstall = await addons.uninstall(addon.name);
-        if (didUninstall) {
-            console.debug("Uninstalled addon: ", addon.name);
-            toast.success(`${addon.alias} was uninstalled`);
+    // Generic handler for addon operations
+    async function handleAddonAction(action: 'uninstall' | 'unmanage') {
+        const actionVerb = action === 'uninstall' ? 'Uninstalling' : 'Unmanaging';
+        const actionPast = action === 'uninstall' ? 'Uninstalled' : 'Unmanaged';
+        
+        console.debug(`${actionVerb} addon: ${addon.name}`);
+        const success = await addons[action](addon.name);
+        
+        if (success) {
+            console.debug(`${actionPast} addon: ${addon.name}`);
+            toast.success(`${addon.alias} was ${action}ed`);
         } else {
-            console.error("Failed to uninstall addon: ", addon.name);
-            toast.error(`Failed to uninstall ${addon.alias}`);
-        }
-    }
-
-    async function handleUnmanage() {
-        console.debug("Unmanaging addon: ", addon.name);
-        if (await addons.unmanage(addon.name)) {
-            console.debug("Unmanaged addon: ", addon.name);
-            toast.success(`${addon.alias} was unmanaged`);
-        } else {
-            console.error("Failed to unmanage addon: ", addon.name);
-            toast.error(`Failed to unmanage ${addon.alias}`);
+            console.error(`Failed to ${action} addon: ${addon.name}`);
+            toast.error(`Failed to ${action} ${addon.alias}`);
         }
     }
 
@@ -61,30 +55,25 @@
             <FolderOpen size={16}/>
             Open directory
         </ContextMenu.Item>
+        
         {#if addon.isManaged}
-            <ContextMenu.Item
-                    class="gap-3"
-                    onclick={() => Browser.OpenURL(`https://github.com/${addon.repo}`)}
-            >
+            <ContextMenu.Item class="gap-3" onclick={() => Browser.OpenURL(`https://github.com/${addon.repo}`)}>
                 <Github size={16}/>
                 View code
             </ContextMenu.Item>
-            <ContextMenu.Item
-                    class="gap-2"
-                    onclick={() => Browser.OpenURL(`https://github.com/${addon.repo}/issues/new`)}
-            >
+            <ContextMenu.Item class="gap-2" onclick={() => Browser.OpenURL(`https://github.com/${addon.repo}/issues/new`)}>
                 <Bug size={16}/>
                 Report issue
             </ContextMenu.Item>
         {/if}
 
-        <ContextMenu.Item class="gap-2" onclick={handleUninstall}>
+        <ContextMenu.Item class="gap-2" onclick={() => handleAddonAction('uninstall')}>
             <Trash size={16}/>
             Uninstall
         </ContextMenu.Item>
 
         {#if addon.isManaged}
-            <ContextMenu.Item class="gap-2" onclick={handleUnmanage}>
+            <ContextMenu.Item class="gap-2" onclick={() => handleAddonAction('unmanage')}>
                 <AlertTriangle size={16}/>
                 Unmanage
             </ContextMenu.Item>
