@@ -389,7 +389,7 @@
                 </div>
 
                 <!-- Input Area -->
-                <div class="border-t bg-background p-3 sm:p-4">
+                <div class="border-t bg-background pt-3 sm:pt-4">
                     <form
                         class="flex items-center gap-2"
                         onsubmit={(e) => { e.preventDefault(); sendMessage(); }}
@@ -428,6 +428,9 @@
                             </Button>
                         </div>
                     </form>
+                    <p class="mt-2 text-center text-xs text-muted-foreground/80">
+                        Darus are known for their wisdom, but sometimes even they make mistakes.
+                    </p>
                 </div>
             </div>
         </Dialog.Content>
