@@ -21,7 +21,7 @@ async function getManifest(name: string): Promise<AddonManifest> {
     const manifests = await RemoteAddonService.GetAddonManifest();
     const m = manifests.find((m) => m.name === name);
     if (!m) {
-        throw new Error("Addon not found: " + name);
+        throw new Error(`Addon not found: ${name}`);
     }
     return m;
 }
@@ -80,7 +80,7 @@ async function getSubscribedAddons() {
         const [is_installed, err] = await safeCall<boolean>(LocalAddonService.IsInstalled(addon.name));
         if(err) {
             console.error("Error checking if addon is installed", err);
-            toast.error("Error occurred while checking if addon is installed: " + err);
+            toast.error(`Error occurred while checking if addon is installed: ${err}`);
             continue;
         }
 
