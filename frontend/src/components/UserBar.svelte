@@ -136,6 +136,16 @@
             isWaitingForResponse = false;
         }
     }
+
+    async function copyToClipboard(text: string) {
+        try {
+            await navigator.clipboard.writeText(text);
+            toast.success('Copied to clipboard');
+        } catch (err) {
+            toast.error('Failed to copy text');
+            console.error('Failed to copy: ', err);
+        }
+    }
 </script>
 
 <style>
@@ -170,6 +180,10 @@
 
     :global(.chat-message.assistant-message ol) {
         @apply list-decimal list-inside my-2;
+    }
+
+    .copy-button {
+        @apply absolute top-1 right-1 p-1 rounded-md text-muted-foreground/60 hover:text-muted-foreground hover:bg-secondary/50 transition-colors duration-150;
     }
 </style>
 
@@ -296,13 +310,17 @@
                                             </div>
                                         {/if}
                                         <div class="flex flex-col gap-2">
-                                            <div class="inline-block rounded-lg px-3 py-1.5 text-sm chat-message {message.role === 'assistant' ? 'assistant-message' : ''}
+                                            <div class="relative inline-block rounded-lg px-3 py-1.5 text-sm chat-message {message.role === 'assistant' ? 'assistant-message' : ''}
                                                 {message.role === 'user' 
                                                     ? 'bg-primary text-black' 
                                                     : 'bg-muted/50'}"
                                             >
                                                 {#if message.role === 'assistant'}
                                                     {@html DOMPurify.sanitize(marked.parse(message.content, {async: false}))}
+                                                    <button class="copy-button" onclick={() => copyToClipboard(message.content)}>
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard-copy"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><path d="M16 4h2a2 2 0 0 1 2 2v4"/><path d="M21 14H11"/><path d="m15 10-4 4 4 4"/></svg>
+                                                        <span class="sr-only">Copy message</span>
+                                                    </button>
                                                 {:else}
                                                     {message.content}
                                                 {/if}
