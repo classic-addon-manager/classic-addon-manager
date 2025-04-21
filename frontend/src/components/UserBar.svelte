@@ -12,6 +12,8 @@
     import addons from "../addons";
     import supportDaru from "../assets/images/support_daru.webp";
     import supportDaruAlt from "../assets/images/support_daru_alt_sm.webp";
+    import DOMPurify from "dompurify";
+    import {marked} from "marked";
 
     let isReady: boolean = $state(false);
     let user: User = $derived(getUser());
@@ -21,6 +23,11 @@
     let isWaitingForResponse: boolean = $state(false);
     let chatContainer: HTMLDivElement;
     let messageInput: HTMLInputElement;
+
+    marked.setOptions({
+        gfm: true,
+        breaks: true,
+    });
 
     $effect(() => {
         if (chatHistory.length > 0) {
@@ -106,25 +113,65 @@
         // Set loading state
         isWaitingForResponse = true;
 
-        // Simulate AI response (in a real app, this would call an API)
         try {
-            setTimeout(() => {
+            const response = await apiClient.post('/daru/inquiry', { p: userMessage });
+            if (response.ok) {
+                const payload = await response.json();
+                console.log(payload);
                 chatHistory = [...chatHistory, {
                     role: 'assistant',
-                    content: `Thanks for your question: "${userMessage}". This is a simulated AI response. In a real implementation, this would connect to an AI service.`
+                    content: payload.data.response || 'Sorry, I could not process your request.'
                 }];
-                isWaitingForResponse = false;
-            }, 1000);
+            } else {
+                throw new Error('Failed to get response from Daru');
+            }
         } catch (error) {
             // If there's an error, add an error message to the chat
             chatHistory = [...chatHistory, {
                 role: 'assistant',
                 content: 'Sorry, I encountered an error processing your request.'
             }];
+            console.error('Chat error:', error);
+        } finally {
             isWaitingForResponse = false;
         }
     }
 </script>
+
+<style>
+    /* Markdown styling for chat messages */
+    :global(.chat-message.assistant-message) {
+        @apply prose prose-invert max-w-none;
+    }
+
+    :global(.chat-message.assistant-message a) {
+        @apply text-blue-400 hover:text-blue-500 hover:underline transition-all;
+    }
+
+    :global(.chat-message.assistant-message code) {
+        @apply bg-gray-700 py-0.5 px-1 rounded-sm font-mono;
+    }
+
+    :global(.chat-message.assistant-message pre) {
+        @apply bg-neutral-900 p-4 my-4 overflow-x-auto rounded-md font-mono text-muted-foreground;
+    }
+
+    :global(.chat-message.assistant-message pre code) {
+        @apply bg-transparent p-0 rounded-none;
+    }
+
+    :global(.chat-message.assistant-message p) {
+        @apply my-2;
+    }
+
+    :global(.chat-message.assistant-message ul) {
+        @apply list-disc list-inside my-2;
+    }
+
+    :global(.chat-message.assistant-message ol) {
+        @apply list-decimal list-inside my-2;
+    }
+</style>
 
 {#if isReady}
     {#if !isAuthenticated()}
@@ -249,12 +296,16 @@
                                             </div>
                                         {/if}
                                         <div class="flex flex-col gap-2">
-                                            <div class="inline-block rounded-lg px-3 py-1.5 text-sm
+                                            <div class="inline-block rounded-lg px-3 py-1.5 text-sm chat-message {message.role === 'assistant' ? 'assistant-message' : ''}
                                                 {message.role === 'user' 
-                                                    ? 'bg-primary text-primary-foreground' 
+                                                    ? 'bg-primary text-black' 
                                                     : 'bg-muted/50'}"
                                             >
-                                                {message.content}
+                                                {#if message.role === 'assistant'}
+                                                    {@html DOMPurify.sanitize(marked.parse(message.content, {async: false}))}
+                                                {:else}
+                                                    {message.content}
+                                                {/if}
                                             </div>
                                         </div>
                                         {#if message.role === 'user'}
@@ -282,9 +333,9 @@
                                         <div class="flex flex-col gap-2">
                                             <div class="inline-block rounded-lg px-3 py-1.5 text-sm bg-muted/50">
                                                 <div class="flex gap-1.5 items-center min-w-[2rem] min-h-[1.25rem]">
-                                                    <span class="w-1.5 h-1.5 bg-current rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                                                    <span class="w-1.5 h-1.5 bg-current rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                                                    <span class="w-1.5 h-1.5 bg-current rounded-full animate-bounce"></span>
+                                                    <span class="w-1.5 h-1.5 bg-current rounded-full animate-bounce-dot-1"></span>
+                                                    <span class="w-1.5 h-1.5 bg-current rounded-full animate-bounce-dot-2"></span>
+                                                    <span class="w-1.5 h-1.5 bg-current rounded-full animate-bounce-dot-3"></span>
                                                 </div>
                                             </div>
                                         </div>
