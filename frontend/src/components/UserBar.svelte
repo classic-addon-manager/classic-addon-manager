@@ -113,6 +113,24 @@
         // Set loading state
         isWaitingForResponse = true;
 
+        // Start timeout for slow response message
+        let timeoutId: number | undefined = undefined;
+        const timeoutPromise = new Promise((_, reject) => {
+            timeoutId = setTimeout(() => {
+                // Check if we are still waiting for the actual response
+                if (isWaitingForResponse) {
+                    chatHistory = [
+                        ...chatHistory,
+                        {
+                            role: 'assistant',
+                            content: "Sorry adventurer, locating the Daru merchants is taking longer than expected. I am still working on your question. 🐸"
+                        }
+                    ];
+                }
+                // We don't reject here, just add the message
+            }, 10000); // 10 seconds
+        });
+
         try {
             const response = await apiClient.post('/daru/inquiry', { p: userMessage });
             if (response.ok) {
@@ -133,6 +151,10 @@
             }];
             console.error('Chat error:', error);
         } finally {
+            // Clear the timeout regardless of success or failure
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+            }
             isWaitingForResponse = false;
         }
     }
