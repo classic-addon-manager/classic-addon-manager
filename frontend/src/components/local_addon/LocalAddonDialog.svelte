@@ -2,15 +2,20 @@
     import * as Dialog from "$lib/components/ui/dialog/index";
     import Like from "lucide-svelte/icons/thumbs-up";
     import Dislike from "lucide-svelte/icons/thumbs-down";
+    import {User, Tag, Package, ArrowUpCircle, RefreshCcw, Trash2} from "lucide-svelte";
+    import {Badge} from "$lib/components/ui/badge/index";
 
     import {Button} from "$lib/components/ui/button/index";
     import type {Addon, Release} from "$lib/wails";
     import addons from "../../addons";
     import {isAuthenticated} from "$stores/UserStore.svelte";
     import {apiClient} from "../../api";
-    import {toast, safeCall} from "../../utils";
+    import {toast, safeCall, formatToLocalTime} from "../../utils";
     import {AddonManifest, RemoteAddonService} from "$lib/wails";
     import LocalAddonUpdateDialog from "./LocalAddonUpdateDialog.svelte";
+    import {marked} from "marked";
+    import DOMPurify from "dompurify";
+    import RemoteAddonReadme from "../remote_addon/RemoteAddonReadme.svelte";
 
     let {
         open = $bindable(),
@@ -27,17 +32,53 @@
     let rating = $state(0);
     let latestRelease: Release | undefined = $state();
     let openUpdateDialog = $state(false);
+    let readme = $state("Loading description...");
+
+    marked.setOptions({
+        gfm: true,
+        breaks: true,
+    });
+
+    $effect(() => {
+        if (open) {
+            getMyRating();
+            if (addon.isManaged) {
+                checkForUpdates();
+            }
+            getReadme();
+        }
+    });
+
+    async function getReadme() {
+        try {
+            if (!addon.repo) {
+                const fallbackReadme = addon.description || "No description provided.";
+                readme = DOMPurify.sanitize(marked.parse(fallbackReadme, {async: false}));
+                return;
+            }
+
+            // Default to 'main' branch if not specified
+            const branch = 'main';
+            const response = await fetch(
+                `https://raw.githubusercontent.com/${addon.repo}/${branch}/README.md`,
+            );
+            if (!response.ok) {
+                const fallbackReadme = addon.description || "No description provided.";
+                readme = DOMPurify.sanitize(marked.parse(fallbackReadme, {async: false}));
+                return;
+            }
+            const rawReadme = await response.text();
+            readme = DOMPurify.sanitize(await marked.parse(rawReadme));
+        } catch (e) {
+            console.error("Error fetching README:", e);
+            const errorReadme = addon.description || "Error loading description.";
+            readme = DOMPurify.sanitize(marked.parse(errorReadme, {async: false}));
+        }
+    }
 
     function handleOpenUpdateDialogChange(o: boolean) {
         openUpdateDialog = o;
     }
-
-    $effect(() => {
-        getMyRating(open);
-        if (open && addon.isManaged) {
-            checkForUpdates();
-        }
-    });
 
     async function checkForUpdates() {
         const [release, error] = await safeCall<Release>(() => RemoteAddonService.GetLatestRelease(addon.name));
@@ -124,7 +165,7 @@
         open = false;
     }
 
-    function getMyRating(open: boolean) {
+    function getMyRating() {
         if (!open || !isAuthenticated()) return;
         apiClient.get(`/addon/${addon.name}/my-rating`).then(async rateResponse => {
             if (rateResponse.status === 200) {
@@ -169,90 +210,43 @@
 {/if}
 
 <Dialog.Root {open} {onOpenChange}>
-    <Dialog.Content class="max-w-2xl">
-        <Dialog.Header class="pb-6">
-            <div class="flex items-start justify-between">
-                <div class="space-y-1.5">
-                    <Dialog.Title class="text-2xl font-semibold tracking-tight">
-                        {addon.alias}
-                    </Dialog.Title>
-                    <div class="flex items-center gap-3 text-sm">
-                        {#if addon.author}
-                            <div class="flex items-center gap-2 px-2 py-0.5 bg-muted/50 rounded-full">
-                                <span class="text-xs text-muted-foreground">by</span>
-                                <span class="font-medium">{addon.author}</span>
-                            </div>
-                        {/if}
-                        {#if addon.isManaged}
-                            <div class="flex items-center gap-1.5">
-                                <div class="w-2 h-2 rounded-full {latestRelease && latestRelease.published_at > addon.updatedAt ? 'bg-amber-500' : 'bg-emerald-500'}"></div>
-                                <span class="font-medium {latestRelease && latestRelease.published_at > addon.updatedAt ? 'text-amber-500' : 'text-emerald-500'}">{addon.version}</span>
-                                {#if latestRelease && latestRelease.published_at > addon.updatedAt}
-                                    <div class="flex items-center gap-2">
-                                        <Button 
-                                            size="sm" 
-                                            variant="ghost" 
-                                            class="h-6 px-2 text-xs hover:text-amber-500 hover:bg-amber-500/10"
-                                            onclick={() => {
-                                                open = false;
-                                                openUpdateDialog = true;
-                                            }}
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-1"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
-                                            Update
-                                        </Button>
-                                    </div>
-                                {/if}
-                            </div>
-                        {/if}
-                    </div>
-                </div>
-
-                {#if isAuthenticated()}
-                    <div class="flex gap-1.5 mr-8">
-                        <Button 
-                            size="sm"
-                            class="relative {rating === 1 ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-500' : ''}"
-                            variant="outline" 
-                            onclick={() => handleRating(1)}
-                        >
-                            <div class="absolute inset-0 bg-blue-500/10 scale-0 group-hover:scale-100 transition-transform rounded-md"></div>
-                            {#if rating === 1}
-                                <Like class="w-4 h-4 text-blue-500"/>
-                            {:else}
-                                <Like class="w-4 h-4 text-muted-foreground hover:text-blue-500 transition-colors"/>
-                            {/if}
-                        </Button>
-                        <Button 
-                            size="sm"
-                            class="relative {rating === -1 ? 'bg-red-100 dark:bg-red-900/30 border-red-500' : ''}"
-                            variant="outline" 
-                            onclick={() => handleRating(-1)}
-                        >
-                            <div class="absolute inset-0 bg-red-500/10 scale-0 group-hover:scale-100 transition-transform rounded-md"></div>
-                            {#if rating === -1}
-                                <Dislike class="w-4 h-4 text-red-500"/>
-                            {:else}
-                                <Dislike class="w-4 h-4 text-muted-foreground hover:text-red-500 transition-colors"/>
-                            {/if}
-                        </Button>
-                    </div>
+    <Dialog.Content class="sm:max-w-[600px] max-h-[90svh] flex flex-col p-0">
+        <Dialog.Header class="p-6 pb-4 shrink-0 border-b">
+            <Dialog.Title class="text-2xl font-semibold mb-1">{addon.alias}</Dialog.Title>
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm mb-3 text-muted-foreground">
+                <span class="inline-flex items-center gap-1">
+                    <User class="w-3.5 h-3.5" />
+                    <span class="font-normal text-foreground/90">{addon.author}</span>
+                </span>
+                {#if addon.version}
+                    <Badge variant="secondary" class="inline-flex items-center gap-1">
+                        <Tag class="w-3 h-3" />
+                        {addon.version}
+                    </Badge>
+                {:else}
+                    <Badge variant="outline">No Version</Badge>
                 {/if}
             </div>
+            {#if addon.description}
+                <Dialog.Description class="text-sm text-muted-foreground">{addon.description}</Dialog.Description>
+            {/if}
         </Dialog.Header>
 
-        <div class="space-y-6">
-            <div class="prose prose-sm dark:prose-invert">
-                <Dialog.Description class="leading-relaxed">
-                    {addon.description}
-                </Dialog.Description>
-            </div>
+        <div class="flex-1 overflow-y-auto p-6">
+            {#if readme === "Loading description..."}
+                <div class="flex flex-col items-center justify-center h-full text-center text-muted-foreground pt-10">
+                    <Package class="w-12 h-12 mb-4 opacity-50" />
+                    <p class="font-medium">Loading description...</p>
+                </div>
+            {:else}
+                <RemoteAddonReadme {readme} />
+            {/if}
 
             {#if !addon.isManaged}
-                <div class="p-4 rounded-lg border bg-card">
+                <div class="border rounded-lg p-4 bg-card mt-6">
                     <div class="space-y-3">
                         <div class="flex items-center gap-2 text-muted-foreground">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-info"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                            <Package class="w-4 h-4" />
                             <p class="text-sm font-medium">This addon is not managed by Classic Addon Manager</p>
                         </div>
 
@@ -264,8 +258,9 @@
                         {:then found}
                             {#if found}
                                 <div class="space-y-3">
-                                    <p class="text-sm">Good news! This addon was found in our repository. Would you like Classic Addon Manager to handle updates for you?</p>
+                                    <p class="text-sm text-muted-foreground">Good news! This addon was found in our repository. Would you like Classic Addon Manager to handle updates for you?</p>
                                     <Button class="w-full sm:w-auto" onclick={handleMatchAddon}>
+                                        <ArrowUpCircle class="w-4 h-4 mr-2"/>
                                         Yes, manage this addon
                                     </Button>
                                 </div>
@@ -276,29 +271,57 @@
             {/if}
         </div>
 
-        {#if addon.isManaged}
-            <Dialog.Footer class="mt-6">
-                <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 w-full">
-                    <Button 
-                        type="button" 
-                        variant="outline" 
-                        class="flex-1 sm:flex-initial" 
-                        onclick={handleReinstall}
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
-                        Reinstall
-                    </Button>
-                    <Button 
-                        type="button" 
-                        variant="destructive" 
-                        class="flex-1 sm:flex-initial"
-                        onclick={handleUninstall}
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                        {uninstallClicks === 1 ? 'Click to confirm' : 'Uninstall'}
-                    </Button>
-                </div>
-            </Dialog.Footer>
-        {/if}
+        <Dialog.Footer class="p-4 border-t">
+            <div class="flex justify-between items-center w-full gap-4">
+                {#if addon.isManaged}
+                    <div class="flex gap-1 items-center">
+                        {#if isAuthenticated()}
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                class="h-8 w-9 transition-all duration-200 hover:scale-105 hover:bg-blue-100 dark:hover:bg-blue-900/30 {rating === 1 ? 'bg-blue-100 dark:bg-blue-900/30 border border-blue-500' : ''}"
+                                onclick={() => handleRating(1)}
+                                aria-label="Like addon"
+                            >
+                                <Like class="w-5 h-5 {rating === 1 ? 'text-blue-500' : 'text-muted-foreground group-hover:text-blue-500'}" />
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                class="h-8 w-9 transition-all duration-200 hover:scale-105 hover:bg-red-100 dark:hover:bg-red-900/30 {rating === -1 ? 'bg-red-100 dark:bg-red-900/30 border border-red-500' : ''}"
+                                onclick={() => handleRating(-1)}
+                                aria-label="Dislike addon"
+                            >
+                                <Dislike class="w-5 h-5 {rating === -1 ? 'text-red-500' : 'text-muted-foreground group-hover:text-red-500'}" />
+                            </Button>
+                        {:else}
+                            <span class="flex items-center gap-1 p-2 cursor-not-allowed opacity-50" aria-label="Log in to rate addons">
+                                <Like class="w-5 h-5 text-muted-foreground"/>
+                                <Dislike class="w-5 h-5 text-muted-foreground"/>
+                            </span>
+                        {/if}
+                    </div>
+
+                    <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                        <Button 
+                            type="button" 
+                            variant="outline"
+                            onclick={handleReinstall}
+                        >
+                            <RefreshCcw class="w-4 h-4 mr-2"/>
+                            Reinstall
+                        </Button>
+                        <Button 
+                            type="button" 
+                            variant="destructive"
+                            onclick={handleUninstall}
+                        >
+                            <Trash2 class="w-4 h-4 mr-2"/>
+                            {uninstallClicks === 1 ? 'Click to confirm' : 'Uninstall'}
+                        </Button>
+                    </div>
+                {/if}
+            </div>
+        </Dialog.Footer>
     </Dialog.Content>
 </Dialog.Root>
