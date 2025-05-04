@@ -6,6 +6,7 @@
     import Bug from "lucide-svelte/icons/bug";
     import Github from "lucide-svelte/icons/github";
     import FolderOpen from "lucide-svelte/icons/folder-open";
+    import GitBranch from "lucide-svelte/icons/git-branch";
     import addons from "../../addons";
     import {LocalAddonService, type Addon} from "$lib/wails";
     import {toast} from "../../utils";
@@ -14,12 +15,13 @@
     let {
         contextTriggerArea,
         addon,
+        onOpenChange,
     }: {
         contextTriggerArea: Snippet;
         addon: Addon;
+        onOpenChange?: (open: boolean) => void;
     } = $props();
 
-    // Generic handler for addon operations
     async function handleAddonAction(action: 'uninstall' | 'unmanage') {
         const actionVerb = action === 'uninstall' ? 'Uninstalling' : 'Unmanaging';
         const actionPast = action === 'uninstall' ? 'Uninstalled' : 'Unmanaged';
@@ -44,9 +46,14 @@
             toast.error(`Failed to open directory: ${e}`);
         }
     }
+
+    async function handleInstallOtherVersion() {
+        console.log(`Install other version for ${addon.name}`);
+        toast.info(`Feature not implemented yet: Install other version for ${addon.alias}`);
+    }
 </script>
 
-<ContextMenu.Root>
+<ContextMenu.Root {onOpenChange}>
     <ContextMenu.Trigger>
         {@render contextTriggerArea()}
     </ContextMenu.Trigger>
@@ -64,6 +71,10 @@
             <ContextMenu.Item class="gap-2" onclick={() => Browser.OpenURL(`https://github.com/${addon.repo}/issues/new`)}>
                 <Bug size={16}/>
                 Report issue
+            </ContextMenu.Item>
+            <ContextMenu.Item class="gap-2" onclick={handleInstallOtherVersion}>
+                <GitBranch size={16}/>
+                Install other version
             </ContextMenu.Item>
         {/if}
 

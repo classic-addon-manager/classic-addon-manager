@@ -10,6 +10,7 @@
     import {Badge} from "$lib/components/ui/badge";
     import LocalAddonUpdateDialog from "./local_addon/LocalAddonUpdateDialog.svelte";
     import { getLatestReleasesMap, getIsCheckingForUpdates } from "$stores/AddonStore.svelte";
+    import { cn } from "$lib/utils";
 
     interface Props {
         addon: Addon;
@@ -22,13 +23,19 @@
 
     let openDialog = $state(false);
     let openUpdateDialog = $state(false);
+    let isContextMenuOpen = $state(false);
 
     function handleOpenDialogChange(o: boolean) {
         openDialog = o;
+        openUpdateDialog = o;
     }
 
     function handleOpenUpdateDialogChange(o: boolean) {
         openUpdateDialog = o;
+    }
+
+    function handleContextMenuOpenChange(open: boolean) {
+        isContextMenuOpen = open;
     }
 </script>
 
@@ -49,7 +56,10 @@
 
 {#snippet contextTriggerArea()}
     <div
-            class="cursor-pointer grid grid-cols-4 p-2 hover:bg-muted/50 border-t transition-colors items-center text-sm"
+            class={cn(
+                "cursor-pointer grid grid-cols-4 p-2 hover:bg-muted/50 border-t transition-colors items-center text-sm",
+                isContextMenuOpen && "bg-muted"
+            )}
             onclick={() => (openDialog = true)}
     >
         <div class="font-medium">{addon.alias}</div>
@@ -97,4 +107,4 @@
     </div>
 {/snippet}
 
-<LocalAddonContextMenu {addon} {contextTriggerArea}/>
+<LocalAddonContextMenu {addon} {contextTriggerArea} onOpenChange={handleContextMenuOpenChange}/>
