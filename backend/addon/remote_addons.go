@@ -22,7 +22,7 @@ func InstallAddon(manifest shared.AddonManifest, version string) (bool, error) {
 		CreateAddonsTxt()
 	}
 
-	logger.Info("Installing addon:" + manifest.Name + " from " + manifest.Repo)
+	logger.Info("Installing addon:" + manifest.Name + " from " + manifest.Repo + " version: " + version)
 
 	zipName := manifest.Name + ".zip"
 
@@ -30,7 +30,7 @@ func InstallAddon(manifest shared.AddonManifest, version string) (bool, error) {
 	if version == "" || version == "latest" {
 		url = fmt.Sprintf("/addon/%s/download", manifest.Name)
 	} else {
-		url = fmt.Sprintf("/addon/%s/download?=%s", manifest.Name, version)
+		url = fmt.Sprintf("/addon/%s/download?version=%s", manifest.Name, version)
 	}
 
 	err := util.DownloadFile(api.ApiURL+url, filepath.Join(config.GetCacheDir(), zipName))
