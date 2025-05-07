@@ -4,7 +4,7 @@ import {
 import {setAddons, getInstalledAddons} from "./stores/AddonStore.svelte";
 import type {AddonManifest} from "$lib/wails";
 import {RemoteAddonService} from "$lib/wails";
-import { safeCall, toast } from "./utils";
+import {safeCall, toast} from "./utils";
 
 export default {
     populateAddonStore,
@@ -31,8 +31,8 @@ async function repoHasAddon(addon: string): Promise<boolean> {
     return manifests.some((m) => m.name === addon);
 }
 
-async function install(manifest: AddonManifest): Promise<boolean> {
-    const result = await RemoteAddonService.InstallAddon(manifest);
+async function install(manifest: AddonManifest, version: string): Promise<boolean> {
+    const result = await RemoteAddonService.InstallAddon(manifest, version);
     if (result) {
         await populateAddonStore();
         return true;
@@ -64,36 +64,36 @@ async function unmanage(addon: string): Promise<boolean> {
 
 async function getSubscribedAddons() {
     const [ads, err] = await safeCall<AddonManifest[]>(RemoteAddonService.GetSubscribedAddons());
-    if(err) {
+    if (err) {
         toast.error("Error getting subscribed addons");
         console.error("Error getting subscribed addons", err);
         return;
     }
 
-    if(!ads) {
+    if (!ads) {
         return;
     }
 
     let installed = 0;
 
-    for(const addon of ads) {
+    for (const addon of ads) {
         const [is_installed, err] = await safeCall<boolean>(LocalAddonService.IsInstalled(addon.name));
-        if(err) {
+        if (err) {
             console.error("Error checking if addon is installed", err);
             toast.error(`Error occurred while checking if addon is installed: ${err}`);
             continue;
         }
 
-        if(is_installed) {
+        if (is_installed) {
             continue;
         }
 
-        if(await install(addon)) {
+        if (await install(addon, 'latest')) {
             installed++;
         }
     }
 
-    if(installed > 0) {
+    if (installed > 0) {
         toast.success("Addons restored", {description: `${installed} addons were restored from the server!`});
     }
 }

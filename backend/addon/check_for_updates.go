@@ -31,7 +31,7 @@ func CheckForUpdates() map[string]Addon {
 		go func(a Addon) {
 			defer wg.Done()
 
-			release, err := api.GetLatestAddonRelease(a.Name)
+			release, err := api.GetAddonRelease(a.Name, "latest")
 			if err != nil {
 				logger.Error("Error getting latest release for "+a.Name+":", err)
 				return

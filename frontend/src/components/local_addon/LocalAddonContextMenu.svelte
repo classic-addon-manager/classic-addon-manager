@@ -11,6 +11,7 @@
     import {LocalAddonService, type Addon} from "$lib/wails";
     import {toast} from "../../utils";
     import {Browser} from "@wailsio/runtime"
+    import LocalAddonVersionSelectDialog from "./LocalAddonVersionSelectDialog.svelte";
 
     let {
         contextTriggerArea,
@@ -22,13 +23,15 @@
         onOpenChange?: (open: boolean) => void;
     } = $props();
 
+    let isVersionSelectOpen = $state(false);
+
     async function handleAddonAction(action: 'uninstall' | 'unmanage') {
         const actionVerb = action === 'uninstall' ? 'Uninstalling' : 'Unmanaging';
         const actionPast = action === 'uninstall' ? 'Uninstalled' : 'Unmanaged';
-        
+
         console.debug(`${actionVerb} addon: ${addon.name}`);
         const success = await addons[action](addon.name);
-        
+
         if (success) {
             console.debug(`${actionPast} addon: ${addon.name}`);
             toast.success(`${addon.alias} was ${action}ed`);
@@ -46,11 +49,6 @@
             toast.error(`Failed to open directory: ${e}`);
         }
     }
-
-    async function handleInstallOtherVersion() {
-        console.log(`Install other version for ${addon.name}`);
-        toast.info(`Feature not implemented yet: Install other version for ${addon.alias}`);
-    }
 </script>
 
 <ContextMenu.Root {onOpenChange}>
@@ -62,17 +60,18 @@
             <FolderOpen size={16}/>
             Open directory
         </ContextMenu.Item>
-        
+
         {#if addon.isManaged}
             <ContextMenu.Item class="gap-3" onclick={() => Browser.OpenURL(`https://github.com/${addon.repo}`)}>
                 <Github size={16}/>
                 View code
             </ContextMenu.Item>
-            <ContextMenu.Item class="gap-2" onclick={() => Browser.OpenURL(`https://github.com/${addon.repo}/issues/new`)}>
+            <ContextMenu.Item class="gap-2"
+                              onclick={() => Browser.OpenURL(`https://github.com/${addon.repo}/issues/new`)}>
                 <Bug size={16}/>
                 Report issue
             </ContextMenu.Item>
-            <ContextMenu.Item class="gap-2" onclick={handleInstallOtherVersion}>
+            <ContextMenu.Item class="gap-2" onclick={() => {isVersionSelectOpen = true}}>
                 <GitBranch size={16}/>
                 Install other version
             </ContextMenu.Item>
@@ -91,3 +90,11 @@
         {/if}
     </ContextMenu.Content>
 </ContextMenu.Root>
+
+{#if addon}
+    <LocalAddonVersionSelectDialog
+            {addon}
+            bind:open={isVersionSelectOpen}
+            onOpenChange={(o) => isVersionSelectOpen = o}
+    />
+{/if}

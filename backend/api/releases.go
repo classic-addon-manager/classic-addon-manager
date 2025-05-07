@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -13,8 +14,9 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-func GetLatestAddonRelease(name string) (Release, error) {
-	url := ApiURL + "/latest_release/" + name
+func GetAddonRelease(name string, version string) (Release, error) {
+
+	url := fmt.Sprintf("%s/addon/%s/release/%s", ApiURL, name, version)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -30,25 +32,25 @@ func GetLatestAddonRelease(name string) (Release, error) {
 
 	// If the status code is not 200 here, there's likely no release
 	if resp.StatusCode != 200 {
-		logger.Error("GetLatestAddonRelease Error: Status Code", errors.New(strconv.Itoa(resp.StatusCode)))
+		logger.Error("GetAddonRelease Error: Status Code", errors.New(strconv.Itoa(resp.StatusCode)))
 		return Release{}, errors.New("no release found")
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		logger.Error("GetLatestAddonRelease Error:", err)
+		logger.Error("GetAddonRelease Error:", err)
 		return Release{}, err
 	}
 
 	var apiResponse ApiResponse
 
 	if err := json.Unmarshal(body, &apiResponse); err != nil {
-		logger.Error("GetLatestAddonRelease Error:", err)
+		logger.Error("GetAddonRelease Error:", err)
 		return Release{}, err
 	}
 
 	if !apiResponse.Status {
-		logger.Warn("GetLatestAddonRelease status false: " + apiResponse.Message)
+		logger.Warn("GetAddonRelease status false: " + apiResponse.Message)
 		return Release{}, errors.New(apiResponse.Message)
 	}
 
@@ -66,14 +68,14 @@ func GetLatestAddonRelease(name string) (Release, error) {
 	publishedAtStr := r["published_at"].(string)
 	release.PublishedAt, err = time.Parse(time.RFC3339, publishedAtStr)
 	if err != nil {
-		logger.Error("GetLatestAddonRelease Error:", err)
+		logger.Error("GetAddonRelease Error:", err)
 		return Release{}, err
 	}
 
 	tag := Tag{}
 	err = mapstructure.Decode(data["tag"], &tag)
 	if err != nil {
-		logger.Error("GetLatestAddonRelease Error:", err)
+		logger.Error("GetAddonRelease Error:", err)
 		return Release{}, err
 	}
 

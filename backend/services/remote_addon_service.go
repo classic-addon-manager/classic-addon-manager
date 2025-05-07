@@ -13,8 +13,8 @@ func (s *RemoteAddonService) GetAddonManifest() []shared.AddonManifest {
 	return addon.GetAddonManifest()
 }
 
-func (s *RemoteAddonService) InstallAddon(ad shared.AddonManifest) (bool, error) {
-	_, err := addon.InstallAddon(ad)
+func (s *RemoteAddonService) InstallAddon(ad shared.AddonManifest, version string) (bool, error) {
+	_, err := addon.InstallAddon(ad, version)
 	if err != nil {
 		logger.Error("Error installing addon:", err)
 		return false, err
@@ -29,7 +29,7 @@ func (s *RemoteAddonService) InstallAddon(ad shared.AddonManifest) (bool, error)
 }
 
 func (s *RemoteAddonService) GetLatestRelease(name string) (api.Release, error) {
-	release, err := api.GetLatestAddonRelease(name)
+	release, err := api.GetAddonRelease(name, "latest")
 	if err != nil {
 		logger.Error("Error getting latest release:", err)
 		return api.Release{}, err

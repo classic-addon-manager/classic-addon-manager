@@ -16,7 +16,7 @@ import (
 	"strconv"
 )
 
-func InstallAddon(manifest shared.AddonManifest) (bool, error) {
+func InstallAddon(manifest shared.AddonManifest, version string) (bool, error) {
 	if !file.FileExists(filepath.Join(config.GetAddonDir(), "addons.txt")) {
 		logger.Info("addons.txt not found in AAC path, creating it.")
 		CreateAddonsTxt()
@@ -26,7 +26,14 @@ func InstallAddon(manifest shared.AddonManifest) (bool, error) {
 
 	zipName := manifest.Name + ".zip"
 
-	err := util.DownloadFile(api.ApiURL+fmt.Sprintf("/addon/%s/download", manifest.Name), filepath.Join(config.GetCacheDir(), zipName))
+	var url string
+	if version == "" || version == "latest" {
+		url = fmt.Sprintf("/addon/%s/download", manifest.Name)
+	} else {
+		url = fmt.Sprintf("/addon/%s/download?=%s", manifest.Name, version)
+	}
+
+	err := util.DownloadFile(api.ApiURL+url, filepath.Join(config.GetCacheDir(), zipName))
 	if err != nil {
 		return false, err
 	}
@@ -58,7 +65,11 @@ func InstallAddon(manifest shared.AddonManifest) (bool, error) {
 		return false, nil
 	}
 
-	release, err := api.GetLatestAddonRelease(manifest.Name)
+	if version == "" {
+		version = "latest"
+	}
+
+	release, err := api.GetAddonRelease(manifest.Name, version)
 	if err != nil {
 		return false, err
 	}
