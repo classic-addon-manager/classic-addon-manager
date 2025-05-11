@@ -17,6 +17,7 @@
     let isWaitingForResponse: boolean = $state(false);
     let chatContainer: HTMLDivElement;
     let messageInput: HTMLInputElement;
+    let lastMessageId: string = $state('');
 
     marked.setOptions({
         gfm: true,
@@ -26,10 +27,15 @@
     $effect(() => {
         if (chatHistory.length > 0) {
             setTimeout(() => {
-                chatContainer?.scrollTo({
-                    top: chatContainer.scrollHeight,
-                    behavior: 'smooth'
-                });
+                const lastMessage = document.getElementById(lastMessageId);
+                if (lastMessage) {
+                    lastMessage.scrollIntoView({ behavior: 'smooth' });
+                } else {
+                    chatContainer?.scrollTo({
+                        top: chatContainer.scrollHeight,
+                        behavior: 'smooth'
+                    });
+                }
             }, 100);
         }
     });
@@ -45,6 +51,7 @@
 
         // Add user message to chat history
         chatHistory = [...chatHistory, {role: 'user', content: chatMessage}];
+        lastMessageId = `message-${chatHistory.length - 1}`;
 
         // Clear input field
         const userMessage = chatMessage;
@@ -66,6 +73,7 @@
                             content: "Sorry adventurer, locating the Daru merchants is taking longer than expected. I am still working on your question. 🐸"
                         }
                     ];
+                    lastMessageId = `message-${chatHistory.length - 1}`;
                 }
                 // We don't reject here, just add the message
             }, 10000); // 10 seconds
@@ -79,6 +87,7 @@
                     role: 'assistant',
                     content: payload.data.response || 'Sorry, I could not process your request.'
                 }];
+                lastMessageId = `message-${chatHistory.length - 1}`;
             } else {
                 throw new Error('Failed to get response from Daru');
             }
@@ -88,6 +97,7 @@
                 role: 'assistant',
                 content: 'Sorry, I encountered an error processing your request.'
             }];
+            lastMessageId = `message-${chatHistory.length - 1}`;
             console.error('Chat error:', error);
         } finally {
             // Clear the timeout regardless of success or failure
@@ -191,7 +201,7 @@
                         {:else}
                             <div class="space-y-6">
                                 {#each chatHistory as message, i (message.content + i)}
-                                    <div class="flex items-start gap-3 px-4 {message.role === 'user' ? 'justify-end' : ''}">
+                                    <div id={`message-${i}`} class="flex items-start gap-3 px-4 {message.role === 'user' ? 'justify-end' : ''}">
                                         {#if message.role === 'assistant'}
                                             <div class="flex h-9 w-9 shrink-0 select-none items-center justify-center rounded-full bg-primary/10 overflow-hidden">
                                                 <img src={supportDaruAlt} alt="Daru Assistant" class="w-full h-full object-cover" />
@@ -199,12 +209,15 @@
                                         {/if}
                                         <div class="flex flex-col gap-2">
                                             <div class="relative inline-block rounded-lg px-3 py-1.5 text-sm chat-message {message.role === 'assistant' ? 'assistant-message' : ''}
-                                                {message.role === 'user' 
-                                                    ? 'bg-primary text-black' 
+                                                {message.role === 'user'
+                                                    ? 'bg-primary text-black'
                                                     : 'bg-muted/50'}"
                                             >
                                                 {#if message.role === 'assistant'}
-                                                    {@html DOMPurify.sanitize(marked.parse(message.content, {async: false}))}
+                                                    {@html DOMPurify.sanitize(marked.parse(message.content
+                                                        .replace(/`([^`]+)`/g, (_, code) => `<code>${code}</code>`),
+                                                        {async: false}
+                                                    ))}
                                                     <button class="copy-button" onclick={() => copyToClipboard(message.content)}>
                                                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard-copy"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><path d="M16 4h2a2 2 0 0 1 2 2v4"/><path d="M21 14H11"/><path d="m15 10-4 4 4 4"/></svg>
                                                         <span class="sr-only">Copy message</span>
