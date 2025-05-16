@@ -9,6 +9,7 @@
     import DOMPurify from "dompurify";
     import {marked} from "marked";
     import type {User} from "$stores/UserStore.svelte";
+    import {Browser} from "@wailsio/runtime";
 
     let { open = $bindable(false), user } = $props<{open?: boolean, user: User}>();
 
@@ -28,10 +29,22 @@
         breaks: true,
     });
 
-    // Configure DOMPurify to allow code blocks
+    // Configure DOMPurify to allow code blocks and links
     DOMPurify.addHook('afterSanitizeAttributes', function(node) {
         if (node.tagName === 'PRE' || node.tagName === 'CODE') {
             node.className = node.className || '';
+        }
+        
+        // Handle links with our custom logic
+        if (node.tagName === 'A' && node.hasAttribute('href')) {
+            const url = node.getAttribute('href');
+            if (url) {
+                node.setAttribute('data-url', url);
+                node.removeAttribute('target');
+                // Keep the href for accessibility but update it to javascript protocol
+                node.setAttribute('href', `javascript:void(0)`);
+                node.classList.add('wails-link');
+            }
         }
     });
 
@@ -47,9 +60,30 @@
                         behavior: 'smooth'
                     });
                 }
+                
+                // Add click handlers to all links after rendering
+                addLinkHandlers();
             }, 100);
         }
     });
+    
+    // Function to add click handlers to links in rendered content
+    function addLinkHandlers() {
+        const links = document.querySelectorAll('.chat-message.assistant-message a.wails-link');
+        links.forEach(link => {
+            if (!link.hasAttribute('data-wails-handled')) {
+                link.setAttribute('data-wails-handled', 'true');
+                link.addEventListener('click', (e: Event) => {
+                    e.preventDefault();
+                    const linkElement = e.currentTarget as HTMLAnchorElement;
+                    const linkUrl = linkElement.getAttribute('data-url');
+                    if (linkUrl) {
+                        Browser.OpenURL(linkUrl);
+                    }
+                });
+            }
+        });
+    }
 
     $effect(() => {
         if (!isWaitingForResponse && messageInput && open) {
@@ -152,7 +186,11 @@
     }
 
     :global(.chat-message.assistant-message a) {
-        @apply text-blue-400 hover:text-blue-500 hover:underline transition-all;
+        @apply text-blue-400 hover:text-blue-500 hover:underline transition-all cursor-pointer;
+    }
+    
+    :global(.chat-message.assistant-message .wails-link) {
+        @apply text-blue-400 hover:text-blue-500 hover:underline transition-all cursor-pointer;
     }
 
     :global(.chat-message.assistant-message code) {
@@ -193,6 +231,10 @@
 
     .copy-button {
         @apply absolute top-1 right-1 p-1 rounded-md text-muted-foreground/60 hover:text-muted-foreground hover:bg-secondary/50 transition-colors duration-150;
+    }
+
+    :global(.chat-message.assistant-message a.wails-link) {
+        @apply text-blue-400 hover:text-blue-500 hover:underline transition-all cursor-pointer;
     }
 </style>
 
@@ -253,7 +295,9 @@
                                                  style="{message.role === 'assistant' ? 'max-width: calc(100% - 1rem); width: 100%;' : 'max-width: 100%;'}"
                                             >
                                                 {#if message.role === 'assistant'}
-                                                    {@html DOMPurify.sanitize(marked.parse(message.content, {async: false}))}
+                                                    {@html DOMPurify.sanitize(marked.parse(message.content, {async: false}), {
+                                                        ADD_ATTR: ['data-url', 'onclick']
+                                                    })}
                                                     <button class="copy-button" onclick={() => copyToClipboard(message.content)}>
                                                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard-copy"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><path d="M16 4h2a2 2 0 0 1 2 2v4"/><path d="M21 14H11"/><path d="m15 10-4 4 4 4"/></svg>
                                                         <span class="sr-only">Copy message</span>
@@ -362,3 +406,15 @@
         </Dialog.Content>
     </Dialog.Portal>
 </Dialog.Root>
+
+<svelte:window on:click={(e: MouseEvent) => {
+    // Handle link clicks globally
+    const target = e.target as HTMLElement;
+    if (target && target.classList && target.classList.contains('wails-link')) {
+        e.preventDefault();
+        const url = target.getAttribute('data-url');
+        if (url) {
+            Browser.OpenURL(url);
+        }
+    }
+}}/>
