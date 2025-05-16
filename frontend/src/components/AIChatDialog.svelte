@@ -18,10 +18,21 @@
     let chatContainer: HTMLDivElement;
     let messageInput: HTMLInputElement;
     let lastMessageId: string = $state('');
+    
+    // Add new state variables for conversation tracking
+    let conversationId: string | null = $state(null);
+    let remainingLimit: number = $state(0);
 
     marked.setOptions({
         gfm: true,
         breaks: true,
+    });
+
+    // Configure DOMPurify to allow code blocks
+    DOMPurify.addHook('afterSanitizeAttributes', function(node) {
+        if (node.tagName === 'PRE' || node.tagName === 'CODE') {
+            node.className = node.className || '';
+        }
     });
 
     $effect(() => {
@@ -80,12 +91,23 @@
         });
 
         try {
-            const response = await apiClient.post('/daru/inquiry', { p: userMessage });
+            // Create request payload, including conversation_id if available
+            const payload = { 
+                p: userMessage,
+                ...(conversationId ? { conversation_id: conversationId } : {})
+            };
+            
+            const response = await apiClient.post('/ai/chat', payload);
             if (response.ok) {
-                const payload = await response.json();
+                const data = await response.json();
+                
+                // Store the conversation_id and remaining_limit
+                conversationId = data.data.conversation_id || conversationId;
+                remainingLimit = data.data.remaining_limit || remainingLimit;
+                
                 chatHistory = [...chatHistory, {
                     role: 'assistant',
-                    content: payload.data.response || 'Sorry, I could not process your request.'
+                    content: data.data.response || 'Sorry, I could not process your request.'
                 }];
                 lastMessageId = `message-${chatHistory.length - 1}`;
             } else {
@@ -123,6 +145,10 @@
     /* Markdown styling for chat messages */
     :global(.chat-message.assistant-message) {
         @apply prose prose-invert max-w-none;
+        max-width: 100%;
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+        word-break: break-word;
     }
 
     :global(.chat-message.assistant-message a) {
@@ -131,14 +157,26 @@
 
     :global(.chat-message.assistant-message code) {
         @apply bg-gray-700 py-0.5 px-1 rounded-sm font-mono;
+        word-break: break-all;
     }
 
     :global(.chat-message.assistant-message pre) {
         @apply bg-neutral-900 p-4 my-4 overflow-x-auto rounded-md font-mono text-muted-foreground;
+        max-width: 100%;
+        width: 100%;
     }
 
     :global(.chat-message.assistant-message pre code) {
         @apply bg-transparent p-0 rounded-none;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+
+    /* Language tag for code blocks */
+    :global(.chat-message.assistant-message pre::before) {
+        @apply text-xs opacity-60 block mb-2;
+        content: attr(data-language);
+        text-transform: uppercase;
     }
 
     :global(.chat-message.assistant-message p) {
@@ -162,8 +200,8 @@
     <Dialog.Portal>
         <Dialog.Overlay class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" />
         <Dialog.Content
-                class="fixed left-[50%] top-[50%] z-50 w-[calc(100%-2rem)] max-w-2xl translate-x-[-50%] translate-y-[-50%] gap-0 border bg-background shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-xl overflow-hidden">
-            <div class="flex max-h-[calc(100vh-4rem)] h-[650px] flex-col">
+                class="fixed left-[50%] top-[50%] z-50 w-[calc(100%-2rem)] max-w-[70%] translate-x-[-50%] translate-y-[-50%] gap-0 border bg-background shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-xl overflow-hidden">
+            <div class="flex max-h-[calc(100vh-4rem)] h-[650px] lg:h-[80vh] flex-col">
                 <!-- Header -->
                 <div class="border-b border-border/40 px-4 sm:px-6 py-4">
                     <div class="flex items-center justify-between">
@@ -207,17 +245,15 @@
                                                 <img src={supportDaruAlt} alt="Daru Assistant" class="w-full h-full object-cover" />
                                             </div>
                                         {/if}
-                                        <div class="flex flex-col gap-2">
+                                        <div class="flex flex-col gap-2 {message.role === 'assistant' ? 'max-w-[calc(100%-3.5rem)] w-full' : 'max-w-[80%]'}">
                                             <div class="relative inline-block rounded-lg px-3 py-1.5 text-sm chat-message {message.role === 'assistant' ? 'assistant-message' : ''}
                                                 {message.role === 'user'
                                                     ? 'bg-primary text-black'
                                                     : 'bg-muted/50'}"
+                                                 style="{message.role === 'assistant' ? 'max-width: calc(100% - 1rem); width: 100%;' : 'max-width: 100%;'}"
                                             >
                                                 {#if message.role === 'assistant'}
-                                                    {@html DOMPurify.sanitize(marked.parse(message.content
-                                                        .replace(/`([^`]+)`/g, (_, code) => `<code>${code}</code>`),
-                                                        {async: false}
-                                                    ))}
+                                                    {@html DOMPurify.sanitize(marked.parse(message.content, {async: false}))}
                                                     <button class="copy-button" onclick={() => copyToClipboard(message.content)}>
                                                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard-copy"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><path d="M16 4h2a2 2 0 0 1 2 2v4"/><path d="M21 14H11"/><path d="m15 10-4 4 4 4"/></svg>
                                                         <span class="sr-only">Copy message</span>
@@ -266,6 +302,17 @@
                         {/if}
                     </div>
                 </div>
+
+                {#if remainingLimit > 0}
+                <div class="flex justify-end px-4 pb-2">
+                    <div class="text-xs text-muted-foreground/60 flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted/20">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="opacity-70">
+                            <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48 2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48 2.83-2.83"/>
+                        </svg>
+                        <span>{remainingLimit} messages remaining</span>
+                    </div>
+                </div>
+                {/if}
 
                 <!-- Input Area -->
                 <div class="border-t bg-background pt-3 sm:pt-4">
