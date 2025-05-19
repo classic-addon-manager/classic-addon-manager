@@ -24,28 +24,42 @@
     let conversationId: string | null = $state(null);
     let remainingLimit: number = $state(0);
 
-    marked.setOptions({
-        gfm: true,
-        breaks: true,
+    // Configure marked options
+    $effect(() => {
+        marked.setOptions({
+            gfm: true,
+            breaks: true,
+        });
     });
 
-    // Configure DOMPurify to allow code blocks and links
-    DOMPurify.addHook('afterSanitizeAttributes', function(node) {
-        if (node.tagName === 'PRE' || node.tagName === 'CODE') {
-            node.className = node.className || '';
-        }
-        
-        // Handle links with our custom logic
-        if (node.tagName === 'A' && node.hasAttribute('href')) {
-            const url = node.getAttribute('href');
-            if (url) {
-                node.setAttribute('data-url', url);
-                node.removeAttribute('target');
-                // Keep the href for accessibility but update it to javascript protocol
-                node.setAttribute('href', `javascript:void(0)`);
-                node.classList.add('wails-link');
+    // Configure DOMPurify hooks to handle links
+    $effect(() => {
+        // Configure DOMPurify to handle links with custom behavior
+        DOMPurify.addHook('afterSanitizeAttributes', function(node) {
+            if (node.tagName === 'PRE' || node.tagName === 'CODE') {
+                node.className = node.className || '';
             }
-        }
+            
+            // Handle links with Wails
+            if (node.tagName === 'A' && node.hasAttribute('href')) {
+                const url = node.getAttribute('href');
+                if (url) {
+                    // Keep the href for accessibility but make it a javascript: protocol
+                    node.setAttribute('href', `javascript:void(0)`);
+                    // Store the original URL for the click handler
+                    node.setAttribute('data-url', url);
+                    // Mark as a Wails link for styling
+                    node.classList.add('wails-link');
+                    // Add onclick handler that uses Wails Browser
+                    node.setAttribute('onclick', `event.preventDefault(); window.runtime.Browser.OpenURL('${url.replace(/'/g, "\\'")}');`);
+                }
+            }
+        });
+
+        // Clean up hook when component is destroyed
+        return () => {
+            DOMPurify.removeHook('afterSanitizeAttributes');
+        };
     });
 
     $effect(() => {
@@ -60,36 +74,23 @@
                         behavior: 'smooth'
                     });
                 }
-                
-                // Add click handlers to all links after rendering
-                addLinkHandlers();
             }, 100);
         }
     });
-    
-    // Function to add click handlers to links in rendered content
-    function addLinkHandlers() {
-        const links = document.querySelectorAll('.chat-message.assistant-message a.wails-link');
-        links.forEach(link => {
-            if (!link.hasAttribute('data-wails-handled')) {
-                link.setAttribute('data-wails-handled', 'true');
-                link.addEventListener('click', (e: Event) => {
-                    e.preventDefault();
-                    const linkElement = e.currentTarget as HTMLAnchorElement;
-                    const linkUrl = linkElement.getAttribute('data-url');
-                    if (linkUrl) {
-                        Browser.OpenURL(linkUrl);
-                    }
-                });
-            }
-        });
-    }
 
     $effect(() => {
         if (!isWaitingForResponse && messageInput && open) {
             setTimeout(() => messageInput?.focus(), 0);
         }
     });
+
+    // Parse and sanitize markdown content
+    function parseMarkdown(content: string) {
+        return DOMPurify.sanitize(
+            marked.parse(content, {async: false}), 
+            {ADD_ATTR: ['data-url', 'onclick']}
+        );
+    }
 
     async function sendMessage() {
         if (!chatMessage.trim() || isWaitingForResponse) return;
@@ -185,6 +186,27 @@
         word-break: break-word;
     }
 
+    :global(.chat-message.assistant-message ol),
+    :global(.chat-message.assistant-message ul) {
+        margin-top: 0;
+        margin-bottom: 0;
+    }
+
+    :global(.chat-message.assistant-message li) {
+        margin-top: 0;
+        margin-bottom: 0;
+    }
+
+    :global(.chat-message.assistant-message li > p) {
+        margin: 0;
+        display: inline;
+    }
+
+    :global(.chat-message.assistant-message li > ul),
+    :global(.chat-message.assistant-message li > ol) {
+        margin-top: 0.5rem;
+    }
+
     :global(.chat-message.assistant-message a) {
         @apply text-blue-400 hover:text-blue-500 hover:underline transition-all cursor-pointer;
     }
@@ -231,10 +253,6 @@
 
     .copy-button {
         @apply absolute top-1 right-1 p-1 rounded-md text-muted-foreground/60 hover:text-muted-foreground hover:bg-secondary/50 transition-colors duration-150;
-    }
-
-    :global(.chat-message.assistant-message a.wails-link) {
-        @apply text-blue-400 hover:text-blue-500 hover:underline transition-all cursor-pointer;
     }
 </style>
 
@@ -295,9 +313,7 @@
                                                  style="{message.role === 'assistant' ? 'max-width: calc(100% - 1rem); width: 100%;' : 'max-width: 100%;'}"
                                             >
                                                 {#if message.role === 'assistant'}
-                                                    {@html DOMPurify.sanitize(marked.parse(message.content, {async: false}), {
-                                                        ADD_ATTR: ['data-url', 'onclick']
-                                                    })}
+                                                    {@html parseMarkdown(message.content)}
                                                     <button class="copy-button" onclick={() => copyToClipboard(message.content)}>
                                                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard-copy"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><path d="M16 4h2a2 2 0 0 1 2 2v4"/><path d="M21 14H11"/><path d="m15 10-4 4 4 4"/></svg>
                                                         <span class="sr-only">Copy message</span>
