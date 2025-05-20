@@ -220,6 +220,12 @@
         word-break: break-all;
     }
 
+    /* Override Tailwind Prose backticks for inline code */
+    :global(.chat-message.assistant-message code::before),
+    :global(.chat-message.assistant-message code::after) {
+        content: none !important;
+    }
+
     :global(.chat-message.assistant-message pre) {
         @apply bg-neutral-900 p-4 my-4 overflow-x-auto rounded-md font-mono text-muted-foreground;
         max-width: 100%;
