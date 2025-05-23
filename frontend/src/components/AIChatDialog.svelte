@@ -178,12 +178,23 @@
 
 <style>
     /* Markdown styling for chat messages */
+    :global(.chat-message) {
+        user-select: text;
+        -webkit-user-select: text;
+        -moz-user-select: text;
+        -ms-user-select: text;
+    }
+
     :global(.chat-message.assistant-message) {
         @apply prose prose-invert max-w-none;
         max-width: 100%;
         overflow-wrap: break-word;
         word-wrap: break-word;
         word-break: break-word;
+        user-select: text;
+        -webkit-user-select: text;
+        -moz-user-select: text;
+        -ms-user-select: text;
     }
 
     :global(.chat-message.assistant-message ol),
@@ -247,18 +258,60 @@
 
     :global(.chat-message.assistant-message p) {
         @apply my-2;
+        user-select: text;
+        -webkit-user-select: text;
+        -moz-user-select: text;
+        -ms-user-select: text;
     }
 
     :global(.chat-message.assistant-message ul) {
         @apply list-disc list-inside my-2;
+        user-select: text;
+        -webkit-user-select: text;
+        -moz-user-select: text;
+        -ms-user-select: text;
     }
 
     :global(.chat-message.assistant-message ol) {
         @apply list-decimal list-inside my-2;
+        user-select: text;
+        -webkit-user-select: text;
+        -moz-user-select: text;
+        -ms-user-select: text;
+    }
+
+    :global(.chat-message.assistant-message li) {
+        user-select: text;
+        -webkit-user-select: text;
+        -moz-user-select: text;
+        -ms-user-select: text;
+    }
+
+    :global(.chat-message.assistant-message code) {
+        @apply bg-gray-700 py-0.5 px-1 rounded-sm font-mono;
+        word-break: break-all;
+        user-select: text;
+        -webkit-user-select: text;
+        -moz-user-select: text;
+        -ms-user-select: text;
+    }
+
+    :global(.chat-message.assistant-message pre code) {
+        @apply bg-transparent p-0 rounded-none;
+        white-space: pre-wrap;
+        word-break: break-word;
+        user-select: text;
+        -webkit-user-select: text;
+        -moz-user-select: text;
+        -ms-user-select: text;
     }
 
     .copy-button {
         @apply absolute top-1 right-1 p-1 rounded-md text-muted-foreground/60 hover:text-muted-foreground hover:bg-secondary/50 transition-colors duration-150;
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
     }
 </style>
 
@@ -307,7 +360,7 @@
                                 {#each chatHistory as message, i (message.content + i)}
                                     <div id={`message-${i}`} class="flex items-start gap-3 px-4 {message.role === 'user' ? 'justify-end' : ''}">
                                         {#if message.role === 'assistant'}
-                                            <div class="flex h-9 w-9 shrink-0 select-none items-center justify-center rounded-full bg-primary/10 overflow-hidden">
+                                            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 overflow-hidden">
                                                 <img src={supportDaruAlt} alt="Daru Assistant" class="w-full h-full object-cover" />
                                             </div>
                                         {/if}
@@ -330,7 +383,7 @@
                                             </div>
                                         </div>
                                         {#if message.role === 'user'}
-                                            <div class="flex h-9 w-9 shrink-0 select-none items-center justify-center rounded-full bg-secondary">
+                                            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary">
                                                 <Avatar.Root class="h-full w-full">
                                                     <Avatar.Image
                                                         src={`https://cdn.discordapp.com/avatars/${user.discord_id}/${user.avatar}.png`}
@@ -348,7 +401,7 @@
                                 
                                 {#if isWaitingForResponse}
                                     <div class="flex items-start gap-3 px-4">
-                                        <div class="flex h-9 w-9 shrink-0 select-none items-center justify-center rounded-full bg-primary/10 overflow-hidden">
+                                        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 overflow-hidden">
                                             <img src={supportDaruAlt} alt="Daru Assistant" class="w-full h-full object-cover" />
                                         </div>
                                         <div class="flex flex-col gap-2">
