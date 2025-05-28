@@ -24,37 +24,18 @@
     });
 
     async function checkForIcon() {
-        const response = await fetch(`https://raw.githubusercontent.com/${addon.repo}/${addon.branch}/icon.png`);
-        if (!response.ok) {
+        const [response, fetchErr] = await safeCall(fetch(`https://raw.githubusercontent.com/${addon.repo}/${addon.branch}/icon.png`));
+        if (!response || fetchErr || !response.ok) {
             return false;
         }
 
-        const reader = response.body?.getReader();
-        if (reader) {
-            const chunks = [];
-            let done = false;
-            while (!done) {
-                const [result, error] = await safeCall(reader.read());
-                if (error) {
-                    console.error("Error reading image:", error);
-                    return false;
-                }
-
-                if (!result) {
-                    // Should not happen if error is null, but satisfy TS
-                    done = true;
-                    continue;
-                }
-
-                done = result.done;
-                if (result.value) {
-                    chunks.push(result.value);
-                }
-            }
-            const blob = new Blob(chunks);
-            icon = URL.createObjectURL(blob);
+        const [buffer, bufferErr] = await safeCall(response.arrayBuffer());
+        if (!buffer || bufferErr) {
+            return false;
         }
-        // If we got this far (especially if reader was valid), assume success
+
+        const blob = new Blob([buffer]);
+        icon = URL.createObjectURL(blob);
         hasIcon = true;
         return true;
     }

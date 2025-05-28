@@ -1,5 +1,29 @@
 <script lang="ts">
+    import ImageOverlay from "./ImageOverlay.svelte";
     let {readme}: { readme: string } = $props();
+    
+    let selectedImage: { src: string, alt: string } | null = $state(null);
+    let isImageOverlayOpen: boolean = $state(false);
+
+    function handleImageClick(event: MouseEvent) {
+        const target = event.target as HTMLElement;
+        if (target.tagName === 'IMG') {
+            const img = target as HTMLImageElement;
+            selectedImage = {
+                src: img.src,
+                alt: img.alt || 'Image'
+            };
+            isImageOverlayOpen = true;
+        }
+    }
+
+    function handleOverlayClose() {
+        isImageOverlayOpen = false;
+        // Clear the selected image after the overlay is closed
+        setTimeout(() => {
+            selectedImage = null;
+        }, 200); // Wait for the animation to finish
+    }
 </script>
 
 <style>
@@ -50,6 +74,17 @@
     /* Links containing images need margins */
     #markdown-container :global(a img) {
         @apply my-3;
+    }
+
+    /* Make images clickable */
+    #markdown-container :global(img) {
+        @apply 
+        cursor-pointer 
+        hover:opacity-90 
+        transition-all
+        hover:scale-105
+        ;
+        transition-duration: 400ms;
     }
 
     /* Code blocks need to be more distinct */
@@ -106,9 +141,18 @@
     #markdown-container :global(ol) {
         @apply list-decimal list-inside;
     }
-
 </style>
 
-<div id="markdown-container" class="max-w-[95%] mx-auto">
+<div id="markdown-container" class="max-w-[95%] mx-auto" on:click={handleImageClick}>
     {@html readme}
 </div>
+
+{#if selectedImage}
+    <ImageOverlay 
+        src={selectedImage.src}
+        alt={selectedImage.alt}
+        bind:open={isImageOverlayOpen}
+        onClose={handleOverlayClose}
+    />
+{/if}
+

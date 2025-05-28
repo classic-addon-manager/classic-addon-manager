@@ -1,16 +1,19 @@
 <script lang="ts">
     import * as Avatar from "$lib/components/ui/avatar/index";
     import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index";
+    import {Button} from "$lib/components/ui/button";
     import {clearUserState, getUser, isAuthenticated, setToken, setUser, type User} from "$stores/UserStore.svelte";
     import {onMount} from "svelte";
     import {apiClient} from "../api";
     import {toast} from "../utils";
     import {Events, Browser} from "@wailsio/runtime";
-    import type { WailsEvent } from "node_modules/@wailsio/runtime/types/events";
+    import type {WailsEvent} from "node_modules/@wailsio/runtime/types/events";
     import addons from "../addons";
+    import AIChatDialog from "./AIChatDialog.svelte";
 
     let isReady: boolean = $state(false);
     let user: User = $derived(getUser());
+    let chatOpen: boolean = $state(false);
 
     onMount(async () => {
         Events.On('authTokenReceived', async (event: WailsEvent) => {
@@ -56,13 +59,20 @@
             window.location.href = '/';
         }, 100);
     }
+
+    function handleChatOpen() {
+        chatOpen = true;
+    }
 </script>
 
+<style>
+</style>
+
 {#if isReady}
-    {#if user.discord_id === ''}
+    {#if !isAuthenticated()}
         <div class="mx-auto w-full">
             <a class="flex scale-[85%] items-center py-2 px-4 rounded-lg bg-[#5865F2] hover:bg-[#5865F2]/80 hover:text-white/80 transition-colors duration-300"
-               onclick={() => Browser.OpenURL('https://discord.com/oauth2/authorize?client_id=1331010099916836914&response_type=code&redirect_uri=https%3A%2F%2Faac.gaijin.dev%2Fauth%2Fdiscord%2Fcallback2&scope=identify')}
+               onclick={(e) => { e.preventDefault(); Browser.OpenURL('https://discord.com/oauth2/authorize?client_id=1331010099916836914&response_type=code&redirect_uri=https%3A%2F%2Faac.gaijin.dev%2Fauth%2Fdiscord%2Fcallback2&scope=identify'); }}
                href="#"
             >
                 <svg viewBox="0 -28.5 256 256" class="h-7 w-7 fill-white hover:fill-white/80 mr-4">
@@ -77,15 +87,32 @@
         </div>
 
     {:else}
-        <div class="w-full px-3">
+        <div class="w-full px-3 space-y-2">
+            <!-- Ask Question Button -->
+            <Button
+                    variant="secondary"
+                    class="w-full flex items-center justify-center gap-2 bg-secondary/30"
+                    onclick={handleChatOpen}
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                     class="lucide lucide-message-circle-question">
+                    <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>
+                    <path d="M10 8.5a2.5 2.5 0 0 1 4 2 2.5 2.5 0 0 1-2.5 2.5"/>
+                    <path d="M12 16h.01"/>
+                </svg>
+                Ask a friendly Daru
+            </Button>
+
+            <!-- User Profile -->
             <DropdownMenu.Root>
                 <DropdownMenu.Trigger class="w-full focus:outline-none">
-                    <div class="flex w-full items-center space-x-3 rounded-md bg-secondary/50 p-2 transition-all hover:bg-secondary">
+                    <div class="flex w-full items-center space-x-3 rounded-md bg-secondary/30 p-2 transition-all hover:bg-secondary">
                         <Avatar.Root class="h-8 w-8">
                             <Avatar.Image
-                                src={`https://cdn.discordapp.com/avatars/${user.discord_id}/${user.avatar}.png`}
-                                alt={user.username}
-                                class="h-full w-full object-cover"
+                                    src={`https://cdn.discordapp.com/avatars/${user.discord_id}/${user.avatar}.png`}
+                                    alt={user.username}
+                                    class="h-full w-full object-cover"
                             />
                             <Avatar.Fallback class="text-xs">
                                 {user.username.substring(0, 2).toUpperCase()}
@@ -97,11 +124,11 @@
                 <DropdownMenu.Content class="w-56">
                     <DropdownMenu.Group>
                         <DropdownMenu.Label>Account</DropdownMenu.Label>
-                        <DropdownMenu.Separator />
+                        <DropdownMenu.Separator/>
                         <DropdownMenu.Item>
                             <button
-                                class="w-full text-left cursor-pointer text-red-500"
-                                onclick={handleSignOut}
+                                    class="w-full text-left cursor-pointer text-red-500"
+                                    onclick={handleSignOut}
                             >
                                 Sign out
                             </button>
@@ -112,3 +139,5 @@
         </div>
     {/if}
 {/if}
+
+<AIChatDialog bind:open={chatOpen} {user} />

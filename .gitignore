@@ -4,6 +4,7 @@ build/windows/installer
 node_modules
 frontend/dist
 frontend/.vscode
+frontend/bindings
 .idea
 .task
 /ClassicAddonManager.exe

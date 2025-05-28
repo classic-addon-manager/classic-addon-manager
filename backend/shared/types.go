@@ -20,4 +20,5 @@ type AddonManifest struct {
 	LikePercent  *int8     `json:"like_percentage"`
 	Kofi         *string   `json:"kofi,omitempty"`
 	AddedAt      time.Time `json:"added_at"`
+	Warning      *string   `json:"warning,omitempty"`
 }

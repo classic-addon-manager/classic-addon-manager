@@ -71,12 +71,25 @@ const config: Config = {
                 'caret-blink': {
                     '0%,70%,100%': {opacity: '1'},
                     '20%,50%': {opacity: '0'}
+                },
+                'bounce-dot': {
+                    '0%, 100%': {
+                        transform: 'translateY(0)',
+                        animationTimingFunction: 'cubic-bezier(0.8, 0, 1, 1)'
+                    },
+                    '50%': {
+                        transform: 'translateY(-12px)',
+                        animationTimingFunction: 'cubic-bezier(0, 0, 0.2, 1)'
+                    }
                 }
             },
             animation: {
                 'accordion-down': 'accordion-down 0.2s ease-out',
                 'accordion-up': 'accordion-up 0.2s ease-out',
-                'caret-blink': 'caret-blink 1.25s ease-out infinite'
+                'caret-blink': 'caret-blink 1.25s ease-out infinite',
+                'bounce-dot-1': 'bounce-dot 1s infinite',
+                'bounce-dot-2': 'bounce-dot 1s infinite 0.1s',
+                'bounce-dot-3': 'bounce-dot 1s infinite 0.2s'
             }
         }
     },
