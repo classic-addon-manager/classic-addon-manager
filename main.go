@@ -78,7 +78,7 @@ func main() {
 		go startPipeServer(a)
 		startup()
 	})
-	shared.Version = "2.3.5"
+	shared.Version = "3.0.0"
 
 	a.NewWebviewWindowWithOptions(application.WebviewWindowOptions{
 		Title:            "Classic Addon Manager",
