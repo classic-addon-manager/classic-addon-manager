@@ -6,8 +6,9 @@ import (
 	"ClassicAddonManager/backend/logger"
 	"path/filepath"
 
+	"slices"
+
 	"github.com/sqweek/dialog"
-	"golang.org/x/exp/slices"
 )
 
 var installedAddonNames []string
@@ -38,10 +39,8 @@ func ReadAddonsTxt() []string {
 func AddToAddonsTxt(addonName string) bool {
 	lines := ReadAddonsTxt()
 	// Check if addon is already in addons.txt
-	for _, line := range lines {
-		if line == addonName {
-			return true
-		}
+	if slices.Contains(lines, addonName) {
+		return true
 	}
 
 	lines = append(lines, addonName)
@@ -56,8 +55,7 @@ func AddToAddonsTxt(addonName string) bool {
 }
 
 func CreateAddonsTxt() {
-	addonDir := config.GetAddonDir()
-	err := file.WriteLines(filepath.Join(addonDir, "addons.txt"), nil)
+	err := file.WriteLines(filepath.Join(config.GetAddonDir(), "addons.txt"), []string{})
 	if err != nil {
 		dialog.Message("Error occurred while creating addons.txt: %s", err.Error()).Title("Classic Addon Manager Error").Error()
 		logger.Fatal("Error creating addons.txt:", err)
