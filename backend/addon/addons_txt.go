@@ -31,14 +31,13 @@ func ReadAddonsTxt() []string {
 	}
 
 	// Remove "AddonUpdateNotification" from lines if it exists
-	for i, line := range lines {
-		if line == "AddonUpdateNotification" {
-			lines = slices.Delete(lines, i, i+1)
-			break
-		}
+	if idx := slices.Index(lines, "AddonUpdateNotification"); idx >= 0 {
+		lines = slices.Delete(lines, idx, idx+1)
 	}
 
+	installedAddonNamesMu.Lock()
 	installedAddonNames = lines
+	installedAddonNamesMu.Unlock()
 	return lines
 }
 
