@@ -6,29 +6,23 @@ import (
 )
 
 func GetAddons() []Addon {
-	addons := ReadAddonsTxt()
-	var addonsList = make([]Addon, 0)
-	for _, ad := range addons {
-		addon := FindLocalAddonByName(ad)
-		fmt.Println("Addon:", ad)
-		if addon != nil {
-			fmt.Println("Addon found:", addon)
-			if addon.Alias == "" {
-				addon.Alias = strings.ReplaceAll(ad, "_", " ")
-			}
-			addonsList = append(addonsList, *addon)
-			continue
-		}
+	var addons []Addon
+	for _, name := range ReadAddonsTxt() {
+		fmt.Println("Addon:", name)
+		alias := strings.ReplaceAll(name, "_", " ")
 
-		addonsList = append(addonsList, Addon{
-			Name:      ad,
-			Alias:     strings.ReplaceAll(ad, "_", " "),
-			Version:   "",
-			Commit:    "",
-			Author:    "",
-			Repo:      "",
-			IsManaged: false,
-		})
+		if local := FindLocalAddonByName(name); local != nil {
+			fmt.Println("Addon found:", local)
+			if local.Alias == "" {
+				local.Alias = alias
+			}
+			addons = append(addons, *local)
+		} else {
+			addons = append(addons, Addon{
+				Name:  name,
+				Alias: alias,
+			})
+		}
 	}
-	return addonsList
+	return addons
 }
