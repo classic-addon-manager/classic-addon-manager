@@ -4,10 +4,10 @@ import (
 	"ClassicAddonManager/backend/config"
 	"ClassicAddonManager/backend/file"
 	"ClassicAddonManager/backend/logger"
-	"path/filepath"
-	"sync"
 
+	"path/filepath"
 	"slices"
+	"sync"
 
 	"github.com/sqweek/dialog"
 )
