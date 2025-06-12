@@ -5,15 +5,21 @@ import (
 	"ClassicAddonManager/backend/file"
 	"ClassicAddonManager/backend/logger"
 	"path/filepath"
+	"sync"
 
 	"slices"
 
 	"github.com/sqweek/dialog"
 )
 
-var installedAddonNames []string
+var (
+	installedAddonNames   []string
+	installedAddonNamesMu sync.RWMutex
+)
 
 func GetInstalledAddonNames() []string {
+	installedAddonNamesMu.RLock()
+	defer installedAddonNamesMu.RUnlock()
 	return installedAddonNames
 }
 
@@ -61,7 +67,9 @@ func CreateAddonsTxt() {
 		logger.Fatal("Error creating addons.txt:", err)
 		return
 	}
+	installedAddonNamesMu.Lock()
 	installedAddonNames = []string{}
+	installedAddonNamesMu.Unlock()
 }
 
 func RemoveFromAddonsTxt(addonName string) bool {
