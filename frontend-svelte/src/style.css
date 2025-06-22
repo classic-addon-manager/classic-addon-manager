@@ -1,29 +1,34 @@
 * {
     user-select: none;
     user-drag: none;
-    -webkit-user-drag: none
+    -webkit-user-drag: none;
 }
 
 body {
-    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
-    "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
-    sans-serif;
+    font-family:
+        -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+        "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+        sans-serif;
 }
 
 :root {
-    --PrimaryColor: #0078D7; /* Change of your choice */
-    --PrimaryColorLight: #60CDFF; /* Lighter version of --PrimaryColor for DarkMode */
+    --PrimaryColor: #0078d7; /* Change of your choice */
+    --PrimaryColorLight: #60cdff; /* Lighter version of --PrimaryColor for DarkMode */
 }
 
 [data-theme="dark"] ::selection {
-    background-color: #2E517E;
+    background-color: #2e517e;
 }
 
 .fade-end {
-    --mask: linear-gradient(to right,
-    rgba(0, 0, 0, 1) 0, rgba(0, 0, 0, 1) 75%,
-    rgba(0, 0, 0, 0) 95%, rgba(0, 0, 0, 0) 0
-    ) 100% 50% / 100% 100% repeat-x;
+    --mask: linear-gradient(
+            to right,
+            rgba(0, 0, 0, 1) 0,
+            rgba(0, 0, 0, 1) 75%,
+            rgba(0, 0, 0, 0) 95%,
+            rgba(0, 0, 0, 0) 0
+        )
+        100% 50% / 100% 100% repeat-x;
 
     -webkit-mask: var(--mask);
     mask: var(--mask);
@@ -106,4 +111,7 @@ body {
     visibility: hidden;
 }
 
-.app-btn-warning{background-color: #fad262; color: #000;}
+.app-btn-warning {
+    background-color: #fad262;
+    color: #000;
+}

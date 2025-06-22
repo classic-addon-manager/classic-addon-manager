@@ -24,6 +24,7 @@ type Addon struct {
 	Repo        string    `json:"repo"`
 	IsManaged   bool      `json:"isManaged"`
 	UpdatedAt   time.Time `json:"updatedAt"`
+	Branch      string    `json:"branch,omitempty"`
 }
 
 var LocalAddons map[string]Addon
@@ -78,6 +79,7 @@ func AddManagedAddon(manifest shared.AddonManifest, release api.Release) {
 		Repo:        manifest.Repo,
 		IsManaged:   true,
 		UpdatedAt:   release.PublishedAt,
+		Branch:      manifest.Branch,
 	}
 
 	if manifest.Alias == "" {
