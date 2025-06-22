@@ -129,7 +129,7 @@ export const LocalAddonDialog = ({ addon, onOpenChange, open }: LocalAddonDialog
             </div>
           )}
 
-          {addon.description && (
+          {addon.isManaged && addon.description && (
             <DialogDescription className="text-sm text-muted-foreground">
               {addon.description}
             </DialogDescription>
@@ -137,13 +137,13 @@ export const LocalAddonDialog = ({ addon, onOpenChange, open }: LocalAddonDialog
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto px-6 pb-6 pt-2">
-          {readme === 'loading' ? (
+          {addon.isManaged && readme === 'loading' ? (
             <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground pt-10">
               <PackageIcon className="w-12 h-12 mb-4 opacity-50" />
               <p className="font-medium">Loading description...</p>
             </div>
           ) : (
-            <RemoteAddonReadme readme={readme} />
+            addon.isManaged && <RemoteAddonReadme readme={readme} />
           )}
 
           {/* Show notice if addon is not managed and is available in repository */}
