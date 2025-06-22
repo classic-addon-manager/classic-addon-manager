@@ -22,21 +22,31 @@ interface LocalAddonDialogProps {
 export const LocalAddonDialog = ({ addon, onOpenChange, open }: LocalAddonDialogProps) => {
   const [readme, setReadme] = useState<string>('loading')
   const [initiallyManaged, setInitiallyManaged] = useState(false)
+  const [hasBeenOpened, setHasBeenOpened] = useState(false)
 
   // Set initial managed state when dialog opens
   useEffect(() => {
-    if (open) {
+    if (open && !hasBeenOpened) {
+      // Mark that we've opened the dialog and captured the initial state
+      setHasBeenOpened(true)
       setInitiallyManaged(addon.isManaged)
+    } else if (!open) {
+      // Reset when dialog closes
+      setHasBeenOpened(false)
     }
-  }, [open, addon.isManaged])
+  }, [open, addon.isManaged, hasBeenOpened])
 
   // Close dialog when addon becomes managed (if it wasn't initially managed)
   useEffect(() => {
-    // Only close if dialog is open, addon is now managed, and it wasn't managed initially
-    if (open && addon.isManaged && !initiallyManaged) {
+    // Only close if:
+    // 1. Dialog is open
+    // 2. We've already captured the initial state (hasBeenOpened)
+    // 3. Addon is now managed
+    // 4. It wasn't managed initially
+    if (open && hasBeenOpened && addon.isManaged && !initiallyManaged) {
       onOpenChange(false)
     }
-  }, [addon.isManaged, onOpenChange, open, initiallyManaged])
+  }, [addon.isManaged, onOpenChange, open, initiallyManaged, hasBeenOpened])
 
   // Fetch readme when dialog opens
   useEffect(() => {
