@@ -3,9 +3,14 @@ Support development of this project by buying me a ko-fi.
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/X8X219OKGE)
 
-<img align="center" src="https://github.com/user-attachments/assets/a0fc4c09-5ecc-4b80-bae0-b77e6c93cb51" width="700">
 
-<img align="center" src="https://github.com/user-attachments/assets/eb4c6a8c-e9a5-43c0-80f1-01841599bf2e" width="700">
+<img align="center" src="https://github.com/user-attachments/assets/8f521ae7-cf14-4915-a58e-6a6d074d74f1" width="700">
+
+<img align="center" src="https://github.com/user-attachments/assets/f0243db8-8dc8-4c00-b244-00a32429b31c" width="700">
+
+<img align="center" src="https://github.com/user-attachments/assets/3d3e21e1-aad8-43e8-856f-da112b8d3da2" width="700">
+
+<img align="center" src="https://github.com/user-attachments/assets/5b081507-ddfa-4128-8ced-b104766b7d6e" width="700">
 
 
 ## Development requirements
