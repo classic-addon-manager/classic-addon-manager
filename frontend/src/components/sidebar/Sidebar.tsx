@@ -6,6 +6,7 @@ import { Home, Blocks, LifeBuoy, Globe } from 'lucide-react'
 import { activePageAtom, type PageId } from '@/atoms/sidebarAtoms'
 import { versionAtom } from '@/atoms/applicationAtoms'
 import { useAddonStore } from '@/stores/addonStore'
+import { UserBar } from '@/components/sidebar/UserBar.tsx'
 
 export const Sidebar = () => {
   const [activeItem, setActiveItem] = useAtom(activePageAtom)
@@ -57,6 +58,9 @@ export const Sidebar = () => {
             onClick={() => Browser.OpenURL('https://aa-classic.com')}
           />
         </nav>
+      </div>
+      <div className="w-full">
+        <UserBar />
       </div>
       <div className="mx-auto mb-2 text-muted-foreground opacity-80">
         <span
