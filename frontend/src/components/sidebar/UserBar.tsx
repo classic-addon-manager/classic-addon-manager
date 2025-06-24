@@ -14,6 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Button } from '@/components/ui/button'
 
 export const UserBar = () => {
   const [isReady, setIsReady] = useState(false)
@@ -47,6 +48,35 @@ export const UserBar = () => {
     return null
   }
 
+  const AIChatButton = () => {
+    if (!isAuthenticated()) return null
+    return (
+      <Button
+        variant="secondary"
+        className="w-full flex items-center justify-center gap-2 bg-secondary/30"
+        onClick={() => window.alert('TODO: Add AI chat component')}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          className="lucide lucide-message-circle-question"
+        >
+          <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
+          <path d="M10 8.5a2.5 2.5 0 0 1 4 2 2.5 2.5 0 0 1-2.5 2.5" />
+          <path d="M12 16h.01" />
+        </svg>
+        Ask a friendly Daru
+      </Button>
+    )
+  }
+
   console.log('Before rendering UI, user:', user, 'authenticated:', isAuthenticated())
   if (!isAuthenticated()) {
     return (
@@ -76,7 +106,7 @@ export const UserBar = () => {
 
   return (
     <div className="w-full px-3 space-y-2">
-      {/* TODO: Add AI chat button */}
+      {AIChatButton()}
       <DropdownMenu>
         <DropdownMenuTrigger className="w-full focus:outline-none">
           <div className="flex w-full items-center space-x-3 rounded-md bg-secondary/30 p-2 transition-all hover:bg-secondary">
