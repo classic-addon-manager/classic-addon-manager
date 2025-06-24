@@ -142,6 +142,12 @@
   }
 }
 
+* {
+  user-select: none;
+  user-drag: none;
+  -webkit-user-drag: none
+}
+
 ::-webkit-scrollbar {
   width: 5px;
   margin-left: 5px;
