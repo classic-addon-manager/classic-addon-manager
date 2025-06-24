@@ -3,7 +3,7 @@ import { useUserStore } from '@/stores/userStore.ts'
 import { createApiClient } from '@/lib/api'
 import { useAtomValue } from 'jotai'
 import { versionAtom } from '@/atoms/applicationAtoms'
-import { Browser } from '@wailsio/runtime'
+import { Browser, Events } from '@wailsio/runtime'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,
@@ -15,10 +15,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
+import type { WailsEvent } from 'node_modules/@wailsio/runtime/types/events'
+import { toast } from '@/components/ui/toast'
+import { AlertTriangleIcon, CheckIcon } from 'lucide-react'
 
 export const UserBar = () => {
   const [isReady, setIsReady] = useState(false)
-  const { user, token, setUser, isAuthenticated } = useUserStore()
+  const { user, token, setUser, setToken, isAuthenticated, clearUser } = useUserStore()
   const version = useAtomValue(versionAtom)
   const apiClient = createApiClient(version)
 
@@ -35,6 +38,41 @@ export const UserBar = () => {
       console.error('Error fetching user data:', error)
     }
   }
+
+  const signOut = () => {
+    clearUser()
+    setTimeout(() => {
+      window.location.href = '/'
+    }, 100)
+  }
+
+  useEffect(() => {
+    const handleAuthToken = async (event: WailsEvent) => {
+      const tokenValue = Array.isArray(event.data) ? (event.data as unknown[])[0] : event.data
+
+      if (typeof tokenValue === 'string') {
+        setToken(tokenValue)
+        await getAccount()
+        toast({
+          title: 'Success',
+          description: 'You have successfully signed in.',
+          icon: CheckIcon,
+        })
+      } else {
+        console.error('Unexpected auth token data:', event.data)
+        toast({
+          title: 'Error',
+          description: 'Failed to retrieve authentication token.',
+          icon: AlertTriangleIcon,
+        })
+      }
+    }
+
+    Events.On('authTokenReceived', handleAuthToken)
+    return () => {
+      Events.Off('authTokenReceived')
+    }
+  }, [])
 
   useEffect(() => {
     console.log('Effect running, user state:', user)
@@ -128,10 +166,7 @@ export const UserBar = () => {
             <DropdownMenuLabel>Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem>
-              <button
-                className="w-full text-left cursor-pointer text-red-500"
-                onClick={() => window.alert('TODO: Add sign out')}
-              >
+              <button className="w-full text-left cursor-pointer text-red-500" onClick={signOut}>
                 Sign out
               </button>
             </DropdownMenuItem>
