@@ -75,9 +75,7 @@ export const UserBar = () => {
   }, [])
 
   useEffect(() => {
-    console.log('Effect running, user state:', user)
     getAccount().then(() => {
-      console.log('After getAccount, user state:', user)
       setIsReady(true)
     })
   }, [token, version])
@@ -115,7 +113,6 @@ export const UserBar = () => {
     )
   }
 
-  console.log('Before rendering UI, user:', user, 'authenticated:', isAuthenticated())
   if (!isAuthenticated()) {
     return (
       <div className="mx-auto w-full">
