@@ -1,19 +1,40 @@
 import { cn } from '@/lib/utils'
-import { Addon } from '@/lib/wails'
+import { Addon, Release } from '@/lib/wails'
 import { AddonStatus } from '@/components/dashboard/AddonStatus.tsx'
 import { LocalAddonContextMenu } from '@/components/dashboard/LocalAddonContextMenu.tsx'
-import { useState } from 'react'
+import { createContext, useEffect, useState } from 'react'
 import { LocalAddonDialog } from '@/components/dashboard/LocalAddonDialog'
+import { useAddonStore } from '@/stores/addonStore.ts'
+import { LocalAddonUpdateDialog } from '@/components/dashboard/LocalAddonUpdateDialog'
+import { atom, type WritableAtom } from 'jotai'
 
 interface LocalAddonProps {
   addon: Addon
 }
 
+export const UpdateDialogAtomContext = createContext<WritableAtom<boolean, any, any> | null>(null)
+
 export const LocalAddon = ({ addon }: LocalAddonProps) => {
   const [isContextMenuOpen, setIsContextMenuOpen] = useState(false)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const isUpdateDialogOpenAtom = atom<boolean>(false)
+  const [hasUpdate, setHasUpdate] = useState(false)
+  const [latestRelease, setLatestRelease] = useState<Release | null>(null)
+  const { latestReleasesMap } = useAddonStore()
+
+  useEffect(() => {
+    if (!addon.isManaged) return
+    const latestRelease = latestReleasesMap.get(addon.name)
+    if (!latestRelease) return
+    setHasUpdate(latestRelease.tag_name !== addon.version)
+    setLatestRelease(latestRelease)
+  }, [latestReleasesMap])
+
   return (
-    <>
+    <UpdateDialogAtomContext.Provider value={isUpdateDialogOpenAtom}>
+      {hasUpdate && latestRelease && (
+        <LocalAddonUpdateDialog addon={addon} release={latestRelease} />
+      )}
       <LocalAddonDialog addon={addon} open={isDialogOpen} onOpenChange={setIsDialogOpen} />
       <LocalAddonContextMenu addon={addon} onOpenChange={setIsContextMenuOpen}>
         <div
@@ -31,6 +52,6 @@ export const LocalAddon = ({ addon }: LocalAddonProps) => {
           </div>
         </div>
       </LocalAddonContextMenu>
-    </>
+    </UpdateDialogAtomContext.Provider>
   )
 }

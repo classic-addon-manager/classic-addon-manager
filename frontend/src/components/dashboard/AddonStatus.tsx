@@ -2,16 +2,25 @@ import { Addon } from '@/lib/wails'
 import { Download, LoaderCircle, Check, ShieldQuestion } from 'lucide-react'
 import { useAddonStore } from '@/stores/addonStore'
 import { Badge } from '@/components/ui/badge'
+import { useContext } from 'react'
+import { UpdateDialogAtomContext } from './LocalAddon'
+import { useAtom, type WritableAtom } from 'jotai'
 
 export const AddonStatus = ({ addon }: { addon: Addon }) => {
-  // const isContextMenuOpen = false // TODO: This should be an atom I think.
-  // let openDialog = false // TODO: Figure out what to do about this
+  const updateDialogAtom = useContext(UpdateDialogAtomContext)
 
-  return <RenderStatus addon={addon} />
+  return <RenderStatus addon={addon} updateDialogAtom={updateDialogAtom} />
 }
 
-const RenderStatus = ({ addon }: { addon: Addon }) => {
+const RenderStatus = ({
+  addon,
+  updateDialogAtom,
+}: {
+  addon: Addon
+  updateDialogAtom: WritableAtom<boolean, any, any> | null
+}) => {
   const { isCheckingForUpdates, latestReleasesMap } = useAddonStore()
+  const setOpen = updateDialogAtom ? useAtom(updateDialogAtom)[1] : null
 
   const latestRelease = latestReleasesMap.get(addon.name)
 
@@ -31,7 +40,9 @@ const RenderStatus = ({ addon }: { addon: Addon }) => {
             onClick={e => {
               e.preventDefault()
               e.stopPropagation()
-              // openUpdateDialog = true
+              if (setOpen) {
+                setOpen(true)
+              }
             }}
           >
             <div style={{ width: 14, height: 14 }}>
