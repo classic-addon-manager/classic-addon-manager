@@ -6,8 +6,6 @@ import (
 	"ClassicAddonManager/backend/file"
 	"ClassicAddonManager/backend/logger"
 	"ClassicAddonManager/backend/services"
-	"ClassicAddonManager/backend/shared"
-
 	"embed"
 	"encoding/json"
 	"flag"
@@ -60,6 +58,11 @@ func main() {
 		os.Exit(0)
 	}
 
+	if !file.FileExists(filepath.Join(config.GetAddonDir(), "addons.txt")) {
+		logger.Info(fmt.Sprintf("addons.txt not found, creating it. Attempted path: %s", filepath.Join(config.GetAddonDir(), "addons.txt")))
+		addon.CreateAddonsTxt()
+	}
+
 	a := application.New(application.Options{
 		Name: "Classic Addon Manager",
 		Assets: application.AssetOptions{
@@ -78,7 +81,6 @@ func main() {
 		go startPipeServer(a)
 		startup()
 	})
-	shared.Version = "3.0.0"
 
 	a.NewWebviewWindowWithOptions(application.WebviewWindowOptions{
 		Title:            "Classic Addon Manager",
@@ -208,10 +210,6 @@ func writeDeeplink() {
 }
 
 func startup() {
-	if !file.FileExists(filepath.Join(config.GetAddonDir(), "addons.txt")) {
-		addon.CreateAddonsTxt()
-	}
-
 	if !file.FileExists(filepath.Join(config.GetDataDir(), "managed_addons.json")) {
 		jsonData, err := json.Marshal([]addon.Addon{})
 		if err != nil {

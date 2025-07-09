@@ -1,6 +1,7 @@
 package file
 
 import (
+	"ClassicAddonManager/backend/logger"
 	"bufio"
 	"fmt"
 	"os"
@@ -35,6 +36,9 @@ func ListFiles(path string) ([]string, error) {
 
 func FileExists(path string) bool {
 	_, err := os.Stat(path)
+	if err != nil {
+		logger.Error("Error checking if file exists:", err)
+	}
 	if os.IsNotExist(err) {
 		return false
 	}

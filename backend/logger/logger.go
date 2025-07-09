@@ -1,7 +1,6 @@
 package logger
 
 import (
-	"ClassicAddonManager/backend/config"
 	"fmt"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -15,7 +14,11 @@ import (
 var logger *zap.SugaredLogger
 
 func GetLogPath() string {
-	return filepath.Join(config.GetDataDir(), "app.log")
+	path, err := os.UserConfigDir()
+	if err != nil {
+		log.Fatalf("Error getting user config dir: %v", err)
+	}
+	return filepath.Join(path, "ClassicAddonManager", "app.log")
 }
 
 func newWinFileSink(u *url.URL) (zap.Sink, error) {
