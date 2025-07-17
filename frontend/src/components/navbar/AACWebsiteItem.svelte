@@ -1,13 +1,13 @@
 <script lang="ts">
-    import NavbarItem from "./NavbarItem.svelte";
+  import {Browser} from '@wailsio/runtime'
+  import Link from 'lucide-svelte/icons/link'
 
-    import Link from "lucide-svelte/icons/link";
-    import {Browser} from "@wailsio/runtime"
+  import NavbarItem from './NavbarItem.svelte'
 </script>
 
 <a
-        href="##"
-        onclick={() => Browser.OpenURL("https://aa-classic.com")}
+  href="##"
+  onclick={() => Browser.OpenURL('https://aa-classic.com')}
 >
-    <NavbarItem name="AA Classic Website" Icon={Link} isActivatable={false}/>
+  <NavbarItem name="AA Classic Website" Icon={Link} isActivatable={false}/>
 </a>

@@ -1,26 +1,28 @@
 <script lang="ts">
-    import { Dialog as DialogPrimitive } from "bits-ui";
-    import Cross2 from "svelte-radix/Cross2.svelte";
-    import * as Dialog from "$lib/components/ui/dialog/index";
+  import {Dialog as DialogPrimitive} from 'bits-ui'
+  import Cross2 from 'svelte-radix/Cross2.svelte'
 
-    let { 
-        src, 
-        alt, 
-        open = $bindable(false),
-        onClose = () => {}
-    }: { 
-        src: string, 
-        alt: string, 
-        open: boolean,
-        onClose: () => void 
-    } = $props();
+  import * as Dialog from '$lib/components/ui/dialog/index'
 
-    function onOpenChange(isOpen: boolean) {
-        open = isOpen;
-        if (!isOpen) {
-            onClose();
-        }
+  let {
+    src,
+    alt,
+    open = $bindable(false),
+    onClose = () => {
     }
+  }: {
+    src: string,
+    alt: string,
+    open: boolean,
+    onClose: () => void
+  } = $props()
+
+  function onOpenChange(isOpen: boolean) {
+    open = isOpen
+    if (!isOpen) {
+      onClose()
+    }
+  }
 </script>
 
 <style>
@@ -44,12 +46,12 @@
         align-items: center;
         justify-content: center;
     }
-    
+
     .zoom-animation[data-state="closed"] {
         opacity: 0;
         transform: scale(0.5);
     }
-    
+
     .zoom-animation[data-state="open"] {
         opacity: 1;
         transform: scale(1);
@@ -58,11 +60,11 @@
     .fade-animation {
         transition: opacity 200ms cubic-bezier(0.4, 0, 0.2, 1);
     }
-    
+
     .fade-animation[data-state="closed"] {
         opacity: 0;
     }
-    
+
     .fade-animation[data-state="open"] {
         opacity: 1;
     }
@@ -89,20 +91,21 @@
 </style>
 
 <Dialog.Root {open} onOpenChange={onOpenChange}>
-    <Dialog.Portal>
-        <Dialog.Overlay class="fixed inset-0 z-50 bg-black/80 fade-animation" />
-        <div class="content-wrapper z-50">
-            <DialogPrimitive.Content
-                class="!p-0 !gap-0 !bg-transparent !border-0 !shadow-none !w-auto !h-auto zoom-animation"
-            >
-                <div class="image-container">
-                    <img {src} {alt} class="rounded-lg" />
-                    <Dialog.Close class="absolute -top-4 -right-4 rounded-full bg-background p-2 text-foreground hover:bg-muted transition-colors shadow-lg">
-                        <Cross2 class="size-4" />
-                        <span class="sr-only">Close</span>
-                    </Dialog.Close>
-                </div>
-            </DialogPrimitive.Content>
+  <Dialog.Portal>
+    <Dialog.Overlay class="fixed inset-0 z-50 bg-black/80 fade-animation"/>
+    <div class="content-wrapper z-50">
+      <DialogPrimitive.Content
+        class="!p-0 !gap-0 !bg-transparent !border-0 !shadow-none !w-auto !h-auto zoom-animation"
+      >
+        <div class="image-container">
+          <img {src} {alt} class="rounded-lg"/>
+          <Dialog.Close
+            class="absolute -top-4 -right-4 rounded-full bg-background p-2 text-foreground hover:bg-muted transition-colors shadow-lg">
+            <Cross2 class="size-4"/>
+            <span class="sr-only">Close</span>
+          </Dialog.Close>
         </div>
-    </Dialog.Portal>
+      </DialogPrimitive.Content>
+    </div>
+  </Dialog.Portal>
 </Dialog.Root> 
