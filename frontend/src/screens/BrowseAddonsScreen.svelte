@@ -26,9 +26,9 @@
   let isRefreshing: boolean = $state(false)
   let searchPhrase: string = $state('')
   let addons: AddonListItem[] = $state([])
-  let tags = [
+  let tags = $state([
     {label: 'All', value: 'all'},
-  ]
+  ])
 
   let selectedTag: string = $state('all')
   let isDialogOpen: boolean = $state(false)
