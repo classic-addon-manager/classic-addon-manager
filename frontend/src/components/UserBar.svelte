@@ -6,7 +6,7 @@
   import {apiClient} from '@/api'
   import {toast} from '@/utils'
   import {clearUserState, getUser, isAuthenticated, setToken, setUser, type User} from '$atoms/user.svelte'
-  import * as Avatar from '$lib/components/ui/avatar/index'
+  import {AvatarFallback, AvatarImage, Root as AvatarRoot} from '$lib/components/ui/avatar/index'
   import {Button} from '$lib/components/ui/button'
   import {
     DropdownMenuContent,
@@ -14,7 +14,8 @@
     DropdownMenuItem,
     DropdownMenuLabel, DropdownMenuSeparator,
     DropdownMenuTrigger,
-    Root as DropdownMenuRoot  } from '$lib/components/ui/dropdown-menu/index'
+    Root as DropdownMenuRoot
+  } from '$lib/components/ui/dropdown-menu/index'
 
   import addons from '../addons'
   import AIChatDialog from './AIChatDialog.svelte'
@@ -116,16 +117,16 @@
       <DropdownMenuRoot>
         <DropdownMenuTrigger class="w-full focus:outline-none">
           <div class="flex w-full items-center space-x-3 rounded-md bg-secondary/30 p-2 transition-all hover:bg-secondary">
-            <Avatar.Root class="h-8 w-8">
-              <Avatar.Image
+            <AvatarRoot class="h-8 w-8">
+              <AvatarImage
                 src={`https://cdn.discordapp.com/avatars/${user.discord_id}/${user.avatar}.png`}
                 alt={user.username}
                 class="h-full w-full object-cover"
               />
-              <Avatar.Fallback class="text-xs">
+              <AvatarFallback class="text-xs">
                 {user.username.substring(0, 2).toUpperCase()}
-              </Avatar.Fallback>
-            </Avatar.Root>
+              </AvatarFallback>
+            </AvatarRoot>
             <span class="text-sm font-medium flex-1 text-left">{user.username}</span>
           </div>
         </DropdownMenuTrigger>
