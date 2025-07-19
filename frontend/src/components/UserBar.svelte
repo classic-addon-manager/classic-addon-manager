@@ -8,7 +8,13 @@
   import {clearUserState, getUser, isAuthenticated, setToken, setUser, type User} from '$atoms/user.svelte'
   import * as Avatar from '$lib/components/ui/avatar/index'
   import {Button} from '$lib/components/ui/button'
-  import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index'
+  import {
+    DropdownMenuContent,
+    DropdownMenuGroup,
+    DropdownMenuItem,
+    DropdownMenuLabel, DropdownMenuSeparator,
+    DropdownMenuTrigger,
+    Root as DropdownMenuRoot  } from '$lib/components/ui/dropdown-menu/index'
 
   import addons from '../addons'
   import AIChatDialog from './AIChatDialog.svelte'
@@ -107,8 +113,8 @@
       </Button>
 
       <!-- User Profile -->
-      <DropdownMenu.Root>
-        <DropdownMenu.Trigger class="w-full focus:outline-none">
+      <DropdownMenuRoot>
+        <DropdownMenuTrigger class="w-full focus:outline-none">
           <div class="flex w-full items-center space-x-3 rounded-md bg-secondary/30 p-2 transition-all hover:bg-secondary">
             <Avatar.Root class="h-8 w-8">
               <Avatar.Image
@@ -122,22 +128,22 @@
             </Avatar.Root>
             <span class="text-sm font-medium flex-1 text-left">{user.username}</span>
           </div>
-        </DropdownMenu.Trigger>
-        <DropdownMenu.Content class="w-56">
-          <DropdownMenu.Group>
-            <DropdownMenu.Label>Account</DropdownMenu.Label>
-            <DropdownMenu.Separator/>
-            <DropdownMenu.Item>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent class="w-56">
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>Account</DropdownMenuLabel>
+            <DropdownMenuSeparator/>
+            <DropdownMenuItem>
               <button
                 class="w-full text-left cursor-pointer text-red-500"
                 onclick={handleSignOut}
               >
                 Sign out
               </button>
-            </DropdownMenu.Item>
-          </DropdownMenu.Group>
-        </DropdownMenu.Content>
-      </DropdownMenu.Root>
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenuRoot>
     </div>
   {/if}
 {/if}
