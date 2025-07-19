@@ -8,6 +8,9 @@ import globals from 'globals'
 
 /** @type {import('eslint').Linter.FlatConfig[]} */
 export default [
+  {
+    ignores: ['bindings/**']
+  },
   js.configs.recommended,
   ...svelte.configs['flat/recommended'],
   {
