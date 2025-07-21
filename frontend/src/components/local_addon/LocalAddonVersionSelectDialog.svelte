@@ -4,7 +4,6 @@
   import CheckCircle2 from 'lucide-svelte/icons/check-circle-2'
   import LoaderCircle from 'lucide-svelte/icons/loader-circle'
   import Tag from 'lucide-svelte/icons/tag'
-  import {onMount} from 'svelte'
 
   import addons from '@/addons'
   import {safeCall, toast} from '@/utils'

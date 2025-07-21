@@ -8,15 +8,15 @@
     Tag,
     User,
   } from 'lucide-svelte'
-  import {marked} from 'marked'
+  import { marked } from 'marked'
 
   import addons from '@/addons'
-  import {formatToLocalTime, safeCall, toast} from '@/utils'
-  import {getUpdateCount, setUpdateCount} from '$atoms/addon.svelte'
-  import {Badge} from '$lib/components/ui/badge/index'
-  import {Button} from '$lib/components/ui/button/index'
+  import { formatToLocalTime, safeCall, toast } from '@/utils'
+  import { getUpdateCount, setUpdateCount } from '$atoms/addon.svelte'
+  import { Badge } from '$lib/components/ui/badge/index'
+  import { Button } from '$lib/components/ui/button/index'
   import * as Dialog from '$lib/components/ui/dialog/index'
-  import type {Addon, Release} from '$lib/wails'
+  import type { Addon, Release } from '$lib/wails'
 
   let {
     open = $bindable(),
@@ -41,7 +41,7 @@
   $effect(() => {
     if (open && release?.body) {
       changelog = DOMPurify.sanitize(
-        marked.parse(release.body, {async: false}),
+        marked.parse(release.body, { async: false }),
       )
     } else {
       changelog = 'No change log was provided by the addon'
@@ -95,7 +95,7 @@
         class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm mb-3 text-muted-foreground"
       >
         <span class="inline-flex items-center gap-1">
-          <User class="w-3.5 h-3.5"/>
+          <User class="w-3.5 h-3.5" />
           <span class="font-normal text-foreground/90"
           >{addon.author}</span
           >
@@ -106,13 +106,13 @@
               variant="secondary"
               class="inline-flex items-center gap-1"
             >
-              <Tag class="w-3 h-3"/>
+              <Tag class="w-3 h-3" />
               {release.tag_name}
             </Badge>
             <span
               class="inline-flex items-center gap-1 text-xs text-muted-foreground"
             >
-              <CalendarDays class="w-3 h-3"/>
+              <CalendarDays class="w-3 h-3" />
               {formatToLocalTime(release.published_at)}
             </span>
           </span>
@@ -132,7 +132,7 @@
         <div
           class="inline-flex items-center gap-1.5 text-xs text-muted-foreground mb-4"
         >
-          <CalendarDays class="w-3.5 h-3.5"/>
+          <CalendarDays class="w-3.5 h-3.5" />
           <span
           >Released on {formatToLocalTime(
             release.published_at,
@@ -140,9 +140,7 @@
           >
         </div>
         <div class="border rounded-lg p-4 bg-card">
-          <div
-            class="prose max-w-none text-sm text-foreground dark:text-foreground/90"
-          >
+          <div class="prose max-w-none text-sm">
             {@html changelog}
           </div>
         </div>
@@ -150,7 +148,7 @@
         <div
           class="flex flex-col items-center justify-center h-full text-center text-muted-foreground pt-10"
         >
-          <Package class="w-12 h-12 mb-4 opacity-50"/>
+          <Package class="w-12 h-12 mb-4 opacity-50" />
           <p class="font-medium">No changelog available</p>
           <p class="text-xs mt-1">
             The author hasn't provided release notes.
@@ -168,7 +166,7 @@
             disabled
             class="w-full sm:w-auto"
           >
-            <LoaderCircle class="w-4 h-4 mr-2 animate-spin"/>
+            <LoaderCircle class="w-4 h-4 mr-2 animate-spin" />
             Updating...
           </Button>
         {:else}
@@ -178,7 +176,7 @@
             onclick={handleUpdateClick}
             class="w-full sm:w-auto"
           >
-            <ArrowUpCircle class="w-4 h-4 mr-2"/>
+            <ArrowUpCircle class="w-4 h-4 mr-2" />
             Update to {release.tag_name}
           </Button>
         {/if}

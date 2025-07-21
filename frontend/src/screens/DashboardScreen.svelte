@@ -8,18 +8,17 @@
   import {fade, fly} from 'svelte/transition'
 
   import addons from '@/addons'
+  import LocalAddonDialog from '@/components/local_addon/LocalAddonDialog.svelte'
   import LocalAddonDrawer from '@/components/local_addon/LocalAddonDrawer.svelte'
+  import LocalAddonUpdateDrawer from '@/components/local_addon/LocalAddonUpdateDrawer.svelte'
   import LocalAddon from '@/components/LocalAddon.svelte'
   import {getInstalledAddons, isCheckingUpdates} from '$atoms/addon.svelte'
+  import {localAddonDrawer, updateDrawer} from '$atoms/addon-drawer.svelte'
   import {setActiveNavbar} from '$atoms/navbar.svelte'
   import {setActiveScreen} from '$atoms/screen.svelte'
   import {Button} from '$lib/components/ui/button/index.js'
   import {Input} from '$lib/components/ui/input/index.js'
   import type {Addon} from '$lib/wails'
-  import {
-    getDrawerState,
-    setDrawerOpen,
-  } from '$stores/LocalAddonDrawerStore.svelte'
 
   import BrowseAddonsScreen from './BrowseAddonsScreen.svelte'
 
@@ -54,10 +53,10 @@
     })
   })
 
-  let drawerState = $derived(getDrawerState())
+  let drawerState = $derived(localAddonDrawer.isOpen)
 
   function handleDrawerOpenChange(open: boolean) {
-    setDrawerOpen(open)
+    localAddonDrawer.setOpen(open)
   }
 </script>
 
@@ -182,9 +181,23 @@
     {/if}
   </main>
 
-  <LocalAddonDrawer
-    addon={drawerState.addon}
-    open={drawerState.open}
+  <!--<LocalAddonDrawer
+                                addon={drawerState.addon}
+                                open={drawerState.open}
+                                onOpenChange={handleDrawerOpenChange}
+                              />-->
+
+
+  <LocalAddonUpdateDrawer
+    addon={updateDrawer.addon}
+    release={updateDrawer.release}
+    open={updateDrawer.isOpen}
+    onOpenChange={updateDrawer.setOpen}
+  />
+
+  <LocalAddonDialog
+    addon={localAddonDrawer.addon}
+    open={localAddonDrawer.isOpen}
     onOpenChange={handleDrawerOpenChange}
   />
 </div>

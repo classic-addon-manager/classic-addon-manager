@@ -3,6 +3,7 @@
   import type {WailsEvent} from 'node_modules/@wailsio/runtime/types/events'
   import {onMount} from 'svelte'
 
+  import addons from '@/addons'
   import {apiClient} from '@/api'
   import {toast} from '@/utils'
   import {clearUserState, getUser, isAuthenticated, setToken, setUser, type User} from '$atoms/user.svelte'
@@ -17,7 +18,6 @@
     Root as DropdownMenuRoot
   } from '$lib/components/ui/dropdown-menu/index'
 
-  import addons from '../addons'
   import AIChatDialog from './AIChatDialog.svelte'
 
   let isReady: boolean = $state(false)
