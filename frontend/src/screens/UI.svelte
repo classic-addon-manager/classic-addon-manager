@@ -9,6 +9,7 @@
     import DashboardItem from "../components/navbar/DashboardItem.svelte";
     import AddonsItem from "../components/navbar/AddonsItem.svelte";
     import AACWebsiteItem from "../components/navbar/AACWebsiteItem.svelte";
+    import SettingsItem from "../components/navbar/SettingsItem.svelte";
 
     import {
     ApplicationRelease,
@@ -67,6 +68,7 @@
                     <DashboardItem/>
                     <AddonsItem/>
                     <TroubleshootingItem/>
+                    <SettingsItem/>
                     <AACWebsiteItem/>
                 </nav>
             </div>

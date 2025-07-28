@@ -68,21 +68,28 @@ func main() {
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
 		},
-		Services: []application.Service{
-			application.NewService(&services.LocalAddonService{}),
-			application.NewService(&services.ApplicationService{}),
-			application.NewService(&services.RemoteAddonService{}),
-		},
 	})
 
-	a.OnApplicationEvent(events.Common.ApplicationStarted, func(event *application.ApplicationEvent) {
+	applicationServices := []application.Service{
+		application.NewService(&services.LocalAddonService{}),
+		application.NewService(&services.ApplicationService{
+			App: a,
+		}),
+		application.NewService(&services.RemoteAddonService{}),
+	}
+
+	for _, service := range applicationServices {
+		a.RegisterService(service)
+	}
+
+	a.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(event *application.ApplicationEvent) {
 		_ = event.Context()
 		writeDeeplink()
 		go startPipeServer(a)
 		startup()
 	})
 
-	a.NewWebviewWindowWithOptions(application.WebviewWindowOptions{
+	a.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:            "Classic Addon Manager",
 		Name:             "main",
 		Width:            985,
@@ -152,7 +159,11 @@ func handlePipeConnection(conn net.Conn, a *application.App) {
 		token := parsedURL.Query().Get("t")
 		if token != "" {
 			logger.Info("Received authentication token")
-			mainWindow := a.GetWindowByName("main")
+			mainWindow, exists := a.Window.GetByName("main")
+			if !exists {
+				logger.Error("Error getting main window:", err)
+				return
+			}
 			if mainWindow.IsMinimised() {
 				mainWindow.UnMinimise()
 			} else {
