@@ -1,26 +1,45 @@
 <script lang="ts">
-  import {Browser} from '@wailsio/runtime'
-  import DOMPurify from 'dompurify'
-  import {BugIcon, CalendarDays, DownloadIcon, GithubIcon, Tag, Trash2Icon, User} from 'lucide-svelte'
-  import Heart from 'lucide-svelte/icons/heart'
-  import Package from 'lucide-svelte/icons/package'
-  import Dislike from 'lucide-svelte/icons/thumbs-down'
-  import Like from 'lucide-svelte/icons/thumbs-up'
-  import {marked} from 'marked'
+    import * as Dialog from "$lib/components/ui/dialog/index";
+    import * as Tabs from "$lib/components/ui/tabs/index";
+    import * as Tooltip from "$lib/components/ui/tooltip/index";
+    import type {AddonManifest, Release} from "$lib/wails";
+    import addons from "../../addons";
+    import {LocalAddonService, RemoteAddonService} from "$lib/wails";
+    import {Browser} from "@wailsio/runtime";
+    import {Button} from "$lib/components/ui/button";
+    import {GithubIcon, BugIcon, DownloadIcon, Tag, User, CalendarDays, Trash2Icon} from "lucide-svelte";
+    import Like from "lucide-svelte/icons/thumbs-up";
+    import Dislike from "lucide-svelte/icons/thumbs-down";
+    import Heart from "lucide-svelte/icons/heart";
+    import Package from "lucide-svelte/icons/package";
+    import {apiClient} from "../../api";
+    import {isAuthenticated} from "$stores/UserStore.svelte";
+    import {toast} from "../../utils";
+    import DOMPurify from "dompurify";
+    import {marked} from "marked";
+    import {Badge} from "$lib/components/ui/badge/index.js";
+    import RemoteAddonReadme from "./RemoteAddonReadme.svelte";
+    import {
+        resolveTransitiveDependencies,
+        installDependenciesInOrder,
+        type DependencyInfo
+    } from "$lib/dependency-resolver";
 
-  import {apiClient} from '@/api'
-  import {toast} from '@/utils'
-  import {isAuthenticated} from '$atoms/user.svelte'
-  import {Badge} from '$lib/components/ui/badge/index.js'
-  import {Button} from '$lib/components/ui/button'
-  import * as Dialog from '$lib/components/ui/dialog/index'
-  import * as Tabs from '$lib/components/ui/tabs/index'
-  import * as Tooltip from '$lib/components/ui/tooltip/index'
-  import type {AddonManifest, Release} from '$lib/wails'
-  import {LocalAddonService, RemoteAddonService} from '$lib/wails'
-
-  import addons from '../../addons'
-  import RemoteAddonReadme from './RemoteAddonReadme.svelte'
+    let {
+        open = $bindable(),
+        onOpenChange,
+        onInstall,
+        onViewDependency,
+        addon,
+        onUninstall,
+    }: {
+        open: boolean;
+        onOpenChange: (open: boolean) => void;
+        onInstall: (installedManifest: AddonManifest) => void;
+        onViewDependency: (manifest: AddonManifest) => void;
+        addon: AddonManifest;
+        onUninstall: (uninstalledManifest: AddonManifest) => void;
+    } = $props();
 
   type DependencyInfo = {
     manifest: AddonManifest;
@@ -141,56 +160,36 @@
     }
   }
 
-  async function getDependencies() {
-    if (addon.dependencies && addon.dependencies.length > 0) {
-      try {
-        // Fetch all manifests first
-        const manifestResults = await Promise.allSettled(
-          addon.dependencies.map(depName => addons.getManifest(depName))
-        )
+    async function getDependencies() {
+        if (addon.dependencies && addon.dependencies.length > 0) {
+            try {
+                const result = await resolveTransitiveDependencies(addon);
 
-        const loadedDependenciesInfo: DependencyInfo[] = []
-        const manifestsToFetchStatus: AddonManifest[] = []
+                if (result.errors.length > 0) {
+                    console.warn("Dependency resolution errors:", result.errors);
+                    // Show first error to user, log all errors
+                    toast.error(`Dependency resolution warning: ${result.errors[0]}`);
+                }
 
-        manifestResults.forEach((result, index) => {
-          if (result.status === 'fulfilled' && result.value) {
-            manifestsToFetchStatus.push(result.value)
-          } else {
-            const depName = addon.dependencies?.[index] ?? 'unknown'
-            toast.error(`Failed to fetch details for dependency: ${depName}`)
-            // Explicitly check if it's rejected to access reason safely
-            if (result.status === 'rejected') {
-              console.error(`Failed to fetch dependency ${depName}:`, result.reason)
+                dependencies = result.dependencies;
+                console.log(`Found ${dependencies.length} total dependencies (including transitive) for ${addon.alias}`);
+
+                // Log dependency tree for debugging
+                if (dependencies.length > 0) {
+                    console.log("Dependency tree:");
+                    dependencies.forEach(dep => {
+                        console.log(`  ${"  ".repeat(dep.depth)}${dep.manifest.alias} (${dep.isInstalled ? 'installed' : 'not installed'})`);
+                    });
+                }
+
+            } catch (e) {
+                toast.error("Failed to fetch dependencies");
+                console.error("Failed to fetch dependencies", e);
+                dependencies = [];
             }
-          }
-        })
-
-        // Fetch installation status for successfully loaded manifests
-        const statusResults = await Promise.allSettled(
-          manifestsToFetchStatus.map(manifest => LocalAddonService.IsInstalled(manifest.name))
-        )
-
-        manifestsToFetchStatus.forEach((manifest, index) => {
-          const statusResult = statusResults[index]
-          if (statusResult.status === 'fulfilled') {
-            loadedDependenciesInfo.push({manifest, isInstalled: statusResult.value})
-          } else {
-            // Handle error fetching status? Or assume not installed? Assume not installed for now.
-            console.error(`Failed to fetch install status for ${manifest.name}:`, statusResult.reason)
-            // Add anyway, showing as not installed
-            loadedDependenciesInfo.push({manifest, isInstalled: false})
-          }
-        })
-
-        dependencies = loadedDependenciesInfo
-
-      } catch (e) {
-        toast.error('Failed to fetch dependencies')
-        console.error('Failed to fetch dependencies', e)
-        dependencies = []
-      }
-    } else {
-      dependencies = []
+        } else {
+            dependencies = [];
+        }
     }
   }
 
@@ -258,18 +257,33 @@
         }
       }
 
-      didInstall = await addons.install(addon, 'latest')
-      if (!didInstall) {
-        toast.error(`Failed to install ${addon.alias}`)
-      }
-    } catch (e: any) {
-      if (String(e).includes('no release found')) {
-        toast.error(`No release found for ${addon.name}`)
-      } else {
-        toast.error(`Failed to install ${addon.alias}: ${e?.message || e}`)
-      }
-      console.error('Install error:', e)
-    }
+        let didInstall: boolean = false;
+        try {
+            toast.info(`Installing ${addon.alias}...`);
+            if (dependencies.length > 0) {
+                const uninstalledDeps = dependencies.filter(d => !d.isInstalled);
+                if (uninstalledDeps.length > 0) {
+                    toast.info(`Installing ${uninstalledDeps.length} dependencies (including transitive)...`);
+
+                    const failedDepNames = await installDependenciesInOrder(dependencies);
+
+                    if (failedDepNames.length > 0) {
+                        const failedDepAliases = failedDepNames.map(name => {
+                            const dep = dependencies.find(d => d.manifest.name === name);
+                            return dep ? dep.manifest.alias : name;
+                        }).join(", ");
+
+                        toast.error(`${failedDepNames.length} dependencies failed to install. Main addon installation aborted.`, {
+                            description: `Failed: ${failedDepAliases}`,
+                        });
+                        return;
+                    }
+
+                    toast.success(`All ${uninstalledDeps.length} dependencies installed successfully`);
+                } else {
+                    console.log("All dependencies already installed.");
+                }
+            }
 
     if (didInstall) {
       toast.success('Addon installed', {
@@ -525,18 +539,82 @@
             <RemoteAddonReadme {readme}/>
           </Tabs.Content>
 
-          <Tabs.Content
-            value="changelog"
-            class="text-sm"
-          >
-            {#if release}
-              <div class="inline-flex items-center gap-1.5 text-xs text-muted-foreground mb-4">
-                <CalendarDays class="w-3.5 h-3.5"/>
-                <span>Released on {formatToLocalTime(release.published_at, true)}</span>
-              </div>
-              <div class="border rounded-lg p-4 bg-card">
-                <div class="prose max-w-none text-sm text-foreground dark:text-foreground/90">
-                  {@html changelog}
+                    <Tabs.Content
+                            value="changelog"
+                            class="text-sm"
+                    >
+                        {#if release}
+                            <div class="inline-flex items-center gap-1.5 text-xs text-muted-foreground mb-4">
+                                <CalendarDays class="w-3.5 h-3.5"/>
+                                <span>Released on {formatToLocalTime(release.published_at, true)}</span>
+                            </div>
+                            <div class="border rounded-lg p-4 bg-card">
+                                <div class="prose max-w-none text-sm text-foreground dark:text-foreground/90">
+                                    {@html changelog}
+                                </div>
+                            </div>
+                        {:else}
+                            <div class="flex flex-col items-center justify-center h-full text-center text-muted-foreground pt-10">
+                                <Package class="w-12 h-12 mb-4 opacity-50"/>
+                                <p class="font-medium">{changelog}</p>
+                                {#if changelog === 'No changelog provided.'}
+                                    <p class="text-xs mt-1">The author hasn't provided release notes.</p>
+                                {:else if changelog === 'Error loading changelog.'}
+                                    <p class="text-xs mt-1 text-destructive">Could not fetch release details.</p>
+                                {/if}
+                            </div>
+                        {/if}
+                    </Tabs.Content>
+
+                    {#if dependencies.length > 0}
+                        <Tabs.Content value="dependencies">
+                            <p class="mb-4 text-sm text-muted-foreground">This addon requires the following
+                                dependencies (including transitive dependencies):</p>
+                            <div class="space-y-3">
+                                {#each dependencies as d (d.manifest.name)}
+                                    <button
+                                            class="flex flex-col w-full p-4 border rounded-lg bg-background hover:bg-muted/50 transition-colors text-left focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                            onclick={() => handleDependencyClick(d.manifest)}
+                                            aria-label={`View details for ${d.manifest.alias}`}
+                                    >
+                                        <div class="flex justify-between items-start mb-1 gap-2">
+                                            <span class="font-medium text-base flex-1 break-words">{d.manifest.alias}</span>
+                                            {#if d.isInstalled}
+                                                <Badge variant="secondary" class="text-xs whitespace-nowrap">Installed
+                                                </Badge>
+                                            {:else}
+                                                <Badge variant="outline" class="text-xs whitespace-nowrap">Not
+                                                    Installed
+                                                </Badge>
+                                            {/if}
+                                        </div>
+                                        <p class="text-sm text-muted-foreground mb-2">by {d.manifest.author}</p>
+                                        <p class="text-sm text-foreground/80 line-clamp-2">
+                                            {d.manifest.description || 'No description available.'}
+                                        </p>
+                                    </button>
+                                {/each}
+                            </div>
+                        </Tabs.Content>
+                    {/if}
+
+                    {#if addon.kofi}
+                        <Tabs.Content value="kofi">
+                            <div class="flex flex-col items-center justify-center text-center space-y-4 p-4 border rounded-lg bg-secondary/30">
+                                <Heart class="w-10 h-10 text-red-500"/>
+                                <p class="text-sm text-muted-foreground">
+                                    Enjoying {addon.alias}? Show your appreciation by buying {addon.author} a coffee!
+                                </p>
+                                <Button
+                                        variant="default"
+                                        onclick={() => Browser.OpenURL(`https://ko-fi.com/${addon.kofi}`)}
+                                >
+                                    <Heart class="w-4 h-4 mr-2"/>
+                                    Support {addon.author} on Ko-fi
+                                </Button>
+                            </div>
+                        </Tabs.Content>
+                    {/if}
                 </div>
               </div>
             {:else}

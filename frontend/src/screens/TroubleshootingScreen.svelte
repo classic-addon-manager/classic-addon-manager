@@ -1,5 +1,5 @@
 <script lang="ts">
-  import {ChevronsUpDown} from 'lucide-svelte'
+  import {ChevronsUpDown, WrenchIcon} from 'lucide-svelte'
   import {onMount} from 'svelte'
   import {cubicOut} from 'svelte/easing'
   import {slide} from 'svelte/transition'
@@ -72,10 +72,15 @@
 
 <div class="flex flex-col h-screen">
   <header class="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-    <div class="container flex h-16 items-center justify-center gap-4 px-4">
-      <div class="flex flex-col items-center gap-1">
-        <h1 class="text-xl font-semibold">Troubleshooting</h1>
-        <p class="text-sm text-muted-foreground">Select an option below to help resolve your issue</p>
+    <div class="container flex h-16 items-center gap-4 px-4">
+      <div class="flex items-center gap-3">
+        <div class="p-2 bg-primary/10 rounded-lg">
+          <WrenchIcon class="h-6 w-6 text-primary"/>
+        </div>
+        <div>
+          <h1 class="text-xl font-semibold tracking-tight">Troubleshooting</h1>
+          <p class="text-sm text-muted-foreground">Select an option below to help resolve your issue</p>
+        </div>
       </div>
     </div>
   </header>

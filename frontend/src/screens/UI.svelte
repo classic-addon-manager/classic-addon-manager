@@ -5,8 +5,7 @@
   import {onMount} from 'svelte'
 
   import aacLogo from '@/assets/images/aac-logo-wide.png'
-  import {AACWebsiteItem, AddonsItem, DashboardItem} from '@/components/navbar'
-  import {TroubleshootingItem} from '@/components/navbar'
+  import {AACWebsiteItem, AddonsItem, DashboardItem, SettingsItem, TroubleshootingItem} from '@/components/navbar'
   import UserBar from '@/components/UserBar.svelte'
   import {safeCall} from '@/utils'
   import {getVersion} from '$atoms/application.svelte'
@@ -63,6 +62,7 @@
           <DashboardItem/>
           <AddonsItem/>
           <TroubleshootingItem/>
+          <SettingsItem/>
           <AACWebsiteItem/>
         </nav>
       </div>

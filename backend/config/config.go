@@ -18,6 +18,11 @@ func LoadConfig() error {
 		return err
 	}
 
+	if !GetBool("general.autodetectpath") {
+		logger.Info("Settings: Override path is enabled, will not detect AAC path")
+		return nil
+	}
+
 	path, err := detectAACPath()
 	if err != nil {
 		dialog.Message("Could not detect ArcheAge Classic installation: %s", err.Error()).Title("Classic Addon Manager Error").Error()
@@ -218,4 +223,8 @@ func SetString(option string, value string) {
 		logger.Error("Could not save config: ", err)
 	}
 	logger.Info("Set config option: " + option + " to " + value)
+}
+
+func GetAll() map[string]any {
+	return viper.AllSettings()
 }
