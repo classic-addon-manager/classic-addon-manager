@@ -10,7 +10,7 @@
     import {getInstalledAddons} from "$stores/AddonStore.svelte";
     import addons from "../addons";
     import {onMount} from "svelte";
-    import {ChevronsUpDown} from "lucide-svelte";
+    import {ChevronsUpDown, WrenchIcon} from "lucide-svelte";
     import {toast} from "../utils";
     import {slide} from "svelte/transition";
     import {cubicOut} from "svelte/easing";
@@ -73,10 +73,15 @@
 
 <div class="flex flex-col h-screen">
     <header class="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-        <div class="container flex h-16 items-center justify-center gap-4 px-4">
-            <div class="flex flex-col items-center gap-1">
-                <h1 class="text-xl font-semibold">Troubleshooting</h1>
-                <p class="text-sm text-muted-foreground">Select an option below to help resolve your issue</p>
+        <div class="container flex h-16 items-center gap-4 px-4">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-primary/10 rounded-lg">
+                    <WrenchIcon class="h-6 w-6 text-primary"/>
+                </div>
+                <div>
+                    <h1 class="text-xl font-semibold tracking-tight">Troubleshooting</h1>
+                    <p class="text-sm text-muted-foreground">Select an option below to help resolve your issue</p>
+                </div>
             </div>
         </div>
     </header>
@@ -85,9 +90,13 @@
         <div class="container px-4 py-6">
             <div class="mx-auto max-w-3xl">
                 <Accordion.Root type="single" class="space-y-4">
-                    {#each [{id: 'item-1', title: 'Specific Addon Issue'}, {id: 'item-2', title: 'No Addons Are Working'}, {id: 'item-3', title: 'Diagnostic Results'}] as item}
+                    {#each [{id: 'item-1', title: 'Specific Addon Issue'}, {
+                        id: 'item-2',
+                        title: 'No Addons Are Working'
+                    }, {id: 'item-3', title: 'Diagnostic Results'}] as item}
                         <Accordion.Item value={item.id} class="border rounded-lg overflow-hidden">
-                            <Accordion.Trigger class="hover:bg-muted/50 transition-colors px-6 w-full [&[data-state=open]]:no-underline hover:no-underline no-underline">
+                            <Accordion.Trigger
+                                    class="hover:bg-muted/50 transition-colors px-6 w-full [&[data-state=open]]:no-underline hover:no-underline no-underline">
                                 <div class="flex items-center gap-2 w-full">
                                     <span class="text-lg">{item.title}</span>
                                     {#if item.id === 'item-3'}
@@ -105,32 +114,40 @@
                             </Accordion.Trigger>
                             <Accordion.Content>
                                 {#if item.id === 'item-1'}
-                                    <div transition:slide={{duration: 200, easing: cubicOut}} class="px-6 py-4 bg-muted/20">
+                                    <div transition:slide={{duration: 200, easing: cubicOut}}
+                                         class="px-6 py-4 bg-muted/20">
                                         <div class="space-y-3">
-                                            <p class="text-muted-foreground">If a specific addon is not working as expected:</p>
+                                            <p class="text-muted-foreground">If a specific addon is not working as
+                                                expected:</p>
                                             <ol class="list-decimal list-inside space-y-2 text-muted-foreground">
                                                 <li>Go to the Dashboard</li>
                                                 <li>Right-click the problematic addon</li>
                                                 <li>Select "Report issue"</li>
                                             </ol>
                                             <div class="bg-muted/30 p-4 rounded-lg mt-4">
-                                                <p class="text-sm italic">Note: A GitHub account is required to report issues.</p>
+                                                <p class="text-sm italic">Note: A GitHub account is required to report
+                                                    issues.</p>
                                             </div>
                                         </div>
                                     </div>
                                 {:else if item.id === 'item-2'}
-                                    <div transition:slide={{duration: 200, easing: cubicOut}} class="px-6 py-4 bg-muted/20">
+                                    <div transition:slide={{duration: 200, easing: cubicOut}}
+                                         class="px-6 py-4 bg-muted/20">
                                         <div class="space-y-4">
-                                            <p class="text-muted-foreground">When all addons stop working, it's typically due to a corrupted addon_settings file.</p>
-                                            
+                                            <p class="text-muted-foreground">When all addons stop working, it's
+                                                typically due to a corrupted addon_settings file.</p>
+
                                             <div class="bg-muted/30 p-4 rounded-lg space-y-3">
                                                 <div class="flex items-start gap-2">
                                                     <div class="w-2 h-2 mt-2 rounded-full bg-green-400"></div>
-                                                    <p class="flex-1"><span class="font-medium text-green-400">Recommended:</span> Try resetting your addon settings first</p>
+                                                    <p class="flex-1"><span class="font-medium text-green-400">Recommended:</span>
+                                                        Try resetting your addon settings first</p>
                                                 </div>
                                                 <div class="flex items-start gap-2">
                                                     <div class="w-2 h-2 mt-2 rounded-full bg-red-400"></div>
-                                                    <p class="flex-1"><span class="font-medium text-red-400">Last resort:</span> Uninstall all addons and reset settings if the first option doesn't work</p>
+                                                    <p class="flex-1"><span class="font-medium text-red-400">Last resort:</span>
+                                                        Uninstall all addons and reset settings if the first option
+                                                        doesn't work</p>
                                                 </div>
                                             </div>
 
@@ -138,17 +155,20 @@
                                                 <Button class="w-1/2" onclick={handleResetAddonSettings}>
                                                     Reset addon settings
                                                 </Button>
-                                                <Button variant="destructive" class="w-1/2" onclick={handleUninstallAllAddons}>
+                                                <Button variant="destructive" class="w-1/2"
+                                                        onclick={handleUninstallAllAddons}>
                                                     Uninstall all addons
                                                 </Button>
                                             </div>
                                         </div>
                                     </div>
                                 {:else}
-                                    <div transition:slide={{duration: 200, easing: cubicOut}} class="px-6 py-4 bg-muted/20">
+                                    <div transition:slide={{duration: 200, easing: cubicOut}}
+                                         class="px-6 py-4 bg-muted/20">
                                         {#if issueCount === 0}
                                             <div class="flex items-center justify-center py-8">
-                                                <p class="text-green-400 font-medium">No issues detected in your system! 🎉</p>
+                                                <p class="text-green-400 font-medium">No issues detected in your system!
+                                                    🎉</p>
                                             </div>
                                         {:else}
                                             <ScrollArea class="rounded-lg border border-zinc-700">
@@ -168,11 +188,15 @@
                                                             </div>
                                                         </Collapsible.Trigger>
                                                         <Collapsible.Content>
-                                                            <div transition:slide={{duration: 200, easing: cubicOut}} class="space-y-2 p-4 bg-zinc-900/30">
+                                                            <div transition:slide={{duration: 200, easing: cubicOut}}
+                                                                 class="space-y-2 p-4 bg-zinc-900/30">
                                                                 {#each groupedIssues[addonName] as issue}
                                                                     <div class="rounded-md border border-zinc-700 px-4 py-3 font-mono text-sm bg-zinc-900/50">
-                                                                        <p class="text-red-400 mb-1">Error: {issue.error}</p>
-                                                                        <p class="text-zinc-400">File: <span class="text-indigo-400">{issue.file}</span></p>
+                                                                        <p class="text-red-400 mb-1">
+                                                                            Error: {issue.error}</p>
+                                                                        <p class="text-zinc-400">File: <span
+                                                                                class="text-indigo-400">{issue.file}</span>
+                                                                        </p>
                                                                     </div>
                                                                 {/each}
                                                             </div>
