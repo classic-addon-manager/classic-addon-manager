@@ -15,7 +15,7 @@ interface ToastProps {
 
 export function toast(toast: Omit<ToastProps, 'id'>) {
   return sonnerToast.custom(
-    (id) => (
+    id => (
       <Toast
         id={id}
         title={toast.title}
@@ -26,7 +26,10 @@ export function toast(toast: Omit<ToastProps, 'id'>) {
     ),
     {
       duration: 4000,
-      dismissible: true
+      dismissible: true,
+      style: {
+        zIndex: 9999,
+      },
     }
   )
 }
@@ -35,10 +38,18 @@ function Toast(props: ToastProps) {
   const { title, description, button, icon: Icon, id } = props
 
   return (
-    <div className="group relative flex w-full items-center overflow-hidden rounded-lg border bg-background p-4 shadow-lg md:w-[364px]">
+    <div
+      className="group relative flex w-full items-center overflow-hidden rounded-lg border bg-background p-4 shadow-lg md:w-[364px]"
+      // Ensure the toast container has proper z-index and pointer events
+      style={{
+        zIndex: 9999,
+        pointerEvents: 'auto',
+      }}
+    >
       <button
         onClick={() => sonnerToast.dismiss(id)}
         className="absolute right-2 top-2 rounded-md p-1 text-foreground/50 transition-opacity hover:text-foreground"
+        style={{ pointerEvents: 'auto' }}
       >
         <X className="h-4 w-4" />
       </button>
@@ -56,6 +67,7 @@ function Toast(props: ToastProps) {
             sonnerToast.dismiss(id)
           }}
           className="inline-flex h-8 shrink-0 items-center justify-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground ring-offset-background transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+          style={{ pointerEvents: 'auto' }}
         >
           {button.label}
         </button>
@@ -63,4 +75,3 @@ function Toast(props: ToastProps) {
     </div>
   )
 }
-

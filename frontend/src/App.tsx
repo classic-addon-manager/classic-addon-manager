@@ -4,7 +4,14 @@ import { Toaster } from 'sonner'
 function App() {
   return (
     <>
-      <Toaster closeButton />
+      <Toaster
+        closeButton
+        toastOptions={{
+          style: {
+            zIndex: 9999,
+          },
+        }}
+      />
       <UI />
     </>
   )
