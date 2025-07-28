@@ -19,11 +19,11 @@
     import {marked} from "marked";
     import {Badge} from "$lib/components/ui/badge/index.js";
     import RemoteAddonReadme from "./RemoteAddonReadme.svelte";
-
-    type DependencyInfo = {
-        manifest: AddonManifest;
-        isInstalled: boolean;
-    };
+    import {
+        resolveTransitiveDependencies,
+        installDependenciesInOrder,
+        type DependencyInfo
+    } from "$lib/dependency-resolver";
 
     let {
         open = $bindable(),
@@ -142,45 +142,24 @@
     async function getDependencies() {
         if (addon.dependencies && addon.dependencies.length > 0) {
             try {
-                // Fetch all manifests first
-                const manifestResults = await Promise.allSettled(
-                    addon.dependencies.map(depName => addons.getManifest(depName))
-                );
+                const result = await resolveTransitiveDependencies(addon);
 
-                const loadedDependenciesInfo: DependencyInfo[] = [];
-                const manifestsToFetchStatus: AddonManifest[] = [];
+                if (result.errors.length > 0) {
+                    console.warn("Dependency resolution errors:", result.errors);
+                    // Show first error to user, log all errors
+                    toast.error(`Dependency resolution warning: ${result.errors[0]}`);
+                }
 
-                manifestResults.forEach((result, index) => {
-                    if (result.status === 'fulfilled' && result.value) {
-                        manifestsToFetchStatus.push(result.value);
-                    } else {
-                        const depName = addon.dependencies?.[index] ?? 'unknown';
-                        toast.error(`Failed to fetch details for dependency: ${depName}`);
-                        // Explicitly check if it's rejected to access reason safely
-                        if (result.status === 'rejected') {
-                            console.error(`Failed to fetch dependency ${depName}:`, result.reason);
-                        }
-                    }
-                });
+                dependencies = result.dependencies;
+                console.log(`Found ${dependencies.length} total dependencies (including transitive) for ${addon.alias}`);
 
-                // Fetch installation status for successfully loaded manifests
-                const statusResults = await Promise.allSettled(
-                    manifestsToFetchStatus.map(manifest => LocalAddonService.IsInstalled(manifest.name))
-                );
-
-                manifestsToFetchStatus.forEach((manifest, index) => {
-                    const statusResult = statusResults[index];
-                    if (statusResult.status === 'fulfilled') {
-                        loadedDependenciesInfo.push({manifest, isInstalled: statusResult.value});
-                    } else {
-                        // Handle error fetching status? Or assume not installed? Assume not installed for now.
-                        console.error(`Failed to fetch install status for ${manifest.name}:`, statusResult.reason);
-                        // Add anyway, showing as not installed
-                        loadedDependenciesInfo.push({manifest, isInstalled: false});
-                    }
-                });
-
-                dependencies = loadedDependenciesInfo;
+                // Log dependency tree for debugging
+                if (dependencies.length > 0) {
+                    console.log("Dependency tree:");
+                    dependencies.forEach(dep => {
+                        console.log(`  ${"  ".repeat(dep.depth)}${dep.manifest.alias} (${dep.isInstalled ? 'installed' : 'not installed'})`);
+                    });
+                }
 
             } catch (e) {
                 toast.error("Failed to fetch dependencies");
@@ -229,30 +208,27 @@
         try {
             toast.info(`Installing ${addon.alias}...`);
             if (dependencies.length > 0) {
-                toast.info(`Installing ${dependencies.length} dependencies...`);
-                let failedDeps = 0;
-                for (const depInfo of dependencies) {
-                    if (depInfo.isInstalled) {
-                        console.log(`Dependency ${depInfo.manifest.alias} already installed.`);
-                        continue;
-                    }
-                    try {
-                        await addons.install(depInfo.manifest, 'latest');
-                        toast.success("Dependency installed", {
-                            description: `${depInfo.manifest.alias} was installed.`,
+                const uninstalledDeps = dependencies.filter(d => !d.isInstalled);
+                if (uninstalledDeps.length > 0) {
+                    toast.info(`Installing ${uninstalledDeps.length} dependencies (including transitive)...`);
+
+                    const failedDepNames = await installDependenciesInOrder(dependencies);
+
+                    if (failedDepNames.length > 0) {
+                        const failedDepAliases = failedDepNames.map(name => {
+                            const dep = dependencies.find(d => d.manifest.name === name);
+                            return dep ? dep.manifest.alias : name;
+                        }).join(", ");
+
+                        toast.error(`${failedDepNames.length} dependencies failed to install. Main addon installation aborted.`, {
+                            description: `Failed: ${failedDepAliases}`,
                         });
-                        depInfo.isInstalled = true;
-                    } catch (e: any) {
-                        failedDeps++;
-                        toast.error("Failed to install dependency", {
-                            description: `Failed to install ${depInfo.manifest.alias}: ${e?.message || e}`,
-                        });
-                        console.error(`Dependency install error for ${depInfo.manifest.alias}:`, e);
+                        return;
                     }
-                }
-                if (failedDeps > 0) {
-                    toast.error(`${failedDeps} dependencies failed to install. Main addon installation aborted.`);
-                    return;
+
+                    toast.success(`All ${uninstalledDeps.length} dependencies installed successfully`);
+                } else {
+                    console.log("All dependencies already installed.");
                 }
             }
 
@@ -553,7 +529,7 @@
                     {#if dependencies.length > 0}
                         <Tabs.Content value="dependencies">
                             <p class="mb-4 text-sm text-muted-foreground">This addon requires the following
-                                dependencies:</p>
+                                dependencies (including transitive dependencies):</p>
                             <div class="space-y-3">
                                 {#each dependencies as d (d.manifest.name)}
                                     <button
