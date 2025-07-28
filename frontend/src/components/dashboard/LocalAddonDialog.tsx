@@ -165,25 +165,35 @@ export const LocalAddonDialog = ({ addon, onOpenChange, open }: LocalAddonDialog
           variant="ghost"
           size="icon"
           className={clsx(
-            'h-8 w-9 transition-all duration-200 hover:scale-105 hover:bg-blue-100 dark:hover:bg-blue-900/30',
+            'h-8 w-9 transition-all duration-200 hover:bg-blue-100 dark:hover:bg-blue-900/30',
             rating === 1 && 'bg-blue-100 dark:bg-blue-900/30 border border-blue-500 text-blue-500'
           )}
           onClick={() => rateAddon(1)}
           aria-label="Like addon"
         >
-          <ThumbsUpIcon className="w-5 h-5 {rating === 1 ? 'text-blue-500' : 'text-muted-foreground group-hover:text-blue-500'}" />
+          <ThumbsUpIcon
+            className={clsx('w-5 h-5', {
+              'text-blue-500': rating === 1,
+              'text-muted-foreground': rating !== 1,
+            })}
+          />
         </Button>
         <Button
           variant="ghost"
           size="icon"
           className={clsx(
-            'h-8 w-9 transition-all duration-200 hover:scale-105 hover:bg-red-100 dark:hover:bg-red-900/30',
+            'h-8 w-9 transition-all duration-200 hover:bg-red-100 dark:hover:bg-red-900/30',
             rating === -1 && 'bg-red-100 dark:bg-red-900/30 border border-red-500 text-red-500'
           )}
           onClick={() => rateAddon(-1)}
           aria-label="Dislike addon"
         >
-          <ThumbsDownIcon className="w-5 h-5 {rating === -1 ? 'text-red-500' : 'text-muted-foreground group-hover:text-red-500'}" />
+          <ThumbsDownIcon
+            className={clsx('w-5 h-5', {
+              'text-red-500': rating === -1,
+              'text-muted-foreground': rating !== -1,
+            })}
+          />
         </Button>
       </div>
     )
