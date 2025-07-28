@@ -4,14 +4,27 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  // DialogFooter,
+  DialogFooter,
 } from '@/components/ui/dialog'
 import type { Addon } from '@/lib/wails'
-import { PackageIcon, Tag, User } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import {
+  PackageIcon,
+  Tag,
+  User,
+  ThumbsDownIcon,
+  ThumbsUpIcon,
+  Trash2,
+  RefreshCw,
+} from 'lucide-react'
 import { Suspense, useEffect, useState } from 'react'
+import { Badge } from '@/components/ui/badge'
 import { RemoteAddonReadme } from '@/components/shared/RemoteAddonReadme'
 import { AddonRepositoryMatch } from '@/components/dashboard/AddonRepositoryMatch'
+import { Button } from '@/components/ui/button'
+import { useUserStore } from '@/stores/userStore'
+import { apiClient } from '@/lib/api'
+import { clsx } from 'clsx'
 
 interface LocalAddonDialogProps {
   addon: Addon
@@ -23,6 +36,8 @@ export const LocalAddonDialog = ({ addon, onOpenChange, open }: LocalAddonDialog
   const [readme, setReadme] = useState<string>('loading')
   const [initiallyManaged, setInitiallyManaged] = useState(false)
   const [hasBeenOpened, setHasBeenOpened] = useState(false)
+  const [rating, setRating] = useState(0)
+  const { isAuthenticated } = useUserStore()
 
   // Set initial managed state when dialog opens
   useEffect(() => {
@@ -53,6 +68,7 @@ export const LocalAddonDialog = ({ addon, onOpenChange, open }: LocalAddonDialog
     if (!open) {
       return
     }
+    getMyRating()
     getReadme()
   }, [open])
 
@@ -78,6 +94,23 @@ export const LocalAddonDialog = ({ addon, onOpenChange, open }: LocalAddonDialog
     setReadme(text)
   }
 
+  const getMyRating = async () => {
+    if (!isAuthenticated) return
+    apiClient
+      .get(`/addon/${addon.name}/my-rating`)
+      .then(async response => {
+        if (response.status === 200) {
+          const r = await response.json()
+          setRating(r.data.rating)
+        }
+      })
+      .catch(e => {
+        console.error('Failed to fetch rating: ', e)
+      })
+  }
+
+  const rateAddon = async (rating: number) => {}
+
   const UnmanagedAddonNotice = () => {
     return (
       <div className="border rounded-lg p-4 bg-card mt-6">
@@ -100,6 +133,58 @@ export const LocalAddonDialog = ({ addon, onOpenChange, open }: LocalAddonDialog
             <AddonRepositoryMatch name={addon.name} />
           </Suspense>
         </div>
+      </div>
+    )
+  }
+
+  const RateAddonButtons = () => {
+    if (!addon.isManaged) {
+      return <div></div>
+    }
+
+    if (!isAuthenticated) {
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span
+              className="flex items-center gap-3 p-2 cursor-not-allowed opacity-50"
+              aria-label="Log in to rate addons"
+            >
+              <ThumbsUpIcon className="w-5 h-5 text-muted-foreground" />
+              <ThumbsDownIcon className="w-5 h-5 text-muted-foreground" />
+            </span>
+          </TooltipTrigger>
+          <TooltipContent className="font-bold">Log in to rate addons</TooltipContent>
+        </Tooltip>
+      )
+    }
+
+    return (
+      <div className="flex gap-2 items-center">
+        <Button
+          variant="ghost"
+          size="icon"
+          className={clsx(
+            'h-8 w-9 transition-all duration-200 hover:scale-105 hover:bg-blue-100 dark:hover:bg-blue-900/30',
+            rating === 1 && 'bg-blue-100 dark:bg-blue-900/30 border border-blue-500 text-blue-500'
+          )}
+          onClick={() => rateAddon(1)}
+          aria-label="Like addon"
+        >
+          <ThumbsUpIcon className="w-5 h-5 {rating === 1 ? 'text-blue-500' : 'text-muted-foreground group-hover:text-blue-500'}" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className={clsx(
+            'h-8 w-9 transition-all duration-200 hover:scale-105 hover:bg-red-100 dark:hover:bg-red-900/30',
+            rating === -1 && 'bg-red-100 dark:bg-red-900/30 border border-red-500 text-red-500'
+          )}
+          onClick={() => rateAddon(-1)}
+          aria-label="Dislike addon"
+        >
+          <ThumbsDownIcon className="w-5 h-5 {rating === -1 ? 'text-red-500' : 'text-muted-foreground group-hover:text-red-500'}" />
+        </Button>
       </div>
     )
   }
@@ -149,6 +234,35 @@ export const LocalAddonDialog = ({ addon, onOpenChange, open }: LocalAddonDialog
           {/* Show notice if addon is not managed and is available in repository */}
           {!addon.isManaged && UnmanagedAddonNotice()}
         </div>
+
+        <DialogFooter className="p-4 border-t">
+          <div className="flex justify-between items-center w-full gap-4">
+            {RateAddonButtons()}
+
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+              {addon.isManaged && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex items-center"
+                  onClick={() => window.alert('Not implemented')}
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Reinstall
+                </Button>
+              )}
+              <Button
+                type="button"
+                variant="destructive"
+                className="flex items-center"
+                onClick={() => window.alert('Not implemented')}
+              >
+                <Trash2 className="w-4 h-4" />
+                Uninstall
+              </Button>
+            </div>
+          </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
