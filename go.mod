@@ -7,7 +7,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/spf13/viper v1.20.1
 	github.com/sqweek/dialog v0.0.0-20240226140203-065105509627
-	github.com/wailsapp/wails/v3 v3.0.0-alpha.12
+	github.com/wailsapp/wails/v3 v3.0.0-alpha.16
 	go.uber.org/zap v1.27.0
 	golang.org/x/sys v0.33.0
 )
