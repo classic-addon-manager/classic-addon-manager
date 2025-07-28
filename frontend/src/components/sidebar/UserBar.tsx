@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useUserStore } from '@/stores/userStore.ts'
-import { createApiClient } from '@/lib/api'
+import { apiClient } from '@/lib/api'
 import { useAtomValue } from 'jotai'
 import { versionAtom } from '@/atoms/applicationAtoms'
 import { Browser, Events } from '@wailsio/runtime'
@@ -23,7 +23,6 @@ export const UserBar = () => {
   const [isReady, setIsReady] = useState(false)
   const { user, token, setUser, setToken, isAuthenticated, clearUser } = useUserStore()
   const version = useAtomValue(versionAtom)
-  const apiClient = createApiClient(version)
 
   const getAccount = async () => {
     if (!token) return
@@ -99,9 +98,9 @@ export const UserBar = () => {
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
           className="lucide lucide-message-circle-question"
         >
           <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
