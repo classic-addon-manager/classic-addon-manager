@@ -16,6 +16,7 @@ import {
   ThumbsUpIcon,
   Trash2,
   RefreshCw,
+  AlertTriangleIcon,
 } from 'lucide-react'
 import { Suspense, useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
@@ -25,6 +26,7 @@ import { Button } from '@/components/ui/button'
 import { useUserStore } from '@/stores/userStore'
 import { apiClient } from '@/lib/api'
 import { clsx } from 'clsx'
+import { toast } from '@/components/ui/toast.tsx'
 
 interface LocalAddonDialogProps {
   addon: Addon
@@ -109,7 +111,38 @@ export const LocalAddonDialog = ({ addon, onOpenChange, open }: LocalAddonDialog
       })
   }
 
-  const rateAddon = async (rating: number) => {}
+  const rateAddon = async (newRating: number) => {
+    if (rating === newRating) return
+
+    const res = await apiClient.post(`/addon/${addon.name}/rate`, {
+      is_like: newRating === 1,
+    })
+
+    if (res.status !== 200) {
+      toast({
+        title: 'Error',
+        description: 'Failed to rate addon, try again later',
+        icon: AlertTriangleIcon,
+      })
+      return
+    }
+
+    if (newRating === 1) {
+      toast({
+        title: 'Addon rated',
+        description: `You liked ${addon.alias}`,
+        icon: ThumbsUpIcon,
+      })
+    } else {
+      toast({
+        title: 'Addon rated',
+        description: `You disliked ${addon.alias}`,
+        icon: ThumbsDownIcon,
+      })
+    }
+
+    setRating(newRating)
+  }
 
   const UnmanagedAddonNotice = () => {
     return (
