@@ -1,13 +1,16 @@
 <script lang="ts">
   import {Browser} from '@wailsio/runtime'
   import DOMPurify from 'dompurify'
-  import {BugIcon, CalendarDays, DownloadIcon, GithubIcon, Tag, Trash2Icon,User} from 'lucide-svelte'
+  import {BugIcon, CalendarDays, DownloadIcon, GithubIcon, Tag, Trash2Icon, User} from 'lucide-svelte'
   import Heart from 'lucide-svelte/icons/heart'
   import Package from 'lucide-svelte/icons/package'
   import Dislike from 'lucide-svelte/icons/thumbs-down'
   import Like from 'lucide-svelte/icons/thumbs-up'
   import {marked} from 'marked'
 
+  import {apiClient} from '@/api'
+  import {toast} from '@/utils'
+  import {isAuthenticated} from '$atoms/user.svelte'
   import {Badge} from '$lib/components/ui/badge/index.js'
   import {Button} from '$lib/components/ui/button'
   import * as Dialog from '$lib/components/ui/dialog/index'
@@ -16,14 +19,12 @@
   import {
     type DependencyInfo,
     installDependenciesInOrder,
-    resolveTransitiveDependencies  } from '$lib/dependency-resolver'
+    resolveTransitiveDependencies
+  } from '$lib/dependency-resolver'
   import type {AddonManifest, Release} from '$lib/wails'
   import {LocalAddonService, RemoteAddonService} from '$lib/wails'
-  import {isAuthenticated} from '$stores/UserStore.svelte'
 
   import addons from '../../addons'
-  import {apiClient} from '../../api'
-  import {toast} from '../../utils'
   import RemoteAddonReadme from './RemoteAddonReadme.svelte'
 
   let {

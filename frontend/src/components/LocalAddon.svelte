@@ -6,20 +6,16 @@
     ShieldQuestion,
   } from 'lucide-svelte'
 
-  import LocalAddonUpdateDrawer from '@/components/local_addon/LocalAddonUpdateDrawer.svelte'
   import {
     getLatestReleaseMap,
     isCheckingUpdates,
   } from '$atoms/addon.svelte'
-  import {localAddonDrawer, updateDrawer} from '$atoms/addon-drawer.svelte'
+  import {addonDialog, updateDialog} from '$atoms/local-addon.svelte'
   import {Badge} from '$lib/components/ui/badge'
   import {cn} from '$lib/utils'
-  import type {Addon, Release} from '$lib/wails'
+  import type {Addon} from '$lib/wails'
 
-  // import {openAddonDrawer} from '$stores/LocalAddonDrawerStore.svelte.js'
   import LocalAddonContextMenu from './local_addon/LocalAddonContextMenu.svelte'
-  // import LocalAddonDialog from './local_addon/LocalAddonDialog.svelte'
-  import LocalAddonUpdateDialog from './local_addon/LocalAddonUpdateDialog.svelte'
 
   interface Props {
     addon: Addon;
@@ -29,33 +25,12 @@
 
   let latestRelease = $derived(getLatestReleaseMap().get(addon.name))
   let isChecking = $derived(isCheckingUpdates())
-
-  let openUpdateDialog = $state(false)
   let isContextMenuOpen = $state(false)
-
-  function handleOpenUpdateDialogChange(o: boolean) {
-    openUpdateDialog = o
-  }
 
   function handleContextMenuOpenChange(open: boolean) {
     isContextMenuOpen = open
   }
 </script>
-
-<!--<LocalAddonDialog-->
-<!--        {addon}-->
-<!--        bind:open={openDrawer}-->
-<!--        onOpenChange={handleOpenDrawerChange}-->
-<!--/>-->
-
-{#if latestRelease}
-  <LocalAddonUpdateDialog
-    {addon}
-    release={latestRelease}
-    bind:open={openUpdateDialog}
-    onOpenChange={handleOpenUpdateDialogChange}
-  />
-{/if}
 
 {#snippet contextTriggerArea()}
   <div
@@ -63,7 +38,7 @@
       'cursor-pointer grid grid-cols-4 p-2 hover:bg-muted/50 border-t transition-colors items-center text-sm',
       isContextMenuOpen && 'bg-muted',
     )}
-    onclick={() => localAddonDrawer.open(addon)}
+    onclick={() => addonDialog.openWith(addon)}
   >
     <div class="font-medium">{addon.alias}</div>
     <div class="text-center">{addon.author}</div>
@@ -82,8 +57,7 @@
               onclick={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
-                /*openUpdateDialog = true*/
-                updateDrawer.open(addon, latestRelease)
+                updateDialog.openWith(addon, latestRelease)
               }}
             >
               <Download size={14} class="mr-1"/>

@@ -9,11 +9,9 @@
 
   import addons from '@/addons'
   import LocalAddonDialog from '@/components/local_addon/LocalAddonDialog.svelte'
-  import LocalAddonDrawer from '@/components/local_addon/LocalAddonDrawer.svelte'
-  import LocalAddonUpdateDrawer from '@/components/local_addon/LocalAddonUpdateDrawer.svelte'
+  import LocalAddonUpdateDialog from '@/components/local_addon/LocalAddonUpdateDialog.svelte'
   import LocalAddon from '@/components/LocalAddon.svelte'
   import {getInstalledAddons, isCheckingUpdates} from '$atoms/addon.svelte'
-  import {localAddonDrawer, updateDrawer} from '$atoms/addon-drawer.svelte'
   import {setActiveNavbar} from '$atoms/navbar.svelte'
   import {setActiveScreen} from '$atoms/screen.svelte'
   import {Button} from '$lib/components/ui/button/index.js'
@@ -52,12 +50,6 @@
       return addon.name.toLowerCase().includes(searchName.toLowerCase())
     })
   })
-
-  let drawerState = $derived(localAddonDrawer.isOpen)
-
-  function handleDrawerOpenChange(open: boolean) {
-    localAddonDrawer.setOpen(open)
-  }
 </script>
 
 <div class="flex flex-col h-screen bg-background">
@@ -181,23 +173,6 @@
     {/if}
   </main>
 
-  <!--<LocalAddonDrawer
-                                addon={drawerState.addon}
-                                open={drawerState.open}
-                                onOpenChange={handleDrawerOpenChange}
-                              />-->
-
-
-  <LocalAddonUpdateDrawer
-    addon={updateDrawer.addon}
-    release={updateDrawer.release}
-    open={updateDrawer.isOpen}
-    onOpenChange={updateDrawer.setOpen}
-  />
-
-  <LocalAddonDialog
-    addon={localAddonDrawer.addon}
-    open={localAddonDrawer.isOpen}
-    onOpenChange={handleDrawerOpenChange}
-  />
+  <LocalAddonDialog/>
+  <LocalAddonUpdateDialog/>
 </div>

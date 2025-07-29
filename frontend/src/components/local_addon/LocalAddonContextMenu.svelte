@@ -8,11 +8,11 @@
   import Trash from 'lucide-svelte/icons/trash'
   import type {Snippet} from 'svelte'
 
+  import addons from '@/addons'
+  import {toast} from '@/utils'
   import * as ContextMenu from '$lib/components/ui/context-menu/index.js'
   import {type Addon, LocalAddonService} from '$lib/wails'
 
-  import addons from '../../addons'
-  import {toast} from '../../utils'
   import LocalAddonVersionSelectDialog from './LocalAddonVersionSelectDialog.svelte'
 
   let {
