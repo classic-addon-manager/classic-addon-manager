@@ -1,6 +1,6 @@
 import {type Addon, Release} from '$lib/wails'
 
-interface DialogState {
+interface Dialog {
     isOpen: boolean
     addon: Addon | null
 }
@@ -11,7 +11,7 @@ interface UpdateDialog {
     release: Release | null
 }
 
-let dialogState = $state<DialogState>({
+let dialogState = $state<Dialog>({
   isOpen: false,
   addon: null
 })
