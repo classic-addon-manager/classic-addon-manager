@@ -38,6 +38,8 @@ export const addonDialog = {
         dialogState.isOpen = false
         dialogState.addon = null
       }, 200)
+    } else {
+      dialogState.isOpen = true
     }
   },
 
@@ -68,6 +70,8 @@ export const updateDialog = {
         updateDialogState.addon = null
         updateDialogState.release = null
       }, 200)
+    } else {
+      updateDialogState.isOpen = true
     }
   },
 

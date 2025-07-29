@@ -34,6 +34,7 @@ async function getManifest(name: string): Promise<AddonManifest> {
 }
 
 async function repoHasAddon(addon: string): Promise<boolean> {
+  if (addon === '') return false
   const manifests = await RemoteAddonService.GetAddonManifest()
   return manifests.some((m) => m.name === addon)
 }

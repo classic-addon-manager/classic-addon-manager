@@ -15,13 +15,13 @@
   import addons from '@/addons'
   import {apiClient} from '@/api'
   import {safeCall, toast} from '@/utils'
-  import {addonDialog, updateDialog} from '$atoms/local-addon.svelte'
+  import {addonDialog} from '$atoms/local-addon.svelte'
   import {isAuthenticated} from '$atoms/user.svelte'
   import {Badge} from '$lib/components/ui/badge/index'
   import {Button} from '$lib/components/ui/button/index'
   import * as Dialog from '$lib/components/ui/dialog/index'
-  import type {Addon, Release} from '$lib/wails'
-  import {AddonManifest, RemoteAddonService} from '$lib/wails'
+  import type {Addon} from '$lib/wails'
+  import {AddonManifest} from '$lib/wails'
 
   import RemoteAddonReadme from '../remote_addon/RemoteAddonReadme.svelte'
 
@@ -192,13 +192,13 @@
   <Dialog.Root {open} onOpenChange={addonDialog.setOpen}>
     <Dialog.Content class="sm:max-w-[600px] max-h-[90svh] flex flex-col p-0">
       <Dialog.Header class="p-6 pb-4 shrink-0 border-b">
-        <Dialog.Title class="text-2xl font-semibold mb-1">{addon.alias}</Dialog.Title>
+        <Dialog.Title class="text-2xl font-semibold mb-1">{addon?.alias}</Dialog.Title>
         <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm mb-3 text-muted-foreground">
           <span class="inline-flex items-center gap-1">
             <User class="w-3.5 h-3.5"/>
-            <span class="font-normal text-foreground/90">{addon.author}</span>
+            <span class="font-normal text-foreground/90">{addon?.author}</span>
           </span>
-          {#if addon.version}
+          {#if addon?.version}
             <Badge variant="secondary" class="inline-flex items-center gap-1">
               <Tag class="w-3 h-3"/>
               {addon.version}
@@ -207,8 +207,8 @@
             <Badge variant="outline">No Version</Badge>
           {/if}
         </div>
-        {#if addon.description}
-          <Dialog.Description class="text-sm text-muted-foreground">{addon.description}</Dialog.Description>
+        {#if addon?.description}
+          <Dialog.Description class="text-sm text-muted-foreground">{addon?.description}</Dialog.Description>
         {/if}
       </Dialog.Header>
 
@@ -222,7 +222,7 @@
           <RemoteAddonReadme {readme}/>
         {/if}
 
-        {#if !addon.isManaged}
+        {#if !addon?.isManaged}
           <div class="border rounded-lg p-4 bg-card mt-6">
             <div class="space-y-3">
               <div class="flex items-center gap-2 text-muted-foreground">
@@ -230,7 +230,7 @@
                 <p class="text-sm font-medium">This addon is not managed by Classic Addon Manager</p>
               </div>
 
-              {#await addons.repoHasAddon(addon.name)}
+              {#await addons.repoHasAddon(addon?.name)}
                 <div class="flex items-center gap-2 text-sm text-muted-foreground">
                   <div class="w-3 h-3 rounded-full border-2 border-t-transparent border-current animate-spin"></div>
                   <span>Checking repository...</span>
@@ -255,7 +255,7 @@
 
       <Dialog.Footer class="p-4 border-t">
         <div class="flex justify-between items-center w-full gap-4">
-          {#if addon.isManaged}
+          {#if addon?.isManaged}
             <div class="flex gap-1 items-center">
               {#if isAuthenticated()}
                 <Button
