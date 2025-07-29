@@ -1,49 +1,49 @@
-import { ContextMenu as ContextMenuPrimitive } from "bits-ui";
+import {ContextMenu as ContextMenuPrimitive} from 'bits-ui'
 
-import Item from "./context-menu-item.svelte";
-import GroupHeading from "./context-menu-group-heading.svelte";
-import Content from "./context-menu-content.svelte";
-import Shortcut from "./context-menu-shortcut.svelte";
-import RadioItem from "./context-menu-radio-item.svelte";
-import Separator from "./context-menu-separator.svelte";
-import SubContent from "./context-menu-sub-content.svelte";
-import SubTrigger from "./context-menu-sub-trigger.svelte";
-import CheckboxItem from "./context-menu-checkbox-item.svelte";
+import CheckboxItem from './context-menu-checkbox-item.svelte'
+import Content from './context-menu-content.svelte'
+import GroupHeading from './context-menu-group-heading.svelte'
+import Item from './context-menu-item.svelte'
+import RadioItem from './context-menu-radio-item.svelte'
+import Separator from './context-menu-separator.svelte'
+import Shortcut from './context-menu-shortcut.svelte'
+import SubContent from './context-menu-sub-content.svelte'
+import SubTrigger from './context-menu-sub-trigger.svelte'
 
-const Sub: typeof ContextMenuPrimitive.Sub = ContextMenuPrimitive.Sub;
-const Root: typeof ContextMenuPrimitive.Root = ContextMenuPrimitive.Root;
-const Trigger: typeof ContextMenuPrimitive.Trigger = ContextMenuPrimitive.Trigger;
-const Group: typeof ContextMenuPrimitive.Group = ContextMenuPrimitive.Group;
-const RadioGroup: typeof ContextMenuPrimitive.RadioGroup = ContextMenuPrimitive.RadioGroup;
+const Sub: typeof ContextMenuPrimitive.Sub = ContextMenuPrimitive.Sub
+const Root: typeof ContextMenuPrimitive.Root = ContextMenuPrimitive.Root
+const Trigger: typeof ContextMenuPrimitive.Trigger = ContextMenuPrimitive.Trigger
+const Group: typeof ContextMenuPrimitive.Group = ContextMenuPrimitive.Group
+const RadioGroup: typeof ContextMenuPrimitive.RadioGroup = ContextMenuPrimitive.RadioGroup
 
 export {
-	Sub,
-	Root,
-	Item,
-	Group,
-	Trigger,
-	Content,
-	Shortcut,
-	Separator,
-	RadioItem,
-	GroupHeading,
-	SubContent,
-	SubTrigger,
-	RadioGroup,
-	CheckboxItem,
-	//
-	Root as ContextMenu,
-	Sub as ContextMenuSub,
-	Item as ContextMenuItem,
-	Group as ContextMenuGroup,
-	Content as ContextMenuContent,
-	Trigger as ContextMenuTrigger,
-	Shortcut as ContextMenuShortcut,
-	RadioItem as ContextMenuRadioItem,
-	Separator as ContextMenuSeparator,
-	GroupHeading as ContextMenuGroupHeading,
-	RadioGroup as ContextMenuRadioGroup,
-	SubContent as ContextMenuSubContent,
-	SubTrigger as ContextMenuSubTrigger,
-	CheckboxItem as ContextMenuCheckboxItem,
-};
+  CheckboxItem,
+  Content,
+  //
+  Root as ContextMenu,
+  CheckboxItem as ContextMenuCheckboxItem,
+  Content as ContextMenuContent,
+  Group as ContextMenuGroup,
+  GroupHeading as ContextMenuGroupHeading,
+  Item as ContextMenuItem,
+  RadioGroup as ContextMenuRadioGroup,
+  RadioItem as ContextMenuRadioItem,
+  Separator as ContextMenuSeparator,
+  Shortcut as ContextMenuShortcut,
+  Sub as ContextMenuSub,
+  SubContent as ContextMenuSubContent,
+  SubTrigger as ContextMenuSubTrigger,
+  Trigger as ContextMenuTrigger,
+  Group,
+  GroupHeading,
+  Item,
+  RadioGroup,
+  RadioItem,
+  Root,
+  Separator,
+  Shortcut,
+  Sub,
+  SubContent,
+  SubTrigger,
+  Trigger,
+}

@@ -5,26 +5,19 @@
     "useDefineForClassFields": true,
     "module": "ESNext",
     "resolveJsonModule": true,
+    "noEmit": true,
+    "outDir": "./dist",
+    "rootDir": ".",
     "baseUrl": ".",
     "paths": {
-      "$lib": [
-        "./src/lib"
-      ],
-      "$lib/*": [
-        "./src/lib/*"
-      ],
-      "$screens": [
-        "./src/screens"
-      ],
-      "$screens/*": [
-        "./src/screens/*"
-      ],
-      "$stores": [
-        "./src/stores"
-      ],
-      "$stores/*": [
-        "./src/stores/*"
-      ],
+      "@/*": ["./src/*"],
+      "$lib": ["./src/lib"],
+      "$lib/*": ["./src/lib/*"],
+      "$screens": ["./src/screens"],
+      "$screens/*": ["./src/screens/*"],
+      "$stores": ["./src/stores"],
+      "$stores/*": ["./src/stores/*"],
+      "$atoms/*": ["./src/atoms/*"]
     },
     /**
      * Typecheck JS in `.svelte` and `.js` files by default.
@@ -36,12 +29,7 @@
     "checkJs": true,
     "isolatedModules": true
   },
-  "include": [
-    "src/**/*.d.ts",
-    "src/**/*.ts",
-    "src/**/*.js",
-    "src/**/*.svelte"
-  ],
+  "include": ["src/**/*.d.ts", "src/**/*.ts", "src/**/*.js", "src/**/*.svelte"],
   "references": [
     {
       "path": "./tsconfig.node.json"

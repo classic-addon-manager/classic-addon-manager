@@ -1,13 +1,14 @@
 <script lang="ts">
-	import { Dialog as SheetPrimitive } from "bits-ui";
-	import { cn } from "$lib/utils.js";
+  import {Dialog as SheetPrimitive} from 'bits-ui'
 
-	type $$Props = SheetPrimitive.PortalProps;
+  import {cn} from '$lib/utils.js'
 
-	let className: $$Props["class"] = undefined;
-	export { className as class };
+  type $$Props = SheetPrimitive.PortalProps;
+
+  let className: $$Props['class'] = undefined
+  export {className as class}
 </script>
 
 <SheetPrimitive.Portal class={cn(className)} {...$$restProps}>
-	<slot />
+  <slot/>
 </SheetPrimitive.Portal>

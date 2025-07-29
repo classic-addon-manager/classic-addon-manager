@@ -1,7 +1,8 @@
 * {
     user-select: none;
     user-drag: none;
-    -webkit-user-drag: none
+    -webkit-user-drag: none;
+    -webkit-font-smoothing: subpixel-antialiased;
 }
 
 body {
