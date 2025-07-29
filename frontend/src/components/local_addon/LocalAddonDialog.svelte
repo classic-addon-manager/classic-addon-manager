@@ -84,7 +84,7 @@
       return
     }
 
-    const [installError] = await safeCall<boolean>(() => addons.install(manifest, 'latest'))
+    const [, installError] = await safeCall<boolean>(() => addons.install(manifest, 'latest'))
     if (installError) {
       const errorString = String(installError)
       if (errorString.includes('no release found')) {
