@@ -1,10 +1,11 @@
-import { repoGetManifest } from '@/lib/repo'
 import { AlertTriangleIcon, ArrowUpCircle, CheckIcon } from 'lucide-react'
-import { Button } from '@/components/ui/button.tsx'
 import usePromise from 'react-promise-suspense'
-import { safeCall } from '@/lib/utils.ts'
-import { AddonManifest } from '@/lib/wails'
+
+import { Button } from '@/components/ui/button.tsx'
 import { toast } from '@/components/ui/toast'
+import { repoGetManifest } from '@/lib/repo'
+import { safeCall } from '@/lib/utils.ts'
+import type { AddonManifest } from '@/lib/wails'
 import { useAddonStore } from '@/stores/addonStore.ts'
 
 const fetchData = async (name: string) => {

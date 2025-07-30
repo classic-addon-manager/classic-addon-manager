@@ -1,4 +1,4 @@
-import { clsx, type ClassValue } from 'clsx'
+import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
 export function cn(...inputs: ClassValue[]) {
@@ -12,4 +12,19 @@ export const safeCall = async <T>(promise: Promise<T>): Promise<[T | null, Error
   } catch (error) {
     return [null, error instanceof Error ? error : new Error(String(error))]
   }
+}
+
+/**
+ * Formats a go date string to a human-readable date string.
+ */
+export function formatToLocalTime(dateString: string): string {
+  const date = new Date(dateString)
+  const options: Intl.DateTimeFormatOptions = {
+    hour: '2-digit',
+    minute: '2-digit',
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  }
+  return date.toLocaleString(undefined, options).replace(',', '')
 }

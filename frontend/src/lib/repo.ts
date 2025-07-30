@@ -1,4 +1,4 @@
-import { AddonManifest, RemoteAddonService } from '@/lib/wails'
+import { type AddonManifest, RemoteAddonService } from '@/lib/wails'
 
 export async function repoGetManifest(name: string): Promise<AddonManifest> {
   const manifests = await RemoteAddonService.GetAddonManifest()
