@@ -10,10 +10,11 @@ import { Addon, Release } from '@/lib/wails'
 import { useContext, useEffect, useState } from 'react'
 import { UpdateDialogAtomContext } from '@/components/dashboard/LocalAddon'
 import { useAtom } from 'jotai'
-import { CalendarDays, Package, Tag, User } from 'lucide-react'
+import { ArrowUpCircle, CalendarDays, LoaderCircle, Package, Tag, User } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { formatToLocalTime } from '@/lib/utils'
 import Markdown from 'react-markdown'
+import { Button } from '../ui/button'
 
 interface Props {
   addon: Addon
@@ -29,6 +30,7 @@ export const LocalAddonUpdateDialog = ({ addon, release }: Props) => {
   const [open, setOpen] = useAtom(atomContext)
 
   const [changelog, setChangelog] = useState<string>('')
+  const [isUpdating, setIsUpdating] = useState<boolean>(false)
 
   useEffect(() => {
     if (open && release?.body) {
@@ -37,6 +39,11 @@ export const LocalAddonUpdateDialog = ({ addon, release }: Props) => {
       setChangelog('No change log was provided')
     }
   }, [open])
+
+  const handleUpdateClick = async () => {
+    setIsUpdating(true)
+    alert('TODO: Finish this')
+  }
 
   const ReleaseInformation = () => {
     if (!release) {
@@ -93,7 +100,24 @@ export const LocalAddonUpdateDialog = ({ addon, release }: Props) => {
           )}
         </div>
 
-        <DialogFooter className="p-4 border-t">TODO: Add buttons</DialogFooter>
+        <DialogFooter className="p-4 border-t">
+          {isUpdating ? (
+            <Button type="button" variant="default" disabled className="w-full sm:w-auto">
+              <LoaderCircle className="w-4 h-4 mr-2 animate-spin" />
+              Updating...
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="default"
+              onClick={handleUpdateClick}
+              className="w-full sm:w-auto"
+            >
+              <ArrowUpCircle className="w-5 h-4 mr-2" />
+              Update to {release.tag_name}
+            </Button>
+          )}
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )

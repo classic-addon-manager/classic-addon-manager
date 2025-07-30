@@ -1,16 +1,17 @@
 <script lang="ts">
-    import DashboardScreen from "$screens/DashboardScreen.svelte";
-    import NavbarItem from "./NavbarItem.svelte";
-    import House from "lucide-svelte/icons/house";
+  import House from 'lucide-svelte/icons/house'
 
-    import { getUpdatesAvailableCount } from "$stores/AddonStore.svelte";
+  import {getUpdateCount} from '$atoms/addon.svelte'
+  import DashboardScreen from '$screens/DashboardScreen.svelte'
 
-    let updatesAvailableCount = $derived.by(() => getUpdatesAvailableCount());
+  import NavbarItem from './NavbarItem.svelte'
+
+  let updatesAvailableCount = $derived.by(() => getUpdateCount())
 </script>
 
 <NavbarItem
-    name="Dashboard"
-    Icon={House}
-    Screen={DashboardScreen}
-    badgeCount={updatesAvailableCount > 0 ? updatesAvailableCount : -1}
+  name="Dashboard"
+  Icon={House}
+  Screen={DashboardScreen}
+  badgeCount={updatesAvailableCount > 0 ? updatesAvailableCount : -1}
 />
