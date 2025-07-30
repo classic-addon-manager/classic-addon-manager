@@ -1,12 +1,19 @@
+import { useAtom, useAtomValue } from 'jotai'
 import { LoaderCircle, RefreshCw, Search } from 'lucide-react'
+import { Suspense, useEffect, useState } from 'react'
+import { useDebouncedCallback } from 'use-debounce'
+
+import { AddonList } from '@/components/dashboard/AddonList'
+import {
+  filteredAddonsAtom,
+  isAddonDialogOpenAtom,
+  searchQueryAtom,
+  selectedAddonAtom,
+} from '@/components/dashboard/atoms'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAddonStore } from '@/stores/addonStore'
-import { Button } from '@/components/ui/button'
-import { useEffect, useState, Suspense } from 'react'
-import { AddonList } from '@/components/dashboard/AddonList'
-import { useAtom, useAtomValue } from 'jotai'
-import { filteredAddonsAtom, isAddonDialogOpenAtom, searchQueryAtom, selectedAddonAtom } from '@/components/dashboard/atoms'
-import { useDebouncedCallback } from 'use-debounce'
+
 import { LocalAddonDialog } from './dashboard/LocalAddonDialog'
 
 export const Dashboard = () => {
@@ -79,12 +86,13 @@ export const Dashboard = () => {
         <LocalAddonDialog
           addon={selectedAddon}
           open={isAddonDialogOpen}
-          onOpenChange={(open) => {
+          onOpenChange={open => {
             setIsAddonDialogOpen(open)
             if (!open) {
               setTimeout(() => setSelectedAddon(null), 200)
             }
-          }} />
+          }}
+        />
       )}
 
       <main className="flex-1 container mx-auto px-4 pt-4 min-h-screen-minus-12 overflow-hidden">
