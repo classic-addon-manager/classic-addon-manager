@@ -1,10 +1,11 @@
-import { useAddonStore } from '@/stores/addonStore'
-import { Package } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { LocalAddon } from '@/components/dashboard/LocalAddon.tsx'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useAtomValue } from 'jotai'
+import { Package } from 'lucide-react'
+
 import { filteredAddonsAtom } from '@/components/dashboard/atoms.ts'
-import { motion, AnimatePresence } from 'framer-motion'
+import { LocalAddon } from '@/components/dashboard/LocalAddon.tsx'
+import { Button } from '@/components/ui/button'
+import { useAddonStore } from '@/stores/addonStore'
 
 export const AddonList = () => {
   const { installedAddons } = useAddonStore()
@@ -48,13 +49,13 @@ export const AddonList = () => {
               <motion.div
                 key={addon.name}
                 initial={{ opacity: 0 }}
-                animate={{ 
+                animate={{
                   opacity: 1,
-                  transition: { duration: 0.30 }
+                  transition: { duration: 0.3 },
                 }}
-                exit={{ 
+                exit={{
                   opacity: 0,
-                  transition: { duration: 0.20 }
+                  transition: { duration: 0.2 },
                 }}
                 className="transition-all duration-300 hover:bg-muted/20"
               >

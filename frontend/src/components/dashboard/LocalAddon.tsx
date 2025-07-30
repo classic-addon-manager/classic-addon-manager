@@ -1,8 +1,7 @@
-import { atom, useAtom } from 'jotai'
+import { useAtom } from 'jotai'
 import { useEffect, useState } from 'react'
 
 import { AddonStatus } from '@/components/dashboard/AddonStatus'
-import { UpdateDialogAtomContext } from '@/components/dashboard/contexts'
 import { LocalAddonContextMenu } from '@/components/dashboard/LocalAddonContextMenu'
 import { LocalAddonUpdateDialog } from '@/components/dashboard/LocalAddonUpdateDialog'
 import { cn } from '@/lib/utils'
@@ -19,7 +18,6 @@ export const LocalAddon = ({ addon }: LocalAddonProps) => {
   const [isContextMenuOpen, setIsContextMenuOpen] = useState(false)
   const [, setSelectedAddon] = useAtom(selectedAddonAtom)
   const [, setIsDialogOpen] = useAtom(isAddonDialogOpenAtom)
-  const isUpdateDialogOpenAtom = atom<boolean>(false)
   const [hasUpdate, setHasUpdate] = useState(false)
   const [latestRelease, setLatestRelease] = useState<Release | null>(null)
   const { latestReleasesMap } = useAddonStore()
@@ -30,10 +28,10 @@ export const LocalAddon = ({ addon }: LocalAddonProps) => {
     if (!latestRelease) return
     setHasUpdate(latestRelease.tag_name !== addon.version)
     setLatestRelease(latestRelease)
-  }, [latestReleasesMap])
+  }, [latestReleasesMap, addon.isManaged, addon.name, addon.version])
 
   return (
-    <UpdateDialogAtomContext.Provider value={isUpdateDialogOpenAtom}>
+    <>
       {hasUpdate && latestRelease && (
         <LocalAddonUpdateDialog addon={addon} release={latestRelease} />
       )}
@@ -56,6 +54,6 @@ export const LocalAddon = ({ addon }: LocalAddonProps) => {
           </div>
         </div>
       </LocalAddonContextMenu>
-    </UpdateDialogAtomContext.Provider>
+    </>
   )
 }

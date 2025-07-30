@@ -1,9 +1,7 @@
-import { useAtom } from 'jotai'
 import { ArrowUpCircle, CalendarDays, LoaderCircle, Package, Tag, User } from 'lucide-react'
-import { useContext, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Markdown from 'react-markdown'
 
-import { UpdateDialogAtomContext } from '@/components/dashboard/contexts'
 import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
@@ -15,6 +13,7 @@ import {
 } from '@/components/ui/dialog'
 import { formatToLocalTime } from '@/lib/utils'
 import type { Addon, Release } from '@/lib/wails'
+import { useUpdateDialogStore } from '@/stores/updateDialogStore'
 
 import { Button } from '../ui/button'
 
@@ -24,15 +23,9 @@ interface Props {
 }
 
 export const LocalAddonUpdateDialog = ({ addon, release }: Props) => {
-  const atomContext = useContext(UpdateDialogAtomContext)
-  if (!atomContext) {
-    throw new Error('LocalAddonUpdateDialog must be used within UpdateDialogAtomContext')
-  }
-
-  const [open, setOpen] = useAtom(atomContext)
-
   const [changelog, setChangelog] = useState<string>('')
   const [isUpdating, setIsUpdating] = useState<boolean>(false)
+  const { open, setOpen } = useUpdateDialogStore()
 
   useEffect(() => {
     if (open && release?.body) {
@@ -40,7 +33,7 @@ export const LocalAddonUpdateDialog = ({ addon, release }: Props) => {
     } else {
       setChangelog('No change log was provided')
     }
-  }, [open])
+  }, [open, release.body])
 
   const handleUpdateClick = async () => {
     setIsUpdating(true)
