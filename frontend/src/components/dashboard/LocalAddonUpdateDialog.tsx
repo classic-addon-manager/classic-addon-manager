@@ -1,4 +1,12 @@
-import { ArrowUpCircle, CalendarDays, LoaderCircle, Package, Tag, User } from 'lucide-react'
+import {
+  AlertTriangleIcon,
+  ArrowUpCircle,
+  CalendarDays,
+  LoaderCircle,
+  Package,
+  Tag,
+  User,
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 import Markdown from 'react-markdown'
 
@@ -11,11 +19,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { formatToLocalTime } from '@/lib/utils'
+import { repoGetManifest } from '@/lib/repo.ts'
+import { formatToLocalTime, safeCall } from '@/lib/utils'
 import type { Addon, Release } from '@/lib/wails'
+import { useAddonStore } from '@/stores/addonStore'
 import { useUpdateDialogStore } from '@/stores/updateDialogStore'
 
 import { Button } from '../ui/button'
+import { toast } from '../ui/toast'
 
 interface Props {
   addon: Addon
@@ -26,6 +37,7 @@ export const LocalAddonUpdateDialog = ({ addon, release }: Props) => {
   const [changelog, setChangelog] = useState<string>('')
   const [isUpdating, setIsUpdating] = useState<boolean>(false)
   const { open, setOpen } = useUpdateDialogStore()
+  const { install } = useAddonStore()
 
   useEffect(() => {
     if (open && release?.body) {
@@ -37,7 +49,39 @@ export const LocalAddonUpdateDialog = ({ addon, release }: Props) => {
 
   const handleUpdateClick = async () => {
     setIsUpdating(true)
-    alert('TODO: Finish this')
+
+    const updateOperation = async () => {
+      const manifest = await repoGetManifest(addon.name)
+      return await install(manifest, release.tag_name)
+    }
+
+    const [didInstall, err] = await safeCall<boolean>(updateOperation())
+
+    if (err) {
+      if (err.message.includes('not found')) {
+        toast({
+          title: 'Error',
+          description: 'No release found for this addon',
+          icon: AlertTriangleIcon,
+        })
+      } else {
+        toast({
+          title: 'Error',
+          description: `Failed to update addon: ${err.message.substring(0, 100)}`,
+        })
+      }
+      setIsUpdating(false)
+      return
+    }
+
+    if (didInstall) {
+      toast({
+        title: 'Addon updated',
+        description: `${addon.alias} was updated to ${release.tag_name}`,
+        icon: ArrowUpCircle,
+      })
+    }
+    setIsUpdating(false)
   }
 
   const ReleaseInformation = () => {
@@ -108,7 +152,7 @@ export const LocalAddonUpdateDialog = ({ addon, release }: Props) => {
               onClick={handleUpdateClick}
               className="w-full sm:w-auto"
             >
-              <ArrowUpCircle className="w-5 h-4 mr-2" />
+              <ArrowUpCircle className="w-5 h-4" />
               Update to {release.tag_name}
             </Button>
           )}

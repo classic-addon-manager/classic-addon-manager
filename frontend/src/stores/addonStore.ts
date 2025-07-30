@@ -1,6 +1,8 @@
 import { create } from 'zustand'
+
 import { safeCall } from '@/lib/utils.ts'
-import { RemoteAddonService, LocalAddonService, Addon, Release, AddonManifest } from '@/lib/wails'
+import type { Addon, AddonManifest, Release } from '@/lib/wails'
+import { LocalAddonService, RemoteAddonService } from '@/lib/wails'
 
 interface AddonState {
   // State
