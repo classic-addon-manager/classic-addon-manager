@@ -2,7 +2,7 @@ import { useAtom, useAtomValue } from 'jotai'
 import { Browser } from '@wailsio/runtime'
 
 import { SidebarItem } from './SidebarItem'
-import { Home, Blocks, LifeBuoy, Globe } from 'lucide-react'
+import { Home, Blocks, WrenchIcon, Globe, SettingsIcon } from 'lucide-react'
 import { activePageAtom, type PageId } from '@/atoms/sidebarAtoms'
 import { versionAtom } from '@/atoms/applicationAtoms'
 import { useAddonStore } from '@/stores/addonStore'
@@ -29,7 +29,13 @@ export const Sidebar = () => {
     {
       id: 'troubleshooting' as PageId,
       name: 'Troubleshooting',
-      icon: <LifeBuoy className="h-4 w-4" />,
+      icon: <WrenchIcon className="h-4 w-4" />,
+      badgeCount: -1,
+    },
+    {
+      id: 'settings' as PageId,
+      name: 'Settings',
+      icon: <SettingsIcon className="h-4 w-4" />,
       badgeCount: -1,
     },
   ]
