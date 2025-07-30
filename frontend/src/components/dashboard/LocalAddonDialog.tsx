@@ -1,32 +1,33 @@
+import { clsx } from 'clsx'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog'
-import type { Addon } from '@/lib/wails'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import {
+  AlertTriangleIcon,
   PackageIcon,
+  RefreshCw,
   Tag,
-  User,
   ThumbsDownIcon,
   ThumbsUpIcon,
   Trash2,
-  RefreshCw,
-  AlertTriangleIcon,
+  User,
 } from 'lucide-react'
 import { Suspense, useEffect, useState } from 'react'
-import { Badge } from '@/components/ui/badge'
-import { RemoteAddonReadme } from '@/components/shared/RemoteAddonReadme'
+
 import { AddonRepositoryMatch } from '@/components/dashboard/AddonRepositoryMatch'
+import { RemoteAddonReadme } from '@/components/shared/RemoteAddonReadme'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { useUserStore } from '@/stores/userStore'
-import { apiClient } from '@/lib/api'
-import { clsx } from 'clsx'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { toast } from '@/components/ui/toast.tsx'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { apiClient } from '@/lib/api'
+import type { Addon } from '@/lib/wails'
+import { useUserStore } from '@/stores/userStore'
 
 interface LocalAddonDialogProps {
   addon: Addon
