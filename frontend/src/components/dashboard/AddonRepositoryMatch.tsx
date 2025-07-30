@@ -1,12 +1,15 @@
+import { useAtom } from 'jotai'
 import { AlertTriangleIcon, ArrowUpCircle, CheckIcon } from 'lucide-react'
 import usePromise from 'react-promise-suspense'
 
-import { Button } from '@/components/ui/button.tsx'
+import { Button } from '@/components/ui/button'
 import { toast } from '@/components/ui/toast'
 import { repoGetManifest } from '@/lib/repo'
 import { safeCall } from '@/lib/utils.ts'
 import type { AddonManifest } from '@/lib/wails'
-import { useAddonStore } from '@/stores/addonStore.ts'
+import { useAddonStore } from '@/stores/addonStore'
+
+import { isAddonDialogOpenAtom, selectedAddonAtom } from './atoms'
 
 const fetchData = async (name: string) => {
   const [manifest, err] = await safeCall(repoGetManifest(name))
@@ -20,6 +23,8 @@ const fetchData = async (name: string) => {
 export const AddonRepositoryMatch = ({ name }: { name: string }) => {
   const data = usePromise(fetchData, [name])
   const { install, performBulkUpdateCheck } = useAddonStore()
+  const [, setDialogOpen] = useAtom(isAddonDialogOpenAtom)
+  const [, setSelectedAddon] = useAtom(selectedAddonAtom)
 
   if (!data) {
     return null
@@ -64,6 +69,9 @@ export const AddonRepositoryMatch = ({ name }: { name: string }) => {
       title: 'Addon Matched',
       description: `"${manifest.alias}" is now managed by Classic Addon Manager.`,
     })
+
+    setDialogOpen(false)
+    setSelectedAddon(null)
   }
 
   return (
