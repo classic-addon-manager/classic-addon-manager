@@ -1,6 +1,8 @@
 import { clsx } from 'clsx'
+import { useAtom } from 'jotai'
 import {
   AlertTriangleIcon,
+  CheckIcon,
   PackageIcon,
   RefreshCw,
   Tag,
@@ -9,9 +11,10 @@ import {
   Trash2,
   User,
 } from 'lucide-react'
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useCallback, useEffect, useState } from 'react'
 
 import { AddonRepositoryMatch } from '@/components/dashboard/AddonRepositoryMatch'
+import { isAddonDialogOpenAtom, selectedAddonAtom } from '@/components/dashboard/atoms.ts'
 import { RemoteAddonReadme } from '@/components/shared/RemoteAddonReadme'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -26,7 +29,10 @@ import {
 import { toast } from '@/components/ui/toast.tsx'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { apiClient } from '@/lib/api'
-import type { Addon } from '@/lib/wails'
+import { repoGetManifest } from '@/lib/repo'
+import { safeCall } from '@/lib/utils'
+import type { Addon, AddonManifest } from '@/lib/wails'
+import { useAddonStore } from '@/stores/addonStore'
 import { useUserStore } from '@/stores/userStore'
 
 interface LocalAddonDialogProps {
@@ -40,7 +46,10 @@ export const LocalAddonDialog = ({ addon, onOpenChange, open }: LocalAddonDialog
   const [initiallyManaged, setInitiallyManaged] = useState(false)
   const [hasBeenOpened, setHasBeenOpened] = useState(false)
   const [rating, setRating] = useState(0)
+  const [, setSelectedAddon] = useAtom(selectedAddonAtom)
+  const [, setIsDialogOpen] = useAtom(isAddonDialogOpenAtom)
   const { isAuthenticated } = useUserStore()
+  const { install } = useAddonStore()
 
   // Set initial managed state when dialog opens
   useEffect(() => {
@@ -66,16 +75,7 @@ export const LocalAddonDialog = ({ addon, onOpenChange, open }: LocalAddonDialog
     }
   }, [addon.isManaged, onOpenChange, open, initiallyManaged, hasBeenOpened])
 
-  // Fetch readme when dialog opens
-  useEffect(() => {
-    if (!open) {
-      return
-    }
-    getMyRating()
-    getReadme()
-  }, [open])
-
-  const getReadme = async () => {
+  const getReadme = useCallback(async () => {
     const fallbackReadme = addon.description || 'No description provided'
 
     if (!addon.repo) {
@@ -95,9 +95,9 @@ export const LocalAddonDialog = ({ addon, onOpenChange, open }: LocalAddonDialog
 
     const text = await response.text()
     setReadme(text)
-  }
+  }, [addon.repo, addon.branch, addon.description])
 
-  const getMyRating = async () => {
+  const getMyRating = useCallback(async () => {
     if (!isAuthenticated) return
     apiClient
       .get(`/addon/${addon.name}/my-rating`)
@@ -110,7 +110,20 @@ export const LocalAddonDialog = ({ addon, onOpenChange, open }: LocalAddonDialog
       .catch(e => {
         console.error('Failed to fetch rating: ', e)
       })
-  }
+  }, [addon.name, isAuthenticated])
+
+  // Fetch readme when dialog opens
+  useEffect(() => {
+    if (!open) {
+      return
+    }
+    getMyRating().catch(e => {
+      console.error('Failed to fetch rating: ', e)
+    })
+    getReadme().catch(e => {
+      console.error('Failed to fetch readme: ', e)
+    })
+  }, [open, getMyRating, getReadme])
 
   const rateAddon = async (newRating: number) => {
     if (rating === newRating) return
@@ -143,6 +156,38 @@ export const LocalAddonDialog = ({ addon, onOpenChange, open }: LocalAddonDialog
     }
 
     setRating(newRating)
+  }
+
+  const handleReinstall = async () => {
+    const [manifest, manifestError] = await safeCall<AddonManifest>(repoGetManifest(addon.name))
+
+    if (manifestError || !manifest) {
+      if (manifestError?.message.includes('no release found')) {
+        toast({
+          title: 'Error',
+          description: 'No release found for this addon',
+          icon: AlertTriangleIcon,
+        })
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Failed to fetch manifest during reinstall, try again later',
+        })
+      }
+      return
+    }
+
+    const didInstall: boolean = await install(manifest, 'latest')
+    if (!didInstall) return
+
+    toast({
+      title: 'Addon reinstalled',
+      description: `${addon.alias} was reinstalled`,
+      icon: CheckIcon,
+    })
+
+    setSelectedAddon(null)
+    setIsDialogOpen(false)
   }
 
   const UnmanagedAddonNotice = () => {
@@ -289,7 +334,7 @@ export const LocalAddonDialog = ({ addon, onOpenChange, open }: LocalAddonDialog
                   type="button"
                   variant="outline"
                   className="flex items-center"
-                  onClick={() => window.alert('Not implemented')}
+                  onClick={handleReinstall}
                 >
                   <RefreshCw className="w-4 h-4" />
                   Reinstall

@@ -1,12 +1,14 @@
-import { cn } from '@/lib/utils'
-import { Addon, Release } from '@/lib/wails'
+import { atom, useAtom, type WritableAtom } from 'jotai'
+import { createContext, useEffect, useState } from 'react'
+
 import { AddonStatus } from '@/components/dashboard/AddonStatus'
 import { LocalAddonContextMenu } from '@/components/dashboard/LocalAddonContextMenu'
-import { createContext, useEffect, useState } from 'react'
-import { useAddonStore } from '@/stores/addonStore'
 import { LocalAddonUpdateDialog } from '@/components/dashboard/LocalAddonUpdateDialog'
-import {isAddonDialogOpenAtom, selectedAddonAtom} from './atoms'
-import { atom, useAtom, type WritableAtom } from 'jotai'
+import { cn } from '@/lib/utils'
+import type { Addon, Release } from '@/lib/wails'
+import { useAddonStore } from '@/stores/addonStore'
+
+import { isAddonDialogOpenAtom, selectedAddonAtom } from './atoms'
 
 interface LocalAddonProps {
   addon: Addon
