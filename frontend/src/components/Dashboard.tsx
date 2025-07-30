@@ -5,12 +5,15 @@ import { Button } from '@/components/ui/button'
 import { useEffect, useState, Suspense } from 'react'
 import { AddonList } from '@/components/dashboard/AddonList'
 import { useAtom, useAtomValue } from 'jotai'
-import { filteredAddonsAtom, searchQueryAtom } from '@/components/dashboard/atoms.ts'
+import { filteredAddonsAtom, isAddonDialogOpenAtom, searchQueryAtom, selectedAddonAtom } from '@/components/dashboard/atoms'
 import { useDebouncedCallback } from 'use-debounce'
+import { LocalAddonDialog } from './dashboard/LocalAddonDialog'
 
 export const Dashboard = () => {
   const { isCheckingForUpdates, performBulkUpdateCheck, updateInstalledAddons } = useAddonStore()
   const [isLoading, setIsLoading] = useState(false)
+  const [selectedAddon, setSelectedAddon] = useAtom(selectedAddonAtom)
+  const [isAddonDialogOpen, setIsAddonDialogOpen] = useAtom(isAddonDialogOpenAtom)
   const [, setSearchQuery] = useAtom(searchQueryAtom)
   const filteredAddons = useAtomValue(filteredAddonsAtom)
 
@@ -71,6 +74,18 @@ export const Dashboard = () => {
           </div>
         </div>
       </header>
+
+      {selectedAddon && (
+        <LocalAddonDialog
+          addon={selectedAddon}
+          open={isAddonDialogOpen}
+          onOpenChange={(open) => {
+            setIsAddonDialogOpen(open)
+            if (!open) {
+              setTimeout(() => setSelectedAddon(null), 200)
+            }
+          }} />
+      )}
 
       <main className="flex-1 container mx-auto px-4 pt-4 min-h-screen-minus-12 overflow-hidden">
         <div className="flex items-center justify-between mb-6">

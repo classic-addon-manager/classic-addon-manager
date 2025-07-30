@@ -1,12 +1,12 @@
 import { cn } from '@/lib/utils'
 import { Addon, Release } from '@/lib/wails'
-import { AddonStatus } from '@/components/dashboard/AddonStatus.tsx'
-import { LocalAddonContextMenu } from '@/components/dashboard/LocalAddonContextMenu.tsx'
+import { AddonStatus } from '@/components/dashboard/AddonStatus'
+import { LocalAddonContextMenu } from '@/components/dashboard/LocalAddonContextMenu'
 import { createContext, useEffect, useState } from 'react'
-import { LocalAddonDialog } from '@/components/dashboard/LocalAddonDialog'
-import { useAddonStore } from '@/stores/addonStore.ts'
+import { useAddonStore } from '@/stores/addonStore'
 import { LocalAddonUpdateDialog } from '@/components/dashboard/LocalAddonUpdateDialog'
-import { atom, type WritableAtom } from 'jotai'
+import {isAddonDialogOpenAtom, selectedAddonAtom} from './atoms'
+import { atom, useAtom, type WritableAtom } from 'jotai'
 
 interface LocalAddonProps {
   addon: Addon
@@ -16,7 +16,8 @@ export const UpdateDialogAtomContext = createContext<WritableAtom<boolean, any, 
 
 export const LocalAddon = ({ addon }: LocalAddonProps) => {
   const [isContextMenuOpen, setIsContextMenuOpen] = useState(false)
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [, setSelectedAddon] = useAtom(selectedAddonAtom)
+  const [, setIsDialogOpen] = useAtom(isAddonDialogOpenAtom)
   const isUpdateDialogOpenAtom = atom<boolean>(false)
   const [hasUpdate, setHasUpdate] = useState(false)
   const [latestRelease, setLatestRelease] = useState<Release | null>(null)
@@ -35,14 +36,16 @@ export const LocalAddon = ({ addon }: LocalAddonProps) => {
       {hasUpdate && latestRelease && (
         <LocalAddonUpdateDialog addon={addon} release={latestRelease} />
       )}
-      <LocalAddonDialog addon={addon} open={isDialogOpen} onOpenChange={setIsDialogOpen} />
       <LocalAddonContextMenu addon={addon} onOpenChange={setIsContextMenuOpen}>
         <div
           className={cn(
             'cursor-pointer grid grid-cols-4 p-2 hover:bg-muted/50 border-t transition-colors items-center text-sm',
             isContextMenuOpen && 'bg-muted'
           )}
-          onClick={() => setIsDialogOpen(true)}
+          onClick={() => {
+            setSelectedAddon(addon)
+            setIsDialogOpen(true)
+          }}
         >
           <div className="font-medium">{addon.alias}</div>
           <div className="text-center">{addon.author}</div>

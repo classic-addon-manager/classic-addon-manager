@@ -1,8 +1,12 @@
-import { useAddonStore } from '@/stores/addonStore.ts'
+import { useAddonStore } from '@/stores/addonStore'
 import { atomWithStore } from 'jotai-zustand'
 import { atom } from 'jotai'
+import type { Addon } from '@/lib/wails'
 
 export const searchQueryAtom = atom<string>('')
+export const selectedAddonAtom = atom<Addon | null>(null)
+export const isAddonDialogOpenAtom = atom<boolean>(false)
+
 const addonStoreAtom = atomWithStore(useAddonStore)
 
 export const filteredAddonsAtom = atom(get => {
