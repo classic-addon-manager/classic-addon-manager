@@ -1,3 +1,10 @@
+import { useAtom } from 'jotai'
+import { ArrowUpCircle, CalendarDays, LoaderCircle, Package, Tag, User } from 'lucide-react'
+import { useContext, useEffect, useState } from 'react'
+import Markdown from 'react-markdown'
+
+import { UpdateDialogAtomContext } from '@/components/dashboard/contexts'
+import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
   DialogContent,
@@ -6,14 +13,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Addon, Release } from '@/lib/wails'
-import { useContext, useEffect, useState } from 'react'
-import { UpdateDialogAtomContext } from '@/components/dashboard/LocalAddon'
-import { useAtom } from 'jotai'
-import { ArrowUpCircle, CalendarDays, LoaderCircle, Package, Tag, User } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
 import { formatToLocalTime } from '@/lib/utils'
-import Markdown from 'react-markdown'
+import type { Addon, Release } from '@/lib/wails'
+
 import { Button } from '../ui/button'
 
 interface Props {

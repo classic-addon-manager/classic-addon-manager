@@ -1,10 +1,11 @@
-import { Addon } from '@/lib/wails'
-import { Download, LoaderCircle, Check, ShieldQuestion } from 'lucide-react'
-import { useAddonStore } from '@/stores/addonStore'
-import { Badge } from '@/components/ui/badge'
-import { useContext } from 'react'
-import { UpdateDialogAtomContext } from './LocalAddon'
 import { useAtom, type WritableAtom } from 'jotai'
+import { Check, Download, LoaderCircle, ShieldQuestion } from 'lucide-react'
+import { useContext } from 'react'
+
+import { UpdateDialogAtomContext } from '@/components/dashboard/contexts'
+import { Badge } from '@/components/ui/badge'
+import type { Addon } from '@/lib/wails'
+import { useAddonStore } from '@/stores/addonStore'
 
 export const AddonStatus = ({ addon }: { addon: Addon }) => {
   const updateDialogAtom = useContext(UpdateDialogAtomContext)

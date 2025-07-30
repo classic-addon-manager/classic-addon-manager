@@ -1,7 +1,8 @@
-import { atom, useAtom, type WritableAtom } from 'jotai'
-import { createContext, useEffect, useState } from 'react'
+import { atom, useAtom } from 'jotai'
+import { useEffect, useState } from 'react'
 
 import { AddonStatus } from '@/components/dashboard/AddonStatus'
+import { UpdateDialogAtomContext } from '@/components/dashboard/contexts'
 import { LocalAddonContextMenu } from '@/components/dashboard/LocalAddonContextMenu'
 import { LocalAddonUpdateDialog } from '@/components/dashboard/LocalAddonUpdateDialog'
 import { cn } from '@/lib/utils'
@@ -13,8 +14,6 @@ import { isAddonDialogOpenAtom, selectedAddonAtom } from './atoms'
 interface LocalAddonProps {
   addon: Addon
 }
-
-export const UpdateDialogAtomContext = createContext<WritableAtom<boolean, any, any> | null>(null)
 
 export const LocalAddon = ({ addon }: LocalAddonProps) => {
   const [isContextMenuOpen, setIsContextMenuOpen] = useState(false)
