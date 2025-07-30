@@ -49,7 +49,7 @@ export const LocalAddonDialog = ({ addon, onOpenChange, open }: LocalAddonDialog
   const [, setSelectedAddon] = useAtom(selectedAddonAtom)
   const [, setIsDialogOpen] = useAtom(isAddonDialogOpenAtom)
   const { isAuthenticated } = useUserStore()
-  const { install } = useAddonStore()
+  const { install, uninstall } = useAddonStore()
 
   // Set initial managed state when dialog opens
   useEffect(() => {
@@ -188,6 +188,26 @@ export const LocalAddonDialog = ({ addon, onOpenChange, open }: LocalAddonDialog
 
     setSelectedAddon(null)
     setIsDialogOpen(false)
+  }
+
+  const handleUninstall = async () => {
+    const didUninstall = await uninstall(addon)
+    if (!didUninstall) {
+      toast({
+        title: 'Error',
+        description: 'Failed to uninstall addon, check log file for more information',
+        icon: AlertTriangleIcon,
+      })
+      return
+    }
+    toast({
+      title: 'Addon uninstalled',
+      description: `${addon.alias} was uninstalled`,
+      icon: CheckIcon,
+    })
+
+    setIsDialogOpen(false)
+    setSelectedAddon(null)
   }
 
   const UnmanagedAddonNotice = () => {
@@ -344,7 +364,7 @@ export const LocalAddonDialog = ({ addon, onOpenChange, open }: LocalAddonDialog
                 type="button"
                 variant="destructive"
                 className="flex items-center"
-                onClick={() => window.alert('Not implemented')}
+                onClick={handleUninstall}
               >
                 <Trash2 className="w-4 h-4" />
                 Uninstall
