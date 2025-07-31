@@ -160,7 +160,7 @@ const AccordionItemBadge = ({ itemId, issueCount }: { itemId: string; issueCount
       {issueCount} {issueCount === 1 ? 'issue' : 'issues'} found
     </Badge>
   ) : (
-    <Badge variant="default" className="ml-auto bg-green-600 hover:bg-green-700">
+    <Badge variant="default" className="ml-auto bg-green-600 hover:bg-green-700 text-foreground">
       No issues detected
     </Badge>
   )
