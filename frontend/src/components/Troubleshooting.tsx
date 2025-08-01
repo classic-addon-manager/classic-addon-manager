@@ -1,4 +1,4 @@
-import { ChevronsUpDown, WrenchIcon } from 'lucide-react'
+import { AlertTriangleIcon, CheckIcon, ChevronsUpDown, WrenchIcon } from 'lucide-react'
 
 import {
   Accordion,
@@ -14,6 +14,11 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible.tsx'
 import { ScrollArea } from '@/components/ui/scroll-area.tsx'
+import { safeCall } from '@/lib/utils'
+import { LocalAddonService } from '@/lib/wails'
+import { useAddonStore } from '@/stores/addonStore'
+
+import { toast } from './ui/toast'
 
 interface AccordionItemData {
   id: string
@@ -23,8 +28,6 @@ interface AccordionItemData {
 interface TroubleshootingProps {
   issueCount?: number
   groupedIssues?: Record<string, Array<{ error: string; file: string }>>
-  onResetAddonSettings?: () => void
-  onUninstallAllAddons?: () => void
 }
 
 const Header = () => {
@@ -64,44 +67,93 @@ const SpecificAddonIssueContent = () => (
   </div>
 )
 
-const NoAddonsWorkingContent = ({
-  onResetAddonSettings,
-  onUninstallAllAddons,
-}: Pick<TroubleshootingProps, 'onResetAddonSettings' | 'onUninstallAllAddons'>) => (
-  <div className="px-6 py-4 bg-muted/20">
-    <div className="space-y-4">
-      <p className="text-muted-foreground">
-        When all addons stop working, it's typically due to a corrupted addon_settings file.
-      </p>
+const NoAddonsWorkingContent = () => {
+  const { installedAddons, uninstall } = useAddonStore()
 
-      <div className="bg-muted/30 p-4 rounded-lg space-y-3">
-        <div className="flex items-start gap-2">
-          <div className="w-2 h-2 mt-2 rounded-full bg-green-400"></div>
-          <p className="flex-1">
-            <span className="font-medium text-green-400">Recommended:</span> Try resetting your
-            addon settings first
-          </p>
-        </div>
-        <div className="flex items-start gap-2">
-          <div className="w-2 h-2 mt-2 rounded-full bg-red-400"></div>
-          <p className="flex-1">
-            <span className="font-medium text-red-400">Last resort:</span> Uninstall all addons and
-            reset settings if the first option doesn't work
-          </p>
-        </div>
-      </div>
+  const onResetAddonSettings = async () => {
+    const [, err] = await safeCall(LocalAddonService.ResetSettings())
+    if (err) {
+      console.error('Failed to reset addon settings:', err)
+      toast({
+        title: 'Error',
+        description: 'Failed to reset addon settings',
+        icon: AlertTriangleIcon,
+      })
+      return
+    }
+    toast({
+      title: 'Addon settings reset',
+      description: 'Addon settings have been reset. Please restart the game',
+      icon: CheckIcon,
+    })
+  }
 
-      <div className="flex gap-3 mt-4">
-        <Button className="w-1/2" onClick={onResetAddonSettings}>
-          Reset addon settings
-        </Button>
-        <Button variant="destructive" className="w-1/2" onClick={onUninstallAllAddons}>
-          Uninstall all addons
-        </Button>
+  const onUninstallAllAddons = async () => {
+    if (installedAddons.length === 0) {
+      toast({
+        title: 'Error',
+        description: 'There are no addons installed to uninstall',
+        icon: AlertTriangleIcon,
+      })
+      return
+    }
+    let i = 0
+    for (const a of installedAddons) {
+      const uninstalled = await uninstall(a)
+      if (!uninstalled) {
+        toast({
+          title: 'Error',
+          description: `Failed to uninstall addon: ${a.alias}`,
+          icon: AlertTriangleIcon,
+        })
+        return
+      }
+      i++
+    }
+    toast({
+      title: 'Success',
+      description: `${i} addons were uninstalled successfully. Please restart the game.`,
+      icon: CheckIcon,
+    })
+    onResetAddonSettings()
+  }
+
+  return (
+    <div className="px-6 py-4 bg-muted/20">
+      <div className="space-y-4">
+        <p className="text-muted-foreground">
+          When all addons stop working, it's typically due to a corrupted addon_settings file.
+        </p>
+
+        <div className="bg-muted/30 p-4 rounded-lg space-y-3">
+          <div className="flex items-start gap-2">
+            <div className="w-2 h-2 mt-2 rounded-full bg-green-400"></div>
+            <p className="flex-1">
+              <span className="font-medium text-green-400">Recommended:</span> Try resetting your
+              addon settings first
+            </p>
+          </div>
+          <div className="flex items-start gap-2">
+            <div className="w-2 h-2 mt-2 rounded-full bg-red-400"></div>
+            <p className="flex-1">
+              <span className="font-medium text-red-400">Last resort:</span> Uninstall all addons
+              and reset settings if the first option doesn't work
+            </p>
+          </div>
+        </div>
+
+        <div className="flex gap-3 mt-4">
+          <Button variant="secondary" className="w-1/2" onClick={onResetAddonSettings}>
+            Reset addon settings
+          </Button>
+          <Button variant="destructive" className="w-1/2" onClick={onUninstallAllAddons}>
+            Uninstall all addons
+          </Button>
+        </div>
       </div>
     </div>
-  </div>
-)
+  )
+}
 
 const DiagnosticResultsContent = ({
   issueCount = 0,
@@ -171,12 +223,7 @@ const renderAccordionContent = (itemId: string, props: TroubleshootingProps) => 
     case 'item-1':
       return <SpecificAddonIssueContent />
     case 'item-2':
-      return (
-        <NoAddonsWorkingContent
-          onResetAddonSettings={props.onResetAddonSettings}
-          onUninstallAllAddons={props.onUninstallAllAddons}
-        />
-      )
+      return <NoAddonsWorkingContent />
     case 'item-3':
       return (
         <DiagnosticResultsContent
@@ -190,12 +237,7 @@ const renderAccordionContent = (itemId: string, props: TroubleshootingProps) => 
 }
 
 export const Troubleshooting = (props: TroubleshootingProps = {}) => {
-  const {
-    issueCount = 0,
-    groupedIssues = {},
-    onResetAddonSettings = () => console.log('Reset addon settingsl'),
-    onUninstallAllAddons = () => console.log('Uninstall all addons'),
-  } = props
+  const { issueCount = 0, groupedIssues = {} } = props
 
   const accordionItems: AccordionItemData[] = [
     { id: 'item-1', title: 'Specific Addon Issue' },
@@ -226,8 +268,6 @@ export const Troubleshooting = (props: TroubleshootingProps = {}) => {
                     {renderAccordionContent(item.id, {
                       issueCount,
                       groupedIssues,
-                      onResetAddonSettings,
-                      onUninstallAllAddons,
                     })}
                   </AccordionContent>
                 </AccordionItem>
