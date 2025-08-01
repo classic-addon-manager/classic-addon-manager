@@ -1,7 +1,8 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { useAtomValue } from 'jotai'
+import { useAtom, useAtomValue } from 'jotai'
 import { Package } from 'lucide-react'
 
+import { activePageAtom } from '@/atoms/sidebarAtoms'
 import { filteredAddonsAtom } from '@/components/dashboard/atoms.ts'
 import { LocalAddon } from '@/components/dashboard/LocalAddon.tsx'
 import { Button } from '@/components/ui/button'
@@ -10,6 +11,7 @@ import { useAddonStore } from '@/stores/addonStore'
 export const AddonList = () => {
   const { installedAddons } = useAddonStore()
   const filteredAddons = useAtomValue(filteredAddonsAtom)
+  const [, setActiveItem] = useAtom(activePageAtom)
 
   if (installedAddons.length === 0) {
     return (
@@ -24,9 +26,9 @@ export const AddonList = () => {
         <Button
           size="lg"
           onClick={() => {
-            // TODO: Navigate to browse addons
+            setActiveItem('addons')
           }}
-          className="transition-all duration-200 hover:shadow-md"
+          className="transition-all duration-200 hover:shadow-md cursor-pointer"
         >
           Browse Addons
         </Button>
