@@ -103,6 +103,8 @@ export const useAddonStore = create<AddonState>((set, get) => ({
 
     if (result) {
       await get().updateInstalledAddons()
+      // Recompute available updates so the sidebar badge updates immediately
+      await get().performBulkUpdateCheck()
       return true
     }
 
