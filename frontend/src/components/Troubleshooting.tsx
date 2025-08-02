@@ -1,4 +1,5 @@
-import { AlertTriangleIcon, CheckIcon, ChevronsUpDown, WrenchIcon } from 'lucide-react'
+import { AlertTriangleIcon, CheckIcon, ChevronsUpDown, Loader2, WrenchIcon } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
 
 import {
   Accordion,
@@ -15,6 +16,7 @@ import {
 } from '@/components/ui/collapsible.tsx'
 import { ScrollArea } from '@/components/ui/scroll-area.tsx'
 import { safeCall } from '@/lib/utils'
+import type { LogParseResult } from '@/lib/wails'
 import { LocalAddonService } from '@/lib/wails'
 import { useAddonStore } from '@/stores/addonStore'
 
@@ -25,9 +27,9 @@ interface AccordionItemData {
   title: string
 }
 
-interface TroubleshootingProps {
-  issueCount?: number
-  groupedIssues?: Record<string, Array<{ error: string; file: string }>>
+interface DiagnosticData {
+  issueCount: number
+  groupedIssues: Record<string, Array<{ type: string; error: string; file: string }>>
 }
 
 const Header = () => {
@@ -115,7 +117,7 @@ const NoAddonsWorkingContent = () => {
       description: `${i} addons were uninstalled successfully. Please restart the game.`,
       icon: CheckIcon,
     })
-    onResetAddonSettings()
+    await onResetAddonSettings()
   }
 
   return (
@@ -155,10 +157,7 @@ const NoAddonsWorkingContent = () => {
   )
 }
 
-const DiagnosticResultsContent = ({
-  issueCount = 0,
-  groupedIssues = {},
-}: Pick<TroubleshootingProps, 'issueCount' | 'groupedIssues'>) => (
+const DiagnosticResultsContent = ({ issueCount, groupedIssues }: DiagnosticData) => (
   <div className="px-6 py-4 bg-muted/20">
     {issueCount === 0 ? (
       <div className="flex items-center justify-center py-8">
@@ -204,8 +203,25 @@ const DiagnosticResultsContent = ({
   </div>
 )
 
-const AccordionItemBadge = ({ itemId, issueCount }: { itemId: string; issueCount: number }) => {
+const AccordionItemBadge = ({
+  itemId,
+  issueCount,
+  isLoading,
+}: {
+  itemId: string
+  issueCount: number
+  isLoading?: boolean
+}) => {
   if (itemId !== 'item-3') return null
+
+  if (isLoading) {
+    return (
+      <Badge variant="secondary" className="ml-auto mr-4">
+        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+        Scanning...
+      </Badge>
+    )
+  }
 
   return issueCount > 0 ? (
     <Badge variant="destructive" className="ml-auto mr-4">
@@ -218,7 +234,7 @@ const AccordionItemBadge = ({ itemId, issueCount }: { itemId: string; issueCount
   )
 }
 
-const renderAccordionContent = (itemId: string, props: TroubleshootingProps) => {
+const renderAccordionContent = (itemId: string, diagnosticData: DiagnosticData) => {
   switch (itemId) {
     case 'item-1':
       return <SpecificAddonIssueContent />
@@ -227,8 +243,8 @@ const renderAccordionContent = (itemId: string, props: TroubleshootingProps) => 
     case 'item-3':
       return (
         <DiagnosticResultsContent
-          issueCount={props.issueCount}
-          groupedIssues={props.groupedIssues}
+          issueCount={diagnosticData.issueCount}
+          groupedIssues={diagnosticData.groupedIssues}
         />
       )
     default:
@@ -236,8 +252,69 @@ const renderAccordionContent = (itemId: string, props: TroubleshootingProps) => 
   }
 }
 
-export const Troubleshooting = (props: TroubleshootingProps = {}) => {
-  const { issueCount = 0, groupedIssues = {} } = props
+export const Troubleshooting = () => {
+  const [diagnosticData, setDiagnosticData] = useState<DiagnosticData>({
+    issueCount: 0,
+    groupedIssues: {},
+  })
+  const [isLoadingDiagnostics, setIsLoadingDiagnostics] = useState(false)
+
+  const runDiagnostics = useCallback(async () => {
+    setIsLoadingDiagnostics(prev => {
+      if (prev) return prev // Already loading, don't start again
+      return true
+    })
+
+    try {
+      const [issues, err] = await safeCall(LocalAddonService.DiagnoseIssues())
+
+      if (err) {
+        console.error('Failed to run diagnostics:', err)
+        toast({
+          title: 'Error',
+          description: 'Failed to run diagnostics',
+          icon: AlertTriangleIcon,
+        })
+        return
+      }
+
+      const issuesArray: LogParseResult[] = issues || []
+      const issueCount = issuesArray.length
+
+      // Group issues by addon
+      const groupedIssues: Record<string, Array<{ type: string; error: string; file: string }>> = {}
+      for (const issue of issuesArray) {
+        if (!groupedIssues[issue.Addon]) {
+          groupedIssues[issue.Addon] = []
+        }
+        groupedIssues[issue.Addon].push({
+          type: issue.Type,
+          error: issue.Error,
+          file: issue.File,
+        })
+      }
+
+      const diagnosticData: DiagnosticData = {
+        issueCount,
+        groupedIssues,
+      }
+
+      setDiagnosticData(diagnosticData)
+    } catch (error) {
+      console.error('Failed to run diagnostics:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to run diagnostics',
+        icon: AlertTriangleIcon,
+      })
+    } finally {
+      setIsLoadingDiagnostics(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    runDiagnostics()
+  }, [runDiagnostics])
 
   const accordionItems: AccordionItemData[] = [
     { id: 'item-1', title: 'Specific Addon Issue' },
@@ -261,14 +338,23 @@ export const Troubleshooting = (props: TroubleshootingProps = {}) => {
                   <AccordionTrigger className="hover:bg-muted/50 transition-colors px-6 w-full [&[data-state=open]]:no-underline hover:no-underline no-underline">
                     <div className="flex items-center gap-2 w-full">
                       <span className="text-lg">{item.title}</span>
-                      <AccordionItemBadge itemId={item.id} issueCount={issueCount} />
+                      <AccordionItemBadge
+                        itemId={item.id}
+                        issueCount={diagnosticData.issueCount}
+                        isLoading={isLoadingDiagnostics}
+                      />
                     </div>
                   </AccordionTrigger>
                   <AccordionContent>
-                    {renderAccordionContent(item.id, {
-                      issueCount,
-                      groupedIssues,
-                    })}
+                    {item.id === 'item-3' && isLoadingDiagnostics ? (
+                      <div className="px-6 py-4 bg-muted/20">
+                        <div className="flex items-center justify-center py-8">
+                          <p className="text-muted-foreground">Running diagnostics...</p>
+                        </div>
+                      </div>
+                    ) : (
+                      renderAccordionContent(item.id, diagnosticData)
+                    )}
                   </AccordionContent>
                 </AccordionItem>
               ))}
