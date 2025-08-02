@@ -117,6 +117,7 @@ const NoAddonsWorkingContent = () => {
       description: `${i} addons were uninstalled successfully. Please restart the game.`,
       icon: CheckIcon,
     })
+
     await onResetAddonSettings()
   }
 
@@ -294,12 +295,7 @@ export const Troubleshooting = () => {
         })
       }
 
-      const diagnosticData: DiagnosticData = {
-        issueCount,
-        groupedIssues,
-      }
-
-      setDiagnosticData(diagnosticData)
+      setDiagnosticData({ issueCount, groupedIssues })
     } catch (error) {
       console.error('Failed to run diagnostics:', error)
       toast({
