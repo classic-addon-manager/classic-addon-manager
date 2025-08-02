@@ -46,7 +46,7 @@ export const AddonList = () => {
       </div>
       <div className="overflow-y-auto">
         <div className="divide-y overflow-clip">
-          <AnimatePresence initial={false} mode="sync">
+          <AnimatePresence initial={false} mode="popLayout">
             {filteredAddons.map(addon => (
               <motion.div
                 key={addon.name}
