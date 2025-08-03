@@ -1,25 +1,31 @@
+import clsx from 'clsx'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
-import { SearchIcon } from 'lucide-react'
+import { AlertTriangleIcon, RefreshCw, SearchIcon } from 'lucide-react'
 import { useEffect } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 
 import {
   filteredAddonsAtom,
-  // addonsAtom,
   isAddonsReadyAtom,
+  isRefreshingAtom,
   loadAddonsAtom,
   searchQueryAtom,
   selectedTagAtom,
   tagsAtom,
 } from '@/components/addons/atoms.ts'
+import { Button } from '@/components/ui/button.tsx'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select'
+import { toast } from '@/components/ui/toast.tsx'
+import { safeCall } from '@/lib/utils.ts'
 
 const Header = () => {
+  const loadAddons = useSetAtom(loadAddonsAtom)
   const isReady = useAtomValue(isAddonsReadyAtom)
   const setSearchQuery = useSetAtom(searchQueryAtom)
   const [selectedTag, setSelectedTag] = useAtom(selectedTagAtom)
   const tags = useAtomValue(tagsAtom)
+  const [isRefreshing, setIsRefreshing] = useAtom(isRefreshingAtom)
 
   const debouncedSetSearch = useDebouncedCallback((value: string) => {
     setSearchQuery(value)
@@ -28,6 +34,34 @@ const Header = () => {
   useEffect(() => {
     console.log(selectedTag)
   }, [selectedTag])
+
+  const onRefresh = async () => {
+    if (isRefreshing) return
+    setIsRefreshing(true)
+
+    const startTime = Date.now()
+    const [, err] = await safeCall(loadAddons())
+    if (err) {
+      console.error('Failed to refresh addons', err)
+      toast({
+        title: 'Error',
+        description: `Failed to refresh addons: ${err.message.substring(0, 100)}`,
+        icon: AlertTriangleIcon,
+      })
+    }
+
+    const elapsedTime = Date.now() - startTime
+    if (elapsedTime < 500) {
+      await new Promise(resolve => setTimeout(resolve, 500 - elapsedTime))
+    }
+
+    setIsRefreshing(false)
+    toast({
+      title: 'Completed',
+      description: `Refreshed addons in ${elapsedTime}ms`,
+      icon: RefreshCw,
+    })
+  }
 
   return (
     <header className="bg-background/95 backdrop-blur-sm supports-[backdrop-filter]:bg-background/60 border-b">
@@ -53,6 +87,16 @@ const Header = () => {
               ))}
             </SelectContent>
           </Select>
+
+          <Button
+            variant="outline"
+            disabled={!isReady || isRefreshing}
+            className="min-w-[120px] w-[120px] flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-md"
+            onClick={onRefresh}
+          >
+            <RefreshCw className={clsx('h-4 w-4', isRefreshing && 'animate-spin')} />
+            {isRefreshing ? 'Refreshing' : 'Refresh'}
+          </Button>
         </div>
       </div>
     </header>
