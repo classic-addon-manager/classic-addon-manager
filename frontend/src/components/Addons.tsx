@@ -4,8 +4,8 @@ import { AlertTriangleIcon, RefreshCw, SearchIcon } from 'lucide-react'
 import { useEffect } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 
+import { AddonList } from '@/components/addons/AddonList.tsx'
 import {
-  filteredAddonsAtom,
   isAddonsReadyAtom,
   isRefreshingAtom,
   loadAddonsAtom,
@@ -105,7 +105,6 @@ const Header = () => {
 
 export const Addons = () => {
   const loadAddons = useSetAtom(loadAddonsAtom)
-  const filteredAddons = useAtomValue(filteredAddonsAtom)
 
   useEffect(() => {
     loadAddons()
@@ -114,11 +113,12 @@ export const Addons = () => {
   return (
     <div className="flex flex-col h-screen">
       <Header />
-      {filteredAddons.map(addon => (
-        <div key={addon.manifest.name} className="flex items-center justify-between p-4 border-b">
-          {addon.manifest.alias}
+
+      <div className="flex-1 overflow-auto">
+        <div className="container px-4">
+          <AddonList />
         </div>
-      ))}
+      </div>
     </div>
   )
 }
