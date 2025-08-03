@@ -28,3 +28,13 @@ export function formatToLocalTime(dateString: string): string {
   }
   return date.toLocaleString(undefined, options).replace(',', '')
 }
+
+/**
+ * Takes a go date and determines how long ago it was in days.
+ */
+export function daysAgo(dateString: string): number {
+  const date = new Date(dateString)
+  const now = new Date()
+  const diff = now.getTime() - date.getTime()
+  return Math.floor(diff / (1000 * 60 * 60 * 24))
+}
