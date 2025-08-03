@@ -8,6 +8,7 @@ import type { AddonListItem } from './types'
 export const isAddonsReadyAtom = atom(false)
 export const searchQueryAtom = atom('')
 export const selectedTagAtom = atom('All')
+export const isRefreshingAtom = atom(false)
 
 export const addonsAtom = atom<AddonListItem[]>([])
 export const tagsAtom = atom(['All'])
