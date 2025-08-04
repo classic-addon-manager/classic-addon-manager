@@ -84,7 +84,7 @@ export const RemoteAddon = ({ manifest, installed }: RemoteAddonProps) => {
           <>
             <span
               key={tag}
-              className="text-xs bg-secondary text-secondary-foreground px-1.5 py-0.5 rounded whitespace-nowrap"
+              className="text-xs bg-secondary text-secondary-foreground px-1.5 py-0.5 rounded whitespace-nowrap transition-all"
             >
               {tag}
             </span>
@@ -101,7 +101,7 @@ export const RemoteAddon = ({ manifest, installed }: RemoteAddonProps) => {
 
   return (
     <div
-      className="grid grid-cols-12 items-center gap-2 bg-muted/50 hover:bg-muted h-16 w-full rounded-lg cursor-pointer transition-colors px-3 py-2 group"
+      className="grid grid-cols-12 items-center gap-2 bg-muted/50 hover:bg-muted/70 h-16 w-full rounded-lg cursor-pointer transition-all px-3 py-2 group"
       onClick={() => alert('todo implement onclick')}
     >
       {/* Left Section: Icon, Title, Stats */}
