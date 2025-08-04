@@ -3,6 +3,7 @@ import { useAtomValue } from 'jotai'
 import { PackageSearch } from 'lucide-react'
 
 import { AddonSkeleton } from '@/components/addons/AddonSkeleton'
+import { RemoteAddon } from '@/components/addons/RemoteAddon'
 
 import { filteredAddonsAtom, isAddonsReadyAtom, searchQueryAtom } from './atoms'
 
@@ -51,7 +52,15 @@ export const AddonList = () => {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3, ease: 'easeOut' }}
         >
-          TODO: List addons
+          <div className="flex flex-1 flex-col gap-4 py-4">
+            {filteredAddons.map(addon => (
+              <RemoteAddon
+                key={addon.manifest.name}
+                manifest={addon.manifest}
+                installed={addon.isInstalled}
+              />
+            ))}
+          </div>
         </motion.main>
       )}
     </AnimatePresence>
