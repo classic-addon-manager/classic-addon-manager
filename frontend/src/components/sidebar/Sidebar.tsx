@@ -1,12 +1,13 @@
-import { useAtom, useAtomValue } from 'jotai'
 import { Browser } from '@wailsio/runtime'
+import { useAtom, useAtomValue } from 'jotai'
+import { Blocks, Globe, Home, Settings2Icon, WrenchIcon } from 'lucide-react'
+
+import { versionAtom } from '@/atoms/applicationAtoms'
+import { activePageAtom, type PageId } from '@/atoms/sidebarAtoms'
+import { UserBar } from '@/components/sidebar/UserBar.tsx'
+import { useAddonStore } from '@/stores/addonStore'
 
 import { SidebarItem } from './SidebarItem'
-import { Home, Blocks, WrenchIcon, Globe, SettingsIcon } from 'lucide-react'
-import { activePageAtom, type PageId } from '@/atoms/sidebarAtoms'
-import { versionAtom } from '@/atoms/applicationAtoms'
-import { useAddonStore } from '@/stores/addonStore'
-import { UserBar } from '@/components/sidebar/UserBar.tsx'
 
 export const Sidebar = () => {
   const [activeItem, setActiveItem] = useAtom(activePageAtom)
@@ -35,7 +36,7 @@ export const Sidebar = () => {
     {
       id: 'settings' as PageId,
       name: 'Settings',
-      icon: <SettingsIcon className="h-4 w-4" />,
+      icon: <Settings2Icon className="h-4 w-4" />,
       badgeCount: -1,
     },
   ]

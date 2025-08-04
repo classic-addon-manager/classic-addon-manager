@@ -1,9 +1,10 @@
 import { atom } from 'jotai'
-import { type ComponentType } from 'react'
-import { Dashboard } from '@/components/Dashboard'
+import type { ComponentType } from 'react'
+
 import { Addons } from '@/components/Addons'
-import { Troubleshooting } from '@/components/Troubleshooting'
+import { Dashboard } from '@/components/Dashboard'
 import { Settings } from '@/components/Settings'
+import { Troubleshooting } from '@/components/Troubleshooting'
 
 export type PageId = 'dashboard' | 'addons' | 'troubleshooting' | 'settings'
 
