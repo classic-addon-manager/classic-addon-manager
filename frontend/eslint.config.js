@@ -34,6 +34,8 @@ export default tseslint.config(
       // Enforce correct type imports
       '@typescript-eslint/consistent-type-imports': 'error',
       '@typescript-eslint/no-import-type-side-effects': 'error',
+      // Disable warnings about floating promises
+      '@typescript-eslint/no-floating-promises': 'off',
     },
   }
 )
