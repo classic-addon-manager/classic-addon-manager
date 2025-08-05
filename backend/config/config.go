@@ -1,6 +1,7 @@
 package config
 
 import (
+	"ClassicAddonManager/backend/logger"
 	"errors"
 	"fmt"
 	"github.com/spf13/viper"
@@ -11,17 +12,15 @@ import (
 	"strconv"
 )
 
-var aacPath = "C:\\AAClassic\\Documents"
-
-func setDefaults() {
-	// GENERAL
-	viper.SetDefault("general.aacpath", aacPath)
-}
-
 func LoadConfig() error {
 	err := getOrCreateConfig()
 	if err != nil {
 		return err
+	}
+
+	if !GetBool("general.autodetectpath") {
+		logger.Info("Settings: Override path is enabled, will not detect AAC path")
+		return nil
 	}
 
 	path, err := detectAACPath()
@@ -30,9 +29,7 @@ func LoadConfig() error {
 		return err
 	}
 
-	aacPath = path + "\\Documents"
-
-	// Workaround for early testers
+	aacPath := path + "\\Documents"
 	SetString("general.aacpath", aacPath)
 
 	return nil
@@ -81,8 +78,8 @@ func detectAACPath() (string, error) {
 			highestNum, _ = strconv.Atoi(highestMatch[2])
 		}
 
-		// Compare numerically
-		if currentNum > highestNum {
+		// Compare numerically, but prefer explicit numbers over implicit zero
+		if currentNum > highestNum || (currentNum == highestNum && currentMatch[2] != "" && highestMatch[2] == "") {
 			highestVersion = match
 		}
 	}
@@ -124,7 +121,6 @@ func getOrCreateConfig() error {
 	viper.SetConfigName("config.toml")
 	viper.AddConfigPath(managerDir)
 	viper.SetConfigFile(filepath.Join(managerDir, "config.toml"))
-	setDefaults()
 
 	err = viper.ReadInConfig()
 	if err != nil {
@@ -195,7 +191,11 @@ func GetDataDir() string {
 }
 
 func GetAACDir() string {
-	return aacPath
+	path := viper.GetString("general.aacpath")
+	if path == "" {
+		dialog.Message("path to AAClassic is empty, this should not happen").Title("Classic Addon Manager Error").Error()
+	}
+	return path
 }
 
 func GetAddonDir() string {
@@ -217,5 +217,14 @@ func GetString(option string) string {
 
 func SetString(option string, value string) {
 	viper.Set(option, value)
-	_ = SaveConfig()
+	err := SaveConfig()
+	if err != nil {
+		dialog.Message("could not save config: %s", err.Error()).Title("Classic Addon Manager Error").Error()
+		logger.Error("Could not save config: ", err)
+	}
+	logger.Info("Set config option: " + option + " to " + value)
+}
+
+func GetAll() map[string]any {
+	return viper.AllSettings()
 }

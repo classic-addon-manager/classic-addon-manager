@@ -6,8 +6,6 @@ import (
 	"ClassicAddonManager/backend/file"
 	"ClassicAddonManager/backend/logger"
 	"ClassicAddonManager/backend/services"
-	"ClassicAddonManager/backend/shared"
-
 	"embed"
 	"encoding/json"
 	"flag"
@@ -60,27 +58,38 @@ func main() {
 		os.Exit(0)
 	}
 
+	if !file.FileExists(filepath.Join(config.GetAddonDir(), "addons.txt")) {
+		logger.Info(fmt.Sprintf("addons.txt not found, creating it. Attempted path: %s", filepath.Join(config.GetAddonDir(), "addons.txt")))
+		addon.CreateAddonsTxt()
+	}
+
 	a := application.New(application.Options{
 		Name: "Classic Addon Manager",
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
 		},
-		Services: []application.Service{
-			application.NewService(&services.LocalAddonService{}),
-			application.NewService(&services.ApplicationService{}),
-			application.NewService(&services.RemoteAddonService{}),
-		},
 	})
 
-	a.OnApplicationEvent(events.Common.ApplicationStarted, func(event *application.ApplicationEvent) {
+	applicationServices := []application.Service{
+		application.NewService(&services.LocalAddonService{}),
+		application.NewService(&services.ApplicationService{
+			App: a,
+		}),
+		application.NewService(&services.RemoteAddonService{}),
+	}
+
+	for _, service := range applicationServices {
+		a.RegisterService(service)
+	}
+
+	a.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(event *application.ApplicationEvent) {
 		_ = event.Context()
 		writeDeeplink()
 		go startPipeServer(a)
 		startup()
 	})
-	shared.Version = "3.0.0"
 
-	a.NewWebviewWindowWithOptions(application.WebviewWindowOptions{
+	a.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:            "Classic Addon Manager",
 		Name:             "main",
 		Width:            985,
@@ -150,7 +159,11 @@ func handlePipeConnection(conn net.Conn, a *application.App) {
 		token := parsedURL.Query().Get("t")
 		if token != "" {
 			logger.Info("Received authentication token")
-			mainWindow := a.GetWindowByName("main")
+			mainWindow, exists := a.Window.GetByName("main")
+			if !exists {
+				logger.Error("Error getting main window:", err)
+				return
+			}
 			if mainWindow.IsMinimised() {
 				mainWindow.UnMinimise()
 			} else {
@@ -208,10 +221,6 @@ func writeDeeplink() {
 }
 
 func startup() {
-	if !file.FileExists(filepath.Join(config.GetAddonDir(), "addons.txt")) {
-		addon.CreateAddonsTxt()
-	}
-
 	if !file.FileExists(filepath.Join(config.GetDataDir(), "managed_addons.json")) {
 		jsonData, err := json.Marshal([]addon.Addon{})
 		if err != nil {

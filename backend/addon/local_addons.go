@@ -10,6 +10,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 )
@@ -61,12 +62,7 @@ func FindLocalAddonByName(name string) *Addon {
 }
 
 func IsInstalled(name string) bool {
-	for _, addonName := range GetInstalledAddonNames() {
-		if addonName == name {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(GetInstalledAddonNames(), name)
 }
 
 func AddManagedAddon(manifest shared.AddonManifest, release api.Release) {
@@ -103,10 +99,11 @@ func RemoveManagedAddon(name string) bool {
 }
 
 func SaveManagedAddonsToDisk() {
-	var managedAddons []Addon
+	managedAddons := make([]Addon, 0, len(LocalAddons))
 	for _, addon := range LocalAddons {
 		managedAddons = append(managedAddons, addon)
 	}
+
 	data, err := json.Marshal(managedAddons)
 	if err != nil {
 		logger.Error("Error marshalling managed addons:", err)

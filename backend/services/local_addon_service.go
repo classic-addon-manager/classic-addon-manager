@@ -25,6 +25,10 @@ func (s *LocalAddonService) IsInstalled(name string) bool {
 	return addon.IsInstalled(name)
 }
 
+func (s *LocalAddonService) GetAllInstalledAddonNames() []string {
+	return addon.GetInstalledAddonNames()
+}
+
 func (s *LocalAddonService) UninstallAddon(name string) bool {
 	if !addon.IsInstalled(name) {
 		return false
@@ -59,10 +63,6 @@ func (s *LocalAddonService) ResetSettings() error {
 		return err
 	}
 	return nil
-}
-
-func (s *LocalAddonService) GetAllInstalledAddonNames() []string {
-	return addon.GetInstalledAddonNames()
 }
 
 func (s *LocalAddonService) DiagnoseIssues() ([]util.LogParseResult, error) {
