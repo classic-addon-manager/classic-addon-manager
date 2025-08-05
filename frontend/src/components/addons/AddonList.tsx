@@ -17,8 +17,8 @@ export const AddonList = () => {
       <div className="flex flex-1 flex-col gap-4 py-4 relative">
         {Array(7)
           .fill(null)
-          .map(() => (
-            <AddonSkeleton />
+          .map((_, i) => (
+            <AddonSkeleton key={i} />
           ))}
       </div>
     )

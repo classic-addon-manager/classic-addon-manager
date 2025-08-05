@@ -61,6 +61,10 @@ func (s *LocalAddonService) ResetSettings() error {
 	return nil
 }
 
+func (s *LocalAddonService) GetAllInstalledAddonNames() []string {
+	return addon.GetInstalledAddonNames()
+}
+
 func (s *LocalAddonService) DiagnoseIssues() ([]util.LogParseResult, error) {
 	return util.DiagnoseIssues()
 }

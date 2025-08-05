@@ -15,13 +15,13 @@ export const tagsAtom = atom(['All'])
 
 export const loadAddonsAtom = atom(null, async (get, set) => {
   const manifests = await RemoteAddonService.GetAddonManifest()
-  // Future todo: we could improve performance by getting a list of all installed addons rather than checking in a loop
-  const installStatusPromises = manifests.map(m => LocalAddonService.IsInstalled(m.name))
-  const installStatuses = await Promise.all(installStatusPromises)
 
-  const tmp: AddonListItem[] = manifests.map((manifest, index) => ({
+  const installedAddonNames = await LocalAddonService.GetAllInstalledAddonNames()
+  const installedAddonSet = new Set(installedAddonNames)
+
+  const tmp: AddonListItem[] = manifests.map(manifest => ({
     manifest,
-    isInstalled: installStatuses[index],
+    isInstalled: installedAddonSet.has(manifest.name),
   }))
 
   // Generate tags

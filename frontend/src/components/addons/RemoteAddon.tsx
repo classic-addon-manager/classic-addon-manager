@@ -80,21 +80,17 @@ export const RemoteAddon = ({ manifest, installed }: RemoteAddonProps) => {
     }
     return (
       <div className="flex items-center justify-end gap-1 flex-wrap col-span-3">
-        {manifest.tags.slice(0, 4).map(tag => (
-          <>
-            <span
-              key={tag}
-              className="text-xs bg-secondary text-secondary-foreground px-1.5 py-0.5 rounded whitespace-nowrap transition-all"
-            >
-              {tag}
-            </span>
-            {manifest.tags.length > 4 && (
-              <span className="text-xs text-muted-foreground">
-                +{manifest.tags.length - 4} more
-              </span>
-            )}
-          </>
+        {manifest.tags.slice(0, 4).map((tag, index) => (
+          <span
+            key={`${tag}-${index}`}
+            className="text-xs bg-secondary text-secondary-foreground px-1.5 py-0.5 rounded whitespace-nowrap transition-all"
+          >
+            {tag}
+          </span>
         ))}
+        {manifest.tags.length > 4 && (
+          <span className="text-xs text-muted-foreground">+{manifest.tags.length - 4} more</span>
+        )}
       </div>
     )
   }

@@ -31,10 +31,6 @@ const Header = () => {
     setSearchQuery(value)
   }, 300)
 
-  useEffect(() => {
-    console.log(selectedTag)
-  }, [selectedTag])
-
   const onRefresh = async () => {
     if (isRefreshing) return
     setIsRefreshing(true)
