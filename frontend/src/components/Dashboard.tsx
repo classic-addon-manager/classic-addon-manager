@@ -1,5 +1,5 @@
 import { useAtom, useAtomValue } from 'jotai'
-import { LoaderCircle, RefreshCw, Search } from 'lucide-react'
+import { LoaderCircle, Package, RefreshCw, Search } from 'lucide-react'
 import { Suspense, useEffect, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 
@@ -10,6 +10,7 @@ import {
   searchQueryAtom,
   selectedAddonAtom,
 } from '@/components/dashboard/atoms'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAddonStore } from '@/stores/addonStore'
@@ -99,9 +100,13 @@ export const Dashboard = () => {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
           {!isLoading && (
-            <div className="text-sm text-muted-foreground">
+            <Badge
+              variant="secondary"
+              className="flex text-muted-foreground items-center gap-1 px-2 py-1.5"
+            >
+              <Package className="size-3" />
               {filteredAddons.length} {filteredAddons.length === 1 ? 'addon' : 'addons'} installed
-            </div>
+            </Badge>
           )}
         </div>
 
