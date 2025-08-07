@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAtom, useAtomValue } from 'jotai'
-import { Package } from 'lucide-react'
+import { Package, PackageSearch } from 'lucide-react'
 
 import { activePageAtom } from '@/atoms/sidebarAtoms'
 import { filteredAddonsAtom } from '@/components/dashboard/atoms.ts'
@@ -13,6 +13,7 @@ export const AddonList = () => {
   const filteredAddons = useAtomValue(filteredAddonsAtom)
   const [, setActiveItem] = useAtom(activePageAtom)
 
+  // Empty "no installed" state
   if (installedAddons.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-lg border bg-card/50 p-8 text-center min-h-screen-minus-10">
@@ -36,37 +37,48 @@ export const AddonList = () => {
     )
   }
 
+  // Card list with animated "no results" state
   return (
-    <div className="rounded-lg border bg-card/10 shadow-sm flex flex-col">
-      <div className="grid grid-cols-4 w-full p-2 border-b bg-muted/40">
-        <div className="font-medium text-sm text-muted-foreground">Name</div>
-        <div className="text-center font-medium text-sm text-muted-foreground">Author</div>
-        <div className="text-center font-medium text-sm text-muted-foreground">Version</div>
-        <div className="text-center font-medium text-sm text-muted-foreground">Status</div>
-      </div>
-      <div className="overflow-y-auto">
-        <div className="divide-y overflow-clip">
-          <AnimatePresence initial={false} mode="popLayout">
+    <AnimatePresence mode="wait">
+      {filteredAddons.length === 0 ? (
+        <motion.div
+          key="no-local-addons"
+          className="flex flex-col items-center justify-center rounded-lg border bg-card/50 p-10 text-center min-h-[280px]"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.25 }}
+        >
+          <PackageSearch className="h-12 w-12 mb-4 text-muted-foreground" />
+          <h3 className="text-lg font-semibold mb-1">No addons match your search</h3>
+          <p className="text-sm text-muted-foreground">
+            Try a different query or clear filters to see all installed addons.
+          </p>
+        </motion.div>
+      ) : (
+        <motion.main
+          key="local-addon-list"
+          className="flex-1"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.25 }}
+        >
+          <div className="flex flex-1 flex-col gap-3 py-2">
             {filteredAddons.map(addon => (
               <motion.div
                 key={addon.name}
-                initial={{ opacity: 0 }}
-                animate={{
-                  opacity: 1,
-                  transition: { duration: 0.3 },
-                }}
-                exit={{
-                  opacity: 0,
-                  transition: { duration: 0.2 },
-                }}
-                className="transition-all duration-300 hover:bg-muted/20"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.2 }}
               >
                 <LocalAddon addon={addon} />
               </motion.div>
             ))}
-          </AnimatePresence>
-        </div>
-      </div>
-    </div>
+          </div>
+        </motion.main>
+      )}
+    </AnimatePresence>
   )
 }

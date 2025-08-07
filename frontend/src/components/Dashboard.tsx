@@ -96,40 +96,42 @@ export const Dashboard = () => {
         />
       )}
 
-      <main className="flex-1 container mx-auto px-4 pt-4 min-h-screen-minus-12 overflow-hidden">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          {!isLoading && (
-            <Badge
-              variant="secondary"
-              className="flex text-muted-foreground items-center gap-1 px-2 py-1.5"
-            >
-              <Package className="size-3" />
-              {filteredAddons.length} {filteredAddons.length === 1 ? 'addon' : 'addons'} installed
-            </Badge>
-          )}
-        </div>
+      <main className="flex-1 overflow-auto">
+        <div className="container mx-auto px-4 pt-4">
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+            {!isLoading && (
+              <Badge
+                variant="secondary"
+                className="flex text-muted-foreground items-center gap-1 px-2 py-1.5"
+              >
+                <Package className="size-3" />
+                {filteredAddons.length} {filteredAddons.length === 1 ? 'addon' : 'addons'} installed
+              </Badge>
+            )}
+          </div>
 
-        <Suspense
-          fallback={
-            <div className="flex flex-col items-center justify-center rounded-lg border bg-card/50 min-h-screen-minus-12 relative overflow-hidden">
-              <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:16px_16px]" />
-              <div className="relative z-10">
-                <div className="absolute -inset-8 rounded-full bg-primary/10 blur-xl animate-pulse" />
-                <div className="absolute -inset-4 rounded-full bg-primary/20 animate-ping opacity-75" />
-                <LoaderCircle
-                  className="size-12 animate-spin text-primary relative"
-                  strokeWidth={1.5}
-                />
+          <Suspense
+            fallback={
+              <div className="flex flex-col items-center justify-center rounded-lg border bg-card/50 min-h-screen-minus-12 relative overflow-hidden">
+                <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:16px_16px]" />
+                <div className="relative z-10">
+                  <div className="absolute -inset-8 rounded-full bg-primary/10 blur-xl animate-pulse" />
+                  <div className="absolute -inset-4 rounded-full bg-primary/20 animate-ping opacity-75" />
+                  <LoaderCircle
+                    className="size-12 animate-spin text-primary relative"
+                    strokeWidth={1.5}
+                  />
+                </div>
+                <p className="text-muted-foreground mt-6 relative z-10 animate-pulse">
+                  Loading your addons...
+                </p>
               </div>
-              <p className="text-muted-foreground mt-6 relative z-10 animate-pulse">
-                Loading your addons...
-              </p>
-            </div>
-          }
-        >
-          <AddonList />
-        </Suspense>
+            }
+          >
+            <AddonList />
+          </Suspense>
+        </div>
       </main>
     </div>
   )
