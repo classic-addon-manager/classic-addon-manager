@@ -64,19 +64,22 @@ export const AddonList = () => {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.25 }}
         >
-          <div className="flex flex-1 flex-col gap-3 py-2">
-            {filteredAddons.map(addon => (
-              <motion.div
-                key={addon.name}
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={{ duration: 0.2 }}
-              >
-                <LocalAddon addon={addon} />
-              </motion.div>
-            ))}
-          </div>
+          <motion.div className="flex flex-1 flex-col gap-3 py-2" layout>
+            <AnimatePresence initial={false}>
+              {filteredAddons.map(addon => (
+                <motion.div
+                  key={addon.name}
+                  layout
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <LocalAddon addon={addon} />
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </motion.div>
         </motion.main>
       )}
     </AnimatePresence>
