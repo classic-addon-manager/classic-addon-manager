@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { useAtom, useAtomValue } from 'jotai'
+import { useAtomValue, useSetAtom } from 'jotai'
 import { Package, PackageSearch } from 'lucide-react'
 
 import { activePageAtom } from '@/atoms/sidebarAtoms'
@@ -11,7 +11,7 @@ import { useAddonStore } from '@/stores/addonStore'
 export const AddonList = () => {
   const { installedAddons } = useAddonStore()
   const filteredAddons = useAtomValue(filteredAddonsAtom)
-  const [, setActiveItem] = useAtom(activePageAtom)
+  const setActiveItem = useSetAtom(activePageAtom)
 
   // Empty "no installed" state
   if (installedAddons.length === 0) {
