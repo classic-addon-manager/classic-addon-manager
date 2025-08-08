@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { AddonStatus } from '@/components/dashboard/AddonStatus'
 import { LocalAddonContextMenu } from '@/components/dashboard/LocalAddonContextMenu'
 import { LocalAddonUpdateDialog } from '@/components/dashboard/LocalAddonUpdateDialog'
+import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { Addon, Release } from '@/lib/wails'
 import { useAddonStore } from '@/stores/addonStore'
@@ -75,18 +76,21 @@ export const LocalAddon = ({ addon }: LocalAddonProps) => {
         >
           {/* Left: Icon + Title */}
           <div className="flex items-center gap-3 col-span-4">
-            <div className="relative shrink-0">
+            <div className="shrink-0">
               <Icon />
-              {hasUpdate && (
-                <div className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[8px] font-bold px-1 py-0.5 rounded-full shadow-md">
-                  UPD
-                </div>
-              )}
             </div>
 
-            <div className="flex flex-col overflow-hidden">
-              <div className="text-foreground font-medium truncate group-hover:text-primary transition-colors">
-                {addon.alias}
+            <div className="flex flex-col relative">
+              <div className="flex items-center gap-2 text-foreground font-medium group-hover:text-primary transition-colors">
+                <span className="truncate">{addon.alias}</span>
+                {hasUpdate && (
+                  <Badge
+                    variant="destructive"
+                    className="ml-0.5 px-1.5 py-0.5 text-[9px] font-bold rounded-full shadow-md flex items-center gap-0.5 shrink-0"
+                  >
+                    Outdated
+                  </Badge>
+                )}
               </div>
               <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
                 {addon.isManaged && (
