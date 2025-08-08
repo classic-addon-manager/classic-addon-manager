@@ -1,7 +1,8 @@
-import { useState, type ComponentProps } from 'react'
-import { Dialog, DialogClose, DialogOverlay, DialogPrimitive } from '@/components/ui/dialog'
-import Markdown from 'react-markdown'
 import { XIcon } from 'lucide-react'
+import { type ComponentProps, useState } from 'react'
+import Markdown from 'react-markdown'
+
+import { Dialog, DialogClose, DialogOverlay, DialogPrimitive } from '@/components/ui/dialog'
 
 interface Props {
   readme: string

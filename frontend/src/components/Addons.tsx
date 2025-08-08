@@ -4,20 +4,23 @@ import { AlertTriangleIcon, RefreshCw, SearchIcon } from 'lucide-react'
 import { useEffect } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 
-import { AddonList } from '@/components/addons/AddonList.tsx'
+import { AddonList } from '@/components/addons/AddonList'
 import {
   isAddonsReadyAtom,
+  isManifestDialogOpenAtom,
   isRefreshingAtom,
   loadAddonsAtom,
   searchQueryAtom,
+  selectedManifestAtom,
   selectedTagAtom,
   tagsAtom,
-} from '@/components/addons/atoms.ts'
-import { Button } from '@/components/ui/button.tsx'
+} from '@/components/addons/atoms'
+import { RemoteAddonDialog } from '@/components/addons/RemoteAddonDialog'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select'
-import { toast } from '@/components/ui/toast.tsx'
-import { safeCall } from '@/lib/utils.ts'
+import { toast } from '@/components/ui/toast'
+import { safeCall } from '@/lib/utils'
 
 const Header = () => {
   const loadAddons = useSetAtom(loadAddonsAtom)
@@ -101,6 +104,8 @@ const Header = () => {
 
 export const Addons = () => {
   const loadAddons = useSetAtom(loadAddonsAtom)
+  const [selectedManifest, setSelectedManifest] = useAtom(selectedManifestAtom)
+  const [isDialogOpen, setDialogOpen] = useAtom(isManifestDialogOpenAtom)
 
   useEffect(() => {
     loadAddons()
@@ -109,6 +114,18 @@ export const Addons = () => {
   return (
     <div className="flex flex-col h-screen">
       <Header />
+      {selectedManifest && (
+        <RemoteAddonDialog
+          manifest={selectedManifest}
+          open={isDialogOpen}
+          onOpenChange={open => {
+            setDialogOpen(open)
+            if (!open) {
+              setTimeout(() => setSelectedManifest(null), 200)
+            }
+          }}
+        />
+      )}
 
       <div className="flex-1 overflow-auto">
         <div className="container px-4">

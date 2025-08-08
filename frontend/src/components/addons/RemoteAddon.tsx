@@ -1,6 +1,8 @@
+import { useSetAtom } from 'jotai'
 import { BlocksIcon, CheckIcon, DownloadIcon, HeartIcon } from 'lucide-react'
 import { useState } from 'react'
 
+import { isManifestDialogOpenAtom, selectedManifestAtom } from '@/components/addons/atoms.ts'
 import { daysAgo } from '@/lib/utils.ts'
 import type { AddonManifest } from '@/lib/wails'
 
@@ -13,6 +15,8 @@ interface RemoteAddonProps {
 
 export const RemoteAddon = ({ manifest, installed }: RemoteAddonProps) => {
   const [hasIcon, setIcon] = useState(true)
+  const setSelectedManifest = useSetAtom(selectedManifestAtom)
+  const setDialogOpen = useSetAtom(isManifestDialogOpenAtom)
 
   const isNew = daysAgo(manifest.added_at) < 32
   const iconUrl = `https://raw.githubusercontent.com/${manifest.repo}/${manifest.branch}/icon.png`
@@ -98,7 +102,10 @@ export const RemoteAddon = ({ manifest, installed }: RemoteAddonProps) => {
   return (
     <div
       className="grid grid-cols-12 items-center gap-2 bg-muted/50 hover:bg-muted/70 h-16 w-full rounded-lg cursor-pointer transition-all px-3 py-2 group"
-      onClick={() => alert('todo implement onclick')}
+      onClick={() => {
+        setSelectedManifest(manifest)
+        setDialogOpen(true)
+      }}
     >
       {/* Left Section: Icon, Title, Stats */}
       <div className="flex items-center gap-3 col-span-5">
