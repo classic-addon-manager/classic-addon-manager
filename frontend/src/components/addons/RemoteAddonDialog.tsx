@@ -31,6 +31,7 @@ interface RemoteAddonDialogProps {
   manifest: AddonManifest
   open: boolean
   onOpenChange: (open: boolean) => void
+  onViewDependency: (manifest: AddonManifest) => void
 }
 
 const Header = ({ manifest, release }: { manifest: AddonManifest; release: Release | null }) => {
@@ -172,13 +173,19 @@ const Warning = ({ text }: { text: string | null | undefined }) => {
   )
 }
 
-export const RemoteAddonDialog = ({ manifest, open, onOpenChange }: RemoteAddonDialogProps) => {
+export const RemoteAddonDialog = ({
+  manifest,
+  open,
+  onOpenChange,
+  onViewDependency,
+}: RemoteAddonDialogProps) => {
   const [release, setRelease] = useState<Release | null>(null)
   const [readme, setReadme] = useState<string>('Loading description...')
   const [changelog, setChangelog] = useState<string>('Loading changelog...')
   const [, setRating] = useState(0)
   const [dependencies, setDependencies] = useState<DependencyInfo[]>([])
   const { isAuthenticated } = useUserStore()
+  const [currentTab, setCurrentTab] = useState<string>('description')
 
   const getRelease = useCallback(async () => {
     const [r, err] = await safeCall<Release | null>(
@@ -315,6 +322,12 @@ export const RemoteAddonDialog = ({ manifest, open, onOpenChange }: RemoteAddonD
     return baseTabs
   }
 
+  const handleDependencyClick = (depManifest: AddonManifest) => {
+    console.log('Clicked dependency:', depManifest.alias)
+    setCurrentTab('description')
+    onViewDependency(depManifest)
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[70%] lg:max-w-[60%] max-h-[90svh] flex flex-col p-0">
@@ -322,7 +335,11 @@ export const RemoteAddonDialog = ({ manifest, open, onOpenChange }: RemoteAddonD
         <Warning text={manifest.warning} />
 
         <div className="flex-1 flex flex-col min-h-0 overflow-y-hidden px-6 pb-0">
-          <Tabs className="w-full flex flex-col min-h-0" defaultValue="description">
+          <Tabs
+            className="w-full flex flex-col min-h-0"
+            value={currentTab}
+            onValueChange={setCurrentTab}
+          >
             <TabsList className="inline-flex items-center bg-transparent justify-start gap-x-4 w-full mb-4">
               {tabs().map(tab => (
                 <TabsTrigger
@@ -376,6 +393,44 @@ export const RemoteAddonDialog = ({ manifest, open, onOpenChange }: RemoteAddonD
                   </div>
                 )}
               </TabsContent>
+
+              {dependencies.length > 0 && (
+                <TabsContent value="dependencies">
+                  <p className="mb-4 text-sm text-muted-foreground">
+                    This addon requires the following dependencies (including transitive
+                    dependencies):
+                  </p>
+                  <div className="space-y-3">
+                    {dependencies.map(d => (
+                      <button
+                        key={d.manifest.name}
+                        className="flex flex-col w-full p-4 border rounded-lg bg-background hover:bg-muted/50 transition-colors text-left focus:outline-none focus:ring-0 focus:ring-offset-0"
+                        onClick={() => handleDependencyClick(d.manifest)}
+                        aria-label={`View details for ${d.manifest.alias}`}
+                      >
+                        <div className="flex justify-between items-start mb-1 gap-2">
+                          <span className="font-medium text-base flex-1 break-words">
+                            {d.manifest.alias}
+                          </span>
+                          {d.isInstalled ? (
+                            <Badge variant="secondary" className="text-xs whitespace-nowrap">
+                              Installed
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-xs whitespace-nowrap">
+                              Not Installed
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-2">by {d.manifest.author}</p>
+                        <p className="text-sm text-foreground/80 line-clamp-2">
+                          {d.manifest.description || 'No description available.'}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                </TabsContent>
+              )}
             </div>
           </Tabs>
         </div>

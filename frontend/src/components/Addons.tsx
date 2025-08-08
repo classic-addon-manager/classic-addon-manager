@@ -124,6 +124,10 @@ export const Addons = () => {
               setTimeout(() => setSelectedManifest(null), 200)
             }
           }}
+          onViewDependency={manifest => {
+            setSelectedManifest(manifest)
+            setDialogOpen(true)
+          }}
         />
       )}
 
