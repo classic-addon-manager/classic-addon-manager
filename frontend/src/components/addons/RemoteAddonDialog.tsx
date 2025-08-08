@@ -1,4 +1,5 @@
 import { Browser } from '@wailsio/runtime'
+import clsx from 'clsx'
 import {
   AlertTriangleIcon,
   BugIcon,
@@ -7,6 +8,8 @@ import {
   HeartIcon,
   PackageIcon,
   TagIcon,
+  ThumbsDownIcon,
+  ThumbsUpIcon,
   UserIcon,
 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
@@ -14,9 +17,21 @@ import { useCallback, useEffect, useState } from 'react'
 import { RemoteAddonReadme } from '@/components/shared/RemoteAddonReadme.tsx'
 import { Badge } from '@/components/ui/badge.tsx'
 import { Button } from '@/components/ui/button.tsx'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.tsx'
 import { toast } from '@/components/ui/toast.tsx'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip.tsx'
 import { apiClient } from '@/lib/api.ts'
 import {
   type DependencyInfo,
@@ -183,7 +198,7 @@ export const RemoteAddonDialog = ({
   const [release, setRelease] = useState<Release | null>(null)
   const [readme, setReadme] = useState<string>('Loading description...')
   const [changelog, setChangelog] = useState<string>('Loading changelog...')
-  const [, setRating] = useState(0)
+  const [rating, setRating] = useState(0)
   const [dependencies, setDependencies] = useState<DependencyInfo[]>([])
   const { isAuthenticated } = useUserStore()
   const [currentTab, setCurrentTab] = useState<string>('description')
@@ -329,6 +344,120 @@ export const RemoteAddonDialog = ({
     onViewDependency(depManifest)
   }
 
+  const rateAddon = async (newRating: number) => {
+    if (rating === newRating) return
+
+    const res = await apiClient.post(`/addon/${manifest.name}/rate`, {
+      is_like: newRating === 1,
+    })
+
+    if (res.status !== 200) {
+      toast({
+        title: 'Error',
+        description: 'Failed to rate addon, try again later',
+        icon: AlertTriangleIcon,
+      })
+      return
+    }
+
+    if (newRating === 1) {
+      toast({
+        title: 'Addon rated',
+        description: `You liked ${manifest.alias}`,
+        icon: ThumbsUpIcon,
+      })
+    } else {
+      toast({
+        title: 'Addon rated',
+        description: `You disliked ${manifest.alias}`,
+        icon: ThumbsDownIcon,
+      })
+    }
+
+    setRating(newRating)
+  }
+
+  const RatingButtons = () => {
+    if (!isAuthenticated()) {
+      return (
+        <TooltipProvider>
+          <Tooltip delayDuration={100}>
+            <TooltipTrigger className="cursor-not-allowed opacity-50">
+              <span className="flex items-center gap-1 p-2">
+                <ThumbsUpIcon className="w-5 h-5 text-muted-foreground" />
+                <ThumbsDownIcon className="w-5 h-5 text-muted-foreground" />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Log in to rate addons</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )
+    }
+
+    return (
+      <>
+        <TooltipProvider>
+          <Tooltip delayDuration={100}>
+            <TooltipTrigger>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={clsx(
+                  'h-8 w-9 transition-all duration-200 hover:scale-105 hover:bg-blue-100 dark:hover:bg-blue-900/30',
+                  rating === 1 && 'bg-blue-100 dark:bg-blue-900/30 border border-blue-500'
+                )}
+                onClick={() => rateAddon(1)}
+                aria-label="Like addon"
+              >
+                <ThumbsUpIcon
+                  className={clsx(
+                    'w-5 h-5',
+                    rating === 1
+                      ? 'text-blue-500'
+                      : 'text-muted-foreground group-hover:text-blue-500'
+                  )}
+                />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{rating === 1 ? 'Unlike' : 'Like'}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        <TooltipProvider>
+          <Tooltip delayDuration={100}>
+            <TooltipTrigger>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={clsx(
+                  'h-8 w-9 transition-all duration-200 hover:scale-105 hover:bg-red-100 dark:hover:bg-red-900/30',
+                  rating === -1 && 'bg-red-100 dark:bg-red-900/30 border border-red-500'
+                )}
+                onClick={() => rateAddon(-1)}
+                aria-label="Dislike addon"
+              >
+                <ThumbsDownIcon
+                  className={clsx(
+                    'w-5 h-5',
+                    rating === -1
+                      ? 'text-red-500'
+                      : 'text-muted-foreground group-hover:text-red-500'
+                  )}
+                />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{rating === -1 ? 'Remove Dislike' : 'Dislike'}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </>
+    )
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[70%] lg:max-w-[60%] max-h-[90svh] flex flex-col p-0">
@@ -453,6 +582,14 @@ export const RemoteAddonDialog = ({
             </div>
           </Tabs>
         </div>
+
+        <DialogFooter className="p-4 border-t shrink-0">
+          <div className="flex justify-between items-center w-full gap-4">
+            <div className="flex gap-1 items-center">
+              <RatingButtons />
+            </div>
+          </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
