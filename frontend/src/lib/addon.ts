@@ -41,3 +41,21 @@ export async function rateAddon(
 
   setRating(newRating)
 }
+
+export async function getMyRating(
+  addonName: string,
+  isAuthenticated: boolean,
+  setRating: (rating: number) => void
+): Promise<void> {
+  if (!isAuthenticated) return
+
+  try {
+    const response = await apiClient.get(`/addon/${addonName}/my-rating`)
+    if (response.status === 200) {
+      const r = await response.json()
+      setRating(r.data.rating)
+    }
+  } catch (e) {
+    console.error('Failed to fetch rating: ', e)
+  }
+}

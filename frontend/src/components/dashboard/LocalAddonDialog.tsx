@@ -28,8 +28,7 @@ import {
 } from '@/components/ui/dialog'
 import { toast } from '@/components/ui/toast'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { rateAddon } from '@/lib/addon'
-import { apiClient } from '@/lib/api'
+import { getMyRating, rateAddon } from '@/lib/addon'
 import { repoGetManifest } from '@/lib/repo'
 import { safeCall } from '@/lib/utils'
 import type { Addon, AddonManifest } from '@/lib/wails'
@@ -98,19 +97,8 @@ export const LocalAddonDialog = ({ addon, onOpenChange, open }: LocalAddonDialog
     setReadme(text)
   }, [addon.repo, addon.branch, addon.description])
 
-  const getMyRating = useCallback(async () => {
-    if (!isAuthenticated) return
-    apiClient
-      .get(`/addon/${addon.name}/my-rating`)
-      .then(async response => {
-        if (response.status === 200) {
-          const r = await response.json()
-          setRating(r.data.rating)
-        }
-      })
-      .catch(e => {
-        console.error('Failed to fetch rating: ', e)
-      })
+  const handleGetMyRating = useCallback(async () => {
+    await getMyRating(addon.name, isAuthenticated(), setRating)
   }, [addon.name, isAuthenticated])
 
   // Fetch readme when dialog opens
@@ -118,13 +106,13 @@ export const LocalAddonDialog = ({ addon, onOpenChange, open }: LocalAddonDialog
     if (!open) {
       return
     }
-    getMyRating().catch(e => {
+    handleGetMyRating().catch(e => {
       console.error('Failed to fetch rating: ', e)
     })
     getReadme().catch(e => {
       console.error('Failed to fetch readme: ', e)
     })
-  }, [open, getMyRating, getReadme])
+  }, [open, handleGetMyRating, getReadme])
 
   const handleRateAddon = async (newRating: number) => {
     await rateAddon(addon.name, addon.alias, newRating, rating, setRating)

@@ -2,8 +2,7 @@ import { AlertTriangleIcon } from 'lucide-react'
 import { useCallback, useState } from 'react'
 
 import { toast } from '@/components/ui/toast.tsx'
-import { rateAddon } from '@/lib/addon.ts'
-import { apiClient } from '@/lib/api.ts'
+import { getMyRating, rateAddon } from '@/lib/addon.ts'
 import {
   type DependencyInfo,
   installDependenciesInOrder,
@@ -215,19 +214,8 @@ export const useAddonActions = ({
     setReadme(text)
   }, [manifest.repo, manifest.branch, manifest.description])
 
-  const getMyRating = useCallback(async () => {
-    if (!isAuthenticated) return
-    apiClient
-      .get(`/addon/${manifest.name}/my-rating`)
-      .then(async response => {
-        if (response.status === 200) {
-          const r = await response.json()
-          setRating(r.data.rating)
-        }
-      })
-      .catch(e => {
-        console.error('Failed to fetch rating: ', e)
-      })
+  const handleGetMyRating = useCallback(async () => {
+    await getMyRating(manifest.name, isAuthenticated(), setRating)
   }, [manifest.name, isAuthenticated])
 
   const getDependencies = useCallback(async () => {
@@ -295,7 +283,7 @@ export const useAddonActions = ({
     handleUninstall,
     getRelease,
     getReadme,
-    getMyRating,
+    getMyRating: handleGetMyRating,
     getDependencies,
     handleDependencyClick,
     rateAddon: handleRateAddon,
