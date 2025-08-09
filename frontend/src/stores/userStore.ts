@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+
 import { ApplicationService } from '@/lib/wails'
 
 interface User {
