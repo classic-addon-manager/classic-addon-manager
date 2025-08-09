@@ -27,6 +27,8 @@ interface RemoteAddonDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onViewDependency: (manifest: AddonManifest) => void
+  onAddonInstalled?: () => void
+  onAddonUninstalled?: () => void
 }
 
 export const RemoteAddonDialog = ({
@@ -34,6 +36,8 @@ export const RemoteAddonDialog = ({
   open,
   onOpenChange,
   onViewDependency,
+  onAddonInstalled,
+  onAddonUninstalled,
 }: RemoteAddonDialogProps) => {
   const [currentTab, setCurrentTab] = useState<string>('description')
   const {
@@ -53,7 +57,13 @@ export const RemoteAddonDialog = ({
     getDependencies,
     handleDependencyClick,
     rateAddon,
-  } = useAddonActions({ manifest, onViewDependency, onOpenChange })
+  } = useAddonActions({
+    manifest,
+    onViewDependency,
+    onOpenChange,
+    onAddonInstalled,
+    onAddonUninstalled,
+  })
 
   const { isAuthenticated } = useUserStore()
 

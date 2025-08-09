@@ -18,12 +18,16 @@ interface UseAddonActionsProps {
   manifest: AddonManifest
   onViewDependency: (manifest: AddonManifest) => void
   onOpenChange: (open: boolean) => void
+  onAddonInstalled?: () => void
+  onAddonUninstalled?: () => void
 }
 
 export const useAddonActions = ({
   manifest,
   onViewDependency,
   onOpenChange,
+  onAddonInstalled,
+  onAddonUninstalled,
 }: UseAddonActionsProps) => {
   const [release, setRelease] = useState<Release | null>(null)
   const [readme, setReadme] = useState<string>('Loading description...')
@@ -141,6 +145,7 @@ export const useAddonActions = ({
         description: `${manifest.alias} was installed successfully.`,
       })
       setIsInstalled(true)
+      onAddonInstalled?.()
       onOpenChange(false)
     }
   }
@@ -159,10 +164,12 @@ export const useAddonActions = ({
       return
     }
     setIsInstalled(false)
+    onAddonUninstalled?.()
     toast({
       title: 'Uninstalled',
       description: `${manifest.alias} uninstalled successfully`,
     })
+    onOpenChange(false)
   }
 
   const getRelease = useCallback(async () => {

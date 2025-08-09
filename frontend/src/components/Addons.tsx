@@ -128,6 +128,8 @@ export const Addons = () => {
             setSelectedManifest(manifest)
             setDialogOpen(true)
           }}
+          onAddonInstalled={loadAddons}
+          onAddonUninstalled={loadAddons}
         />
       )}
 
