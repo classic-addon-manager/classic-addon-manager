@@ -190,7 +190,7 @@ export const RemoteAddonDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[70%] lg:max-w-[60%] max-h-[90svh] flex flex-col p-0">
+      <DialogContent className="max-w-0 min-w-[650px] md:max-w-[70svw] min-h-[500px] max-h-[90svh] lg:max-w-[850px] flex flex-col p-0">
         <Header manifest={manifest} release={release} />
         <Warning text={manifest.warning} />
 
