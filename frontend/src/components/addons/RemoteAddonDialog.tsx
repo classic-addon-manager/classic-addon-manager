@@ -75,6 +75,11 @@ export const RemoteAddonDialog = ({
   }, [open, checkInstalledStatus])
 
   useEffect(() => {
+    // Reset to description tab when manifest changes
+    setCurrentTab('description')
+  }, [manifest])
+
+  useEffect(() => {
     if (!open) {
       return
     }
