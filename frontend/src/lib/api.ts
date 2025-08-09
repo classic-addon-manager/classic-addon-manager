@@ -1,5 +1,5 @@
-import { useUserStore } from '@/stores/userStore.ts'
 import { ApplicationService } from '@/lib/wails'
+import { useUserStore } from '@/stores/userStore.ts'
 
 const API_URL = 'https://aac.gaijin.dev'
 

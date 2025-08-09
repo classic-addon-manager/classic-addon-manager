@@ -14,7 +14,7 @@ import {
 import { Suspense, useCallback, useEffect, useState } from 'react'
 
 import { AddonRepositoryMatch } from '@/components/dashboard/AddonRepositoryMatch'
-import { isAddonDialogOpenAtom, selectedAddonAtom } from '@/components/dashboard/atoms.ts'
+import { isAddonDialogOpenAtom, selectedAddonAtom } from '@/components/dashboard/atoms'
 import { RemoteAddonReadme } from '@/components/shared/RemoteAddonReadme'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -26,8 +26,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { toast } from '@/components/ui/toast.tsx'
+import { toast } from '@/components/ui/toast'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { rateAddon } from '@/lib/addon'
 import { apiClient } from '@/lib/api'
 import { repoGetManifest } from '@/lib/repo'
 import { safeCall } from '@/lib/utils'
@@ -125,37 +126,8 @@ export const LocalAddonDialog = ({ addon, onOpenChange, open }: LocalAddonDialog
     })
   }, [open, getMyRating, getReadme])
 
-  const rateAddon = async (newRating: number) => {
-    if (rating === newRating) return
-
-    const res = await apiClient.post(`/addon/${addon.name}/rate`, {
-      is_like: newRating === 1,
-    })
-
-    if (res.status !== 200) {
-      toast({
-        title: 'Error',
-        description: 'Failed to rate addon, try again later',
-        icon: AlertTriangleIcon,
-      })
-      return
-    }
-
-    if (newRating === 1) {
-      toast({
-        title: 'Addon rated',
-        description: `You liked ${addon.alias}`,
-        icon: ThumbsUpIcon,
-      })
-    } else {
-      toast({
-        title: 'Addon rated',
-        description: `You disliked ${addon.alias}`,
-        icon: ThumbsDownIcon,
-      })
-    }
-
-    setRating(newRating)
+  const handleRateAddon = async (newRating: number) => {
+    await rateAddon(addon.name, addon.alias, newRating, rating, setRating)
   }
 
   const handleReinstall = async () => {
@@ -267,7 +239,7 @@ export const LocalAddonDialog = ({ addon, onOpenChange, open }: LocalAddonDialog
             'h-8 w-9 transition-all duration-200 hover:bg-blue-100 dark:hover:bg-blue-900/30',
             rating === 1 && 'bg-blue-100 dark:bg-blue-900/30 border border-blue-500 text-blue-500'
           )}
-          onClick={() => rateAddon(1)}
+          onClick={() => handleRateAddon(1)}
           aria-label="Like addon"
         >
           <ThumbsUpIcon
@@ -284,7 +256,7 @@ export const LocalAddonDialog = ({ addon, onOpenChange, open }: LocalAddonDialog
             'h-8 w-9 transition-all duration-200 hover:bg-red-100 dark:hover:bg-red-900/30',
             rating === -1 && 'bg-red-100 dark:bg-red-900/30 border border-red-500 text-red-500'
           )}
-          onClick={() => rateAddon(-1)}
+          onClick={() => handleRateAddon(-1)}
           aria-label="Dislike addon"
         >
           <ThumbsDownIcon

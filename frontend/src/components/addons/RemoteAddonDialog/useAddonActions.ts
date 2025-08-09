@@ -1,7 +1,8 @@
-import { AlertTriangleIcon, ThumbsDownIcon, ThumbsUpIcon } from 'lucide-react'
+import { AlertTriangleIcon } from 'lucide-react'
 import { useCallback, useState } from 'react'
 
 import { toast } from '@/components/ui/toast.tsx'
+import { rateAddon } from '@/lib/addon.ts'
 import { apiClient } from '@/lib/api.ts'
 import {
   type DependencyInfo,
@@ -277,37 +278,8 @@ export const useAddonActions = ({
     onViewDependency(depManifest)
   }
 
-  const rateAddon = async (newRating: number) => {
-    if (rating === newRating) return
-
-    const res = await apiClient.post(`/addon/${manifest.name}/rate`, {
-      is_like: newRating === 1,
-    })
-
-    if (res.status !== 200) {
-      toast({
-        title: 'Error',
-        description: 'Failed to rate addon, try again later',
-        icon: AlertTriangleIcon,
-      })
-      return
-    }
-
-    if (newRating === 1) {
-      toast({
-        title: 'Addon rated',
-        description: `You liked ${manifest.alias}`,
-        icon: ThumbsUpIcon,
-      })
-    } else {
-      toast({
-        title: 'Addon rated',
-        description: `You disliked ${manifest.alias}`,
-        icon: ThumbsDownIcon,
-      })
-    }
-
-    setRating(newRating)
+  const handleRateAddon = async (newRating: number) => {
+    await rateAddon(manifest.name, manifest.alias, newRating, rating, setRating)
   }
 
   return {
@@ -326,6 +298,6 @@ export const useAddonActions = ({
     getMyRating,
     getDependencies,
     handleDependencyClick,
-    rateAddon,
+    rateAddon: handleRateAddon,
   }
 }
