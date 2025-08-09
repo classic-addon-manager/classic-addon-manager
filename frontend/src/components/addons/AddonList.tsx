@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useAtomValue } from 'jotai'
 import { PackageSearch } from 'lucide-react'
 
+import { listAnimations } from '@/animations/listAnimations'
 import { AddonSkeleton } from '@/components/addons/AddonSkeleton'
 import { RemoteAddon } from '@/components/addons/RemoteAddon'
 
@@ -30,10 +31,7 @@ export const AddonList = () => {
         <motion.div
           key="no-addons"
           className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.3, ease: 'easeOut' }}
+          {...listAnimations.emptyState}
         >
           <PackageSearch className="h-12 w-12 mb-4" />
           <h3 className="text-lg font-semibold mb-2">No addons found</h3>
@@ -47,20 +45,17 @@ export const AddonList = () => {
         <motion.main
           key="addon-list"
           className="flex-1 overflow-auto"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.3, ease: 'easeOut' }}
+          {...listAnimations.container}
         >
-          <div className="flex flex-1 flex-col gap-4 py-4">
-            {filteredAddons.map(addon => (
-              <RemoteAddon
-                key={addon.manifest.name}
-                manifest={addon.manifest}
-                installed={addon.isInstalled}
-              />
-            ))}
-          </div>
+          <motion.div className="flex flex-1 flex-col gap-4 py-4" layout>
+            <AnimatePresence initial={false}>
+              {filteredAddons.map(addon => (
+                <motion.div key={addon.manifest.name} layout {...listAnimations.item}>
+                  <RemoteAddon manifest={addon.manifest} installed={addon.isInstalled} />
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </motion.div>
         </motion.main>
       )}
     </AnimatePresence>

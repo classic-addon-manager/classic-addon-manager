@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { Package, PackageSearch } from 'lucide-react'
 
+import { listAnimations } from '@/animations/listAnimations'
 import { activePageAtom } from '@/atoms/sidebarAtoms'
 import { filteredAddonsAtom } from '@/components/dashboard/atoms.ts'
 import { LocalAddon } from '@/components/dashboard/LocalAddon.tsx'
@@ -13,7 +14,6 @@ export const AddonList = () => {
   const filteredAddons = useAtomValue(filteredAddonsAtom)
   const setActiveItem = useSetAtom(activePageAtom)
 
-  // Empty "no installed" state
   if (installedAddons.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-lg border bg-card/50 p-8 text-center min-h-screen-minus-10">
@@ -37,17 +37,13 @@ export const AddonList = () => {
     )
   }
 
-  // Card list with animated "no results" state
   return (
     <AnimatePresence mode="wait">
       {filteredAddons.length === 0 ? (
         <motion.div
           key="no-local-addons"
           className="flex flex-col items-center justify-center rounded-lg border bg-card/50 p-10 text-center min-h-[280px]"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.25 }}
+          {...listAnimations.emptyState}
         >
           <PackageSearch className="h-12 w-12 mb-4 text-muted-foreground" />
           <h3 className="text-lg font-semibold mb-1">No addons match your search</h3>
@@ -56,25 +52,11 @@ export const AddonList = () => {
           </p>
         </motion.div>
       ) : (
-        <motion.main
-          key="local-addon-list"
-          className="flex-1"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.25 }}
-        >
+        <motion.main key="local-addon-list" className="flex-1" {...listAnimations.container}>
           <motion.div className="flex flex-1 flex-col gap-3 py-2" layout>
             <AnimatePresence initial={false}>
               {filteredAddons.map(addon => (
-                <motion.div
-                  key={addon.name}
-                  layout
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
-                  transition={{ duration: 0.2 }}
-                >
+                <motion.div key={addon.name} layout {...listAnimations.item}>
                   <LocalAddon addon={addon} />
                 </motion.div>
               ))}
