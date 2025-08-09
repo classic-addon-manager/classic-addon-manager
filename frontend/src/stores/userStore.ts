@@ -61,6 +61,8 @@ export const useUserStore = create<UserState>((set, get) => ({
 
   setToken: (token: string) => {
     set({ token })
+    localStorage.setItem('token', token)
+    ApplicationService.SetAuthToken(token)
   },
 
   clearUser: () => {
