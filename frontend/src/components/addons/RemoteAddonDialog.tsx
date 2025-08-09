@@ -4,12 +4,14 @@ import {
   AlertTriangleIcon,
   BugIcon,
   CalendarDaysIcon,
+  DownloadIcon,
   GithubIcon,
   HeartIcon,
   PackageIcon,
   TagIcon,
   ThumbsDownIcon,
   ThumbsUpIcon,
+  Trash2Icon,
   UserIcon,
 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
@@ -36,11 +38,13 @@ import { apiClient } from '@/lib/api.ts'
 import {
   type DependencyInfo,
   type DependencyResolutionResult,
+  installDependenciesInOrder,
   resolveTransitiveDependencies,
 } from '@/lib/dependency-resolver.ts'
 import { formatToLocalTime, safeCall } from '@/lib/utils.ts'
 import type { AddonManifest } from '@/lib/wails'
-import { type Release, RemoteAddonService } from '@/lib/wails'
+import { LocalAddonService, type Release, RemoteAddonService } from '@/lib/wails'
+import { useAddonStore } from '@/stores/addonStore.ts'
 import { useUserStore } from '@/stores/userStore.ts'
 
 interface RemoteAddonDialogProps {
@@ -202,6 +206,143 @@ export const RemoteAddonDialog = ({
   const [dependencies, setDependencies] = useState<DependencyInfo[]>([])
   const { isAuthenticated } = useUserStore()
   const [currentTab, setCurrentTab] = useState<string>('description')
+  const [isInstalled, setIsInstalled] = useState<boolean>(false)
+  const [isProcessing, setIsProcessing] = useState<boolean>(false)
+
+  useEffect(() => {
+    if (!open) return
+    safeCall(LocalAddonService.IsInstalled(manifest.name))
+      .then(([installed]) => setIsInstalled(!!installed))
+      .catch(e => {
+        console.error('Failed to check installed status:', e)
+      })
+  }, [open, manifest.name])
+
+  const handleInstall = async () => {
+    if (isProcessing) return
+
+    if (isInstalled) {
+      toast({
+        title: 'Already installed',
+        description: `${manifest.alias} is already installed.`,
+      })
+      return
+    }
+
+    if (!release) {
+      toast({
+        title: 'Error',
+        description: 'Cannot install addon without a release.',
+        icon: AlertTriangleIcon,
+      })
+      return
+    }
+
+    setIsProcessing(true)
+    let didInstall = false
+
+    try {
+      // Handle dependencies if any
+      if (dependencies.length > 0) {
+        const uninstalledDeps = dependencies.filter(d => !d.isInstalled)
+
+        if (uninstalledDeps.length > 0) {
+          const failedDepNames = await installDependenciesInOrder(dependencies)
+
+          if (failedDepNames.length > 0) {
+            const failedDepAliases = failedDepNames
+              .map(name => {
+                const dep = dependencies.find(d => d.manifest.name === name)
+                return dep ? dep.manifest.alias : name
+              })
+              .join(', ')
+
+            toast({
+              title: 'Dependency installation failed',
+              description: `Failed: ${failedDepAliases}`,
+              icon: AlertTriangleIcon,
+            })
+            setIsProcessing(false)
+            return
+          }
+
+          // Show a success toast for each dependency that was installed
+          uninstalledDeps.forEach(depInfo => {
+            // after installDependenciesInOrder, depInfo.isInstalled will be true if it succeeded
+            if (depInfo.isInstalled) {
+              toast({
+                title: 'Dependency installed',
+                description: `${depInfo.manifest.alias} installed successfully`,
+              })
+            }
+          })
+        } else {
+          console.log('All dependencies already installed.')
+        }
+      }
+
+      // Install main addon via store to keep global state in sync
+      const success = await useAddonStore.getState().install(manifest, 'latest')
+      didInstall = success
+
+      if (!success) {
+        toast({
+          title: 'Error',
+          description: `Failed to install ${manifest.alias}`,
+          icon: AlertTriangleIcon,
+        })
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+
+      if (message.includes('no release found')) {
+        toast({
+          title: 'Error',
+          description: `No release found for ${manifest.name}`,
+          icon: AlertTriangleIcon,
+        })
+      } else {
+        toast({
+          title: 'Error',
+          description: `Failed to install ${manifest.alias}: ${message}`,
+          icon: AlertTriangleIcon,
+        })
+      }
+
+      console.error('Install error:', err)
+    } finally {
+      setIsProcessing(false)
+    }
+
+    if (didInstall) {
+      toast({
+        title: 'Addon installed',
+        description: `${manifest.alias} was installed successfully.`,
+      })
+      setIsInstalled(true)
+      onOpenChange(false)
+    }
+  }
+
+  const handleUninstall = async () => {
+    if (isProcessing) return
+    setIsProcessing(true)
+    const [result, err] = await safeCall(LocalAddonService.UninstallAddon(manifest.name))
+    setIsProcessing(false)
+    if (err || !result) {
+      toast({
+        title: 'Error',
+        description: `Failed to uninstall ${manifest.alias}`,
+        icon: AlertTriangleIcon,
+      })
+      return
+    }
+    setIsInstalled(false)
+    toast({
+      title: 'Uninstalled',
+      description: `${manifest.alias} uninstalled successfully`,
+    })
+  }
 
   const getRelease = useCallback(async () => {
     const [r, err] = await safeCall<Release | null>(
@@ -588,6 +729,33 @@ export const RemoteAddonDialog = ({
             <div className="flex gap-1 items-center">
               <RatingButtons />
             </div>
+            <Button
+              variant={isInstalled ? 'destructive' : 'default'}
+              onClick={isInstalled ? handleUninstall : handleInstall}
+              disabled={(!isInstalled && !release) || isProcessing}
+              className="min-w-[100px]"
+              aria-label={
+                isInstalled
+                  ? `Uninstall ${manifest.alias}`
+                  : !release
+                    ? 'Addon not available for installation'
+                    : `Install ${manifest.alias}`
+              }
+            >
+              {isInstalled ? (
+                <>
+                  <Trash2Icon className="w-4 h-4 mr-2" />
+                  Uninstall
+                </>
+              ) : !release ? (
+                <>Not Available</>
+              ) : (
+                <>
+                  <DownloadIcon className="w-4 h-4 mr-2" />
+                  Install
+                </>
+              )}
+            </Button>
           </div>
         </DialogFooter>
       </DialogContent>
