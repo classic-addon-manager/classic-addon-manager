@@ -1,51 +1,26 @@
-import { Browser } from '@wailsio/runtime'
 import clsx from 'clsx'
-import {
-  AlertTriangleIcon,
-  BugIcon,
-  CalendarDaysIcon,
-  DownloadIcon,
-  GithubIcon,
-  HeartIcon,
-  PackageIcon,
-  TagIcon,
-  ThumbsDownIcon,
-  ThumbsUpIcon,
-  Trash2Icon,
-  UserIcon,
-} from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { DownloadIcon, ThumbsDownIcon, ThumbsUpIcon, Trash2Icon } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
-import { RemoteAddonReadme } from '@/components/shared/RemoteAddonReadme.tsx'
-import { Badge } from '@/components/ui/badge.tsx'
 import { Button } from '@/components/ui/button.tsx'
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.tsx'
-import { toast } from '@/components/ui/toast.tsx'
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip.tsx'
-import { apiClient } from '@/lib/api.ts'
-import {
-  type DependencyInfo,
-  type DependencyResolutionResult,
-  installDependenciesInOrder,
-  resolveTransitiveDependencies,
-} from '@/lib/dependency-resolver.ts'
-import { formatToLocalTime, safeCall } from '@/lib/utils.ts'
 import type { AddonManifest } from '@/lib/wails'
-import { LocalAddonService, type Release, RemoteAddonService } from '@/lib/wails'
-import { useAddonStore } from '@/stores/addonStore.ts'
 import { useUserStore } from '@/stores/userStore.ts'
+
+import { ChangelogTab } from './RemoteAddonDialog/ChangelogTab.tsx'
+import { DependenciesTab } from './RemoteAddonDialog/DependenciesTab.tsx'
+import { DescriptionTab } from './RemoteAddonDialog/DescriptionTab.tsx'
+import { Header } from './RemoteAddonDialog/Header.tsx'
+import { SupportTab } from './RemoteAddonDialog/SupportTab.tsx'
+import { useAddonActions } from './RemoteAddonDialog/useAddonActions.ts'
+import { Warning } from './RemoteAddonDialog/Warning.tsx'
 
 interface RemoteAddonDialogProps {
   manifest: AddonManifest
@@ -54,397 +29,40 @@ interface RemoteAddonDialogProps {
   onViewDependency: (manifest: AddonManifest) => void
 }
 
-const Header = ({ manifest, release }: { manifest: AddonManifest; release: Release | null }) => {
-  const [hasBanner, setHasBanner] = useState(true)
-  const bannerUrl =
-    'repo' in manifest && 'branch' in manifest
-      ? `https://raw.githubusercontent.com/${manifest.repo}/${manifest.branch}/banner.png`
-      : null
-
-  const BannerImage = () => {
-    if (bannerUrl && hasBanner) {
-      return (
-        <img
-          className="absolute top-0 left-0 w-full h-full object-cover"
-          src={bannerUrl}
-          alt={`${manifest.alias} Banner`}
-          onError={() => setHasBanner(false)}
-        />
-      )
-    }
-    return null
-  }
-
-  const ReleaseInformation = ({ release }: { release: Release | null }) => {
-    if (!release) {
-      return <Badge variant="outline">No Release</Badge>
-    }
-
-    // Possible todo, we need to handle case where there is a banner and colors may be hard to read
-    return (
-      <span className="inline-flex items-center gap-x-1.5">
-        <Badge variant="secondary" className="inline-flex items-center gap-1">
-          <TagIcon className="w-3 h-3" />
-          {release.tag_name}
-        </Badge>
-        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-          <CalendarDaysIcon className="w-3 h-3" />
-          {formatToLocalTime(release.published_at)}
-        </span>
-      </span>
-    )
-  }
-
-  if (!hasBanner) {
-    return (
-      <DialogHeader className="p-6 pb-4 shrink-0 border-b">
-        <DialogTitle className="text-2xl font-semibold mb-1">{manifest.alias}</DialogTitle>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm mb-3 text-muted-foreground">
-          <span className="inline-flex items-center gap-1">
-            <UserIcon className="w-3.5 h-3.5" />
-            <span className="font-normal text-foreground/90">{manifest.author}</span>
-          </span>
-          <ReleaseInformation release={release} />
-        </div>
-        <div className="flex flex-wrap gap-2 text-sm">
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-1"
-            onClick={() => Browser.OpenURL(`https://github.com/${manifest.repo}`)}
-          >
-            <GithubIcon className="w-4 h-4" />
-            View Code
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-1"
-            onClick={() => Browser.OpenURL(`https://github.com/${manifest.repo}/issues/new`)}
-          >
-            <BugIcon className="w-4 h-4" />
-            Report Issue
-          </Button>
-        </div>
-      </DialogHeader>
-    )
-  }
-
-  return (
-    <div className="relative w-full h-48 overflow-hidden shrink-0 rounded-t-lg border-b dark:border-white/10">
-      <BannerImage />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/50 to-black/5"></div>
-      <div className="absolute bottom-0 left-0 right-0 p-6 pb-4 pt-16 text-white bg-gradient-to-t from-black/60 to-transparent">
-        <DialogTitle className="text-2xl font-semibold mb-1">{manifest.alias}</DialogTitle>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm mb-3 text-white/80">
-          <span className="inline-flex items-center gap-1">
-            <UserIcon className="w-3.5 h-3.5" />
-            <span className="font-normal text-white/90">{manifest.author}</span>
-          </span>
-          <ReleaseInformation release={release} />
-        </div>
-        <div className="flex flex-wrap gap-x-2 gap-y-2 text-sm">
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-1 border-white/50 text-white hover:bg-white/10"
-            onClick={() => Browser.OpenURL(`https://github.com/${manifest.repo}`)}
-          >
-            <GithubIcon className="w-4 h-4" />
-            View Code
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-1 border-white/50 text-white hover:bg-white/10"
-            onClick={() => Browser.OpenURL(`https://github.com/${manifest.repo}/issues/new`)}
-          >
-            <BugIcon className="w-4 h-4" />
-            Report Issue
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-const Warning = ({ text }: { text: string | null | undefined }) => {
-  if (!text) return null
-  return (
-    <div className="px-6 py-3 bg-yellow-100 dark:bg-yellow-900/30 border-y border-yellow-200 dark:border-yellow-800">
-      <p className="text-sm text-yellow-800 dark:text-yellow-200 flex items-start gap-2">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className="h-5 w-5 shrink-0 mt-0.5"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
-          <line x1="12" y1="9" x2="12" y2="13" />
-          <line x1="12" y1="17" x2="12.01" y2="17" />
-        </svg>
-        {text}
-      </p>
-    </div>
-  )
-}
-
 export const RemoteAddonDialog = ({
   manifest,
   open,
   onOpenChange,
   onViewDependency,
 }: RemoteAddonDialogProps) => {
-  const [release, setRelease] = useState<Release | null>(null)
-  const [readme, setReadme] = useState<string>('Loading description...')
-  const [changelog, setChangelog] = useState<string>('Loading changelog...')
-  const [rating, setRating] = useState(0)
-  const [dependencies, setDependencies] = useState<DependencyInfo[]>([])
-  const { isAuthenticated } = useUserStore()
   const [currentTab, setCurrentTab] = useState<string>('description')
-  const [isInstalled, setIsInstalled] = useState<boolean>(false)
-  const [isProcessing, setIsProcessing] = useState<boolean>(false)
+  const {
+    release,
+    readme,
+    changelog,
+    rating,
+    dependencies,
+    isInstalled,
+    isProcessing,
+    checkInstalledStatus,
+    handleInstall,
+    handleUninstall,
+    getRelease,
+    getReadme,
+    getMyRating,
+    getDependencies,
+    handleDependencyClick,
+    rateAddon,
+  } = useAddonActions({ manifest, onViewDependency, onOpenChange })
+
+  const { isAuthenticated } = useUserStore()
 
   useEffect(() => {
     if (!open) return
-    safeCall(LocalAddonService.IsInstalled(manifest.name))
-      .then(([installed]) => setIsInstalled(!!installed))
-      .catch(e => {
-        console.error('Failed to check installed status:', e)
-      })
-  }, [open, manifest.name])
-
-  const handleInstall = async () => {
-    if (isProcessing) return
-
-    if (isInstalled) {
-      toast({
-        title: 'Already installed',
-        description: `${manifest.alias} is already installed.`,
-      })
-      return
-    }
-
-    if (!release) {
-      toast({
-        title: 'Error',
-        description: 'Cannot install addon without a release.',
-        icon: AlertTriangleIcon,
-      })
-      return
-    }
-
-    setIsProcessing(true)
-    let didInstall = false
-
-    try {
-      // Handle dependencies if any
-      if (dependencies.length > 0) {
-        const uninstalledDeps = dependencies.filter(d => !d.isInstalled)
-
-        if (uninstalledDeps.length > 0) {
-          const failedDepNames = await installDependenciesInOrder(dependencies)
-
-          if (failedDepNames.length > 0) {
-            const failedDepAliases = failedDepNames
-              .map(name => {
-                const dep = dependencies.find(d => d.manifest.name === name)
-                return dep ? dep.manifest.alias : name
-              })
-              .join(', ')
-
-            toast({
-              title: 'Dependency installation failed',
-              description: `Failed: ${failedDepAliases}`,
-              icon: AlertTriangleIcon,
-            })
-            setIsProcessing(false)
-            return
-          }
-
-          // Show a success toast for each dependency that was installed
-          uninstalledDeps.forEach(depInfo => {
-            // after installDependenciesInOrder, depInfo.isInstalled will be true if it succeeded
-            if (depInfo.isInstalled) {
-              toast({
-                title: 'Dependency installed',
-                description: `${depInfo.manifest.alias} installed successfully`,
-              })
-            }
-          })
-        } else {
-          console.log('All dependencies already installed.')
-        }
-      }
-
-      // Install main addon via store to keep global state in sync
-      const success = await useAddonStore.getState().install(manifest, 'latest')
-      didInstall = success
-
-      if (!success) {
-        toast({
-          title: 'Error',
-          description: `Failed to install ${manifest.alias}`,
-          icon: AlertTriangleIcon,
-        })
-      }
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err)
-
-      if (message.includes('no release found')) {
-        toast({
-          title: 'Error',
-          description: `No release found for ${manifest.name}`,
-          icon: AlertTriangleIcon,
-        })
-      } else {
-        toast({
-          title: 'Error',
-          description: `Failed to install ${manifest.alias}: ${message}`,
-          icon: AlertTriangleIcon,
-        })
-      }
-
-      console.error('Install error:', err)
-    } finally {
-      setIsProcessing(false)
-    }
-
-    if (didInstall) {
-      toast({
-        title: 'Addon installed',
-        description: `${manifest.alias} was installed successfully.`,
-      })
-      setIsInstalled(true)
-      onOpenChange(false)
-    }
-  }
-
-  const handleUninstall = async () => {
-    if (isProcessing) return
-    setIsProcessing(true)
-    const [result, err] = await safeCall(LocalAddonService.UninstallAddon(manifest.name))
-    setIsProcessing(false)
-    if (err || !result) {
-      toast({
-        title: 'Error',
-        description: `Failed to uninstall ${manifest.alias}`,
-        icon: AlertTriangleIcon,
-      })
-      return
-    }
-    setIsInstalled(false)
-    toast({
-      title: 'Uninstalled',
-      description: `${manifest.alias} uninstalled successfully`,
+    checkInstalledStatus().catch(e => {
+      console.error('Failed to check installed status:', e)
     })
-  }
-
-  const getRelease = useCallback(async () => {
-    const [r, err] = await safeCall<Release | null>(
-      RemoteAddonService.GetLatestRelease(manifest.name)
-    )
-    if (err) {
-      toast({
-        title: 'Error',
-        description: `Failed to fetch release information for ${manifest.name}`,
-        icon: AlertTriangleIcon,
-      })
-      console.error('Fetch release error: ', err)
-      setChangelog('Error loading change log')
-      return
-    }
-    setRelease(r)
-    if (r?.body) {
-      setChangelog(r.body)
-    } else {
-      setChangelog('No change log was provided')
-    }
-  }, [manifest.name])
-
-  const getReadme = useCallback(async () => {
-    const [r, err] = await safeCall<Response>(
-      fetch(
-        `https://raw.githubusercontent.com/${manifest.repo}/refs/heads/${manifest.branch}/README.md`
-      )
-    )
-    if (err) {
-      console.error('Error fetching README: ', err)
-      setReadme(manifest.description || 'Error loading description.')
-      return
-    }
-    if (!r || !r.ok) {
-      setReadme(manifest.description || 'No description provided.')
-      return
-    }
-
-    const text = await r.text()
-    setReadme(text)
-  }, [manifest.repo, manifest.branch, manifest.description])
-
-  const getMyRating = useCallback(async () => {
-    if (!isAuthenticated) return
-    apiClient
-      .get(`/addon/${manifest.name}/my-rating`)
-      .then(async response => {
-        if (response.status === 200) {
-          const r = await response.json()
-          setRating(r.data.rating)
-        }
-      })
-      .catch(e => {
-        console.error('Failed to fetch rating: ', e)
-      })
-  }, [manifest.name, isAuthenticated])
-
-  const getDependencies = useCallback(async () => {
-    if (!manifest.dependencies || manifest.dependencies.length === 0) {
-      setDependencies([])
-      return
-    }
-
-    const [result, err] = await safeCall<DependencyResolutionResult>(
-      resolveTransitiveDependencies(manifest)
-    )
-    if (err || !result) {
-      toast({
-        title: 'Error',
-        description: `Failed to resolve dependencies for ${manifest.name}`,
-        icon: AlertTriangleIcon,
-      })
-      setDependencies([])
-      return
-    }
-
-    if (result.errors.length > 0) {
-      console.warn('Dependency resolution errors:', result.errors)
-      // Show first error to user, log all errors
-      toast({
-        title: 'Dependency resolution warning',
-        description: result.errors[0],
-        icon: AlertTriangleIcon,
-      })
-    }
-
-    setDependencies(result.dependencies)
-    console.log(
-      `Found ${dependencies.length} total dependencies (including transitive) for ${manifest.alias}`
-    )
-
-    // Log dependency tree for debugging
-    if (dependencies.length > 0) {
-      console.log('Dependency tree:')
-      dependencies.forEach(dep => {
-        console.log(
-          `  ${'  '.repeat(dep.depth)}${dep.manifest.alias} (${dep.isInstalled ? 'installed' : 'not installed'})`
-        )
-      })
-    }
-  }, [manifest])
+  }, [open, checkInstalledStatus])
 
   useEffect(() => {
     if (!open) {
@@ -477,45 +95,6 @@ export const RemoteAddonDialog = ({
       baseTabs.push({ value: 'kofi', label: 'Support Author' })
     }
     return baseTabs
-  }
-
-  const handleDependencyClick = (depManifest: AddonManifest) => {
-    console.log('Clicked dependency:', depManifest.alias)
-    setCurrentTab('description')
-    onViewDependency(depManifest)
-  }
-
-  const rateAddon = async (newRating: number) => {
-    if (rating === newRating) return
-
-    const res = await apiClient.post(`/addon/${manifest.name}/rate`, {
-      is_like: newRating === 1,
-    })
-
-    if (res.status !== 200) {
-      toast({
-        title: 'Error',
-        description: 'Failed to rate addon, try again later',
-        icon: AlertTriangleIcon,
-      })
-      return
-    }
-
-    if (newRating === 1) {
-      toast({
-        title: 'Addon rated',
-        description: `You liked ${manifest.alias}`,
-        icon: ThumbsUpIcon,
-      })
-    } else {
-      toast({
-        title: 'Addon rated',
-        description: `You disliked ${manifest.alias}`,
-        icon: ThumbsDownIcon,
-      })
-    }
-
-    setRating(newRating)
   }
 
   const RatingButtons = () => {
@@ -629,95 +208,24 @@ export const RemoteAddonDialog = ({
                 className="max-w-none"
                 style={{ transform: 'translate(0)' }}
               >
-                <RemoteAddonReadme readme={readme} />
+                <DescriptionTab readme={readme} />
               </TabsContent>
 
               <TabsContent value="changelog" className="text-sm">
-                {release ? (
-                  <>
-                    <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground mb-4">
-                      <CalendarDaysIcon className="w-3.5 h-3.5" />
-                      <span>Released on {formatToLocalTime(release.published_at)}</span>
-                    </div>
-                    <div className="border rounded-lg p-4 bg-card">
-                      <div className="prose max-w-none text-sm text-foreground dark:text-foreground/90">
-                        <RemoteAddonReadme readme={changelog} />
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground pt-10">
-                    <PackageIcon className="w-12 h-12 mb-4 opacity-50" />
-                    <p className="font-medium">{changelog}</p>
-                    {changelog === 'No change log was provided' ? (
-                      <p className="text-xs mt-1">The author hasn't provided release notes.</p>
-                    ) : (
-                      <></>
-                    )}
-                    {changelog === 'Error loading change log' ? (
-                      <p className="text-xs mt-0 text-destructive">
-                        Could not fetch release details.
-                      </p>
-                    ) : (
-                      <></>
-                    )}
-                  </div>
-                )}
+                <ChangelogTab release={release} changelog={changelog} />
               </TabsContent>
 
               {dependencies.length > 0 && (
                 <TabsContent value="dependencies">
-                  <p className="mb-4 text-sm text-muted-foreground">
-                    This addon requires the following dependencies (including transitive
-                    dependencies):
-                  </p>
-                  <div className="space-y-3">
-                    {dependencies.map(d => (
-                      <button
-                        key={d.manifest.name}
-                        className="flex flex-col w-full p-4 border rounded-lg bg-background hover:bg-muted/50 transition-colors text-left focus:outline-none focus:ring-0 focus:ring-offset-0"
-                        onClick={() => handleDependencyClick(d.manifest)}
-                        aria-label={`View details for ${d.manifest.alias}`}
-                      >
-                        <div className="flex justify-between items-start mb-1 gap-2">
-                          <span className="font-medium text-base flex-1 break-words">
-                            {d.manifest.alias}
-                          </span>
-                          {d.isInstalled ? (
-                            <Badge variant="secondary" className="text-xs whitespace-nowrap">
-                              Installed
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-xs whitespace-nowrap">
-                              Not Installed
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground mb-2">by {d.manifest.author}</p>
-                        <p className="text-sm text-foreground/80 line-clamp-2">
-                          {d.manifest.description || 'No description available.'}
-                        </p>
-                      </button>
-                    ))}
-                  </div>
+                  <DependenciesTab
+                    dependencies={dependencies}
+                    onDependencyClick={handleDependencyClick}
+                  />
                 </TabsContent>
               )}
               {manifest.kofi && (
                 <TabsContent value="kofi">
-                  <div className="flex flex-col items-center justify-center text-center space-y-4 p-4 border rounded-lg bg-secondary/30">
-                    <HeartIcon className="w-10 h-10 text-red-500" />
-                    <p className="text-sm text-muted-foreground">
-                      Enjoying {manifest.alias}? Show your appreciation by buying {manifest.author}{' '}
-                      a coffee!
-                    </p>
-                    <Button
-                      variant="default"
-                      onClick={() => Browser.OpenURL(`https://ko-fi.com/${manifest.kofi}`)}
-                    >
-                      <HeartIcon className="w-4 h-4 mr-2" />
-                      Support {manifest.author} on Ko-fi
-                    </Button>
-                  </div>
+                  <SupportTab manifest={manifest} />
                 </TabsContent>
               )}
             </div>
