@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react'
-import { useUserStore } from '@/stores/userStore.ts'
-import { apiClient } from '@/lib/api'
-import { useAtomValue } from 'jotai'
-import { versionAtom } from '@/atoms/applicationAtoms'
 import { Browser, Events } from '@wailsio/runtime'
+import { useAtomValue } from 'jotai'
+import { AlertTriangleIcon, CheckIcon } from 'lucide-react'
+import type { WailsEvent } from 'node_modules/@wailsio/runtime/types/events'
+import { useEffect, useState } from 'react'
+
+import { versionAtom } from '@/atoms/applicationAtoms'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,10 +16,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Button } from '@/components/ui/button'
-import type { WailsEvent } from 'node_modules/@wailsio/runtime/types/events'
 import { toast } from '@/components/ui/toast'
-import { AlertTriangleIcon, CheckIcon } from 'lucide-react'
+import { apiClient } from '@/lib/api'
+import { useUserStore } from '@/stores/userStore.ts'
 
 export const UserBar = () => {
   const [isReady, setIsReady] = useState(false)
@@ -30,7 +31,7 @@ export const UserBar = () => {
     try {
       const resp = await apiClient.get('/me')
       if (resp.status === 200) {
-        let userData = await resp.json()
+        const userData = await resp.json()
         setUser(userData)
       }
     } catch (error) {
