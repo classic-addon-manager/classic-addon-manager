@@ -1,7 +1,8 @@
-import aacLogo from '@/assets/images/aac-logo-wide.png'
-import { Sidebar } from '@/components/sidebar'
 import { useAtomValue } from 'jotai'
+
+import aacLogo from '@/assets/images/aac-logo-wide.png'
 import { activeComponentAtom } from '@/atoms/sidebarAtoms'
+import { Sidebar } from '@/components/sidebar'
 
 export default function UI() {
   const ActiveComponent = useAtomValue(activeComponentAtom)

@@ -1,10 +1,4 @@
-import { Addon, LocalAddonService } from '@/lib/wails'
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-} from '@/components/ui/context-menu'
+import { Browser } from '@wailsio/runtime'
 import {
   AlertTriangleIcon,
   BugIcon,
@@ -13,10 +7,18 @@ import {
   GithubIcon,
   Trash2Icon,
 } from 'lucide-react'
-import { safeCall } from '@/lib/utils.ts'
 import type { ReactNode } from 'react'
-import { Browser } from '@wailsio/runtime'
+
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu'
 import { toast } from '@/components/ui/toast.tsx'
+import { safeCall } from '@/lib/utils.ts'
+import type { Addon } from '@/lib/wails'
+import { LocalAddonService } from '@/lib/wails'
 import { useAddonStore } from '@/stores/addonStore.ts'
 
 interface LocalAddonContextMenuProps {

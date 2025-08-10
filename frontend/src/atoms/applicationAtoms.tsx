@@ -1,4 +1,5 @@
 import { atomWithDefault } from 'jotai/utils'
+
 import { ApplicationService } from '@/lib/wails'
 
 export const versionAtom = atomWithDefault<Promise<string>>(async () => {

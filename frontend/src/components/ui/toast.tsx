@@ -1,6 +1,6 @@
-import { toast as sonnerToast } from 'sonner'
-import { X } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import { X } from 'lucide-react'
+import { toast as sonnerToast } from 'sonner'
 
 interface ToastProps {
   id: string | number

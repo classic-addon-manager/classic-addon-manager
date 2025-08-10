@@ -1,5 +1,6 @@
-import UI from './UI.tsx'
 import { Toaster } from 'sonner'
+
+import UI from './UI.tsx'
 
 function App() {
   return (

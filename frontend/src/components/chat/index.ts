@@ -3,7 +3,7 @@ export { ChatMessage } from './ChatMessage'
 export { EmptyState } from './EmptyState'
 export { LoadingIndicator } from './LoadingIndicator'
 export { MessageInput } from './MessageInput'
-export type { ChatMessage as ChatMessageType } from './types'
+export type { ChatMessageType } from './types'
 export {
   useAnimationCleanup,
   useAutoScroll,
