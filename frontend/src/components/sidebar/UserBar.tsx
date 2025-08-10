@@ -5,6 +5,7 @@ import type { WailsEvent } from 'node_modules/@wailsio/runtime/types/events'
 import { useEffect, useState } from 'react'
 
 import { versionAtom } from '@/atoms/applicationAtoms'
+import { AIChatDialog } from '@/components/AIChatDialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
@@ -22,6 +23,7 @@ import { useUserStore } from '@/stores/userStore.ts'
 
 export const UserBar = () => {
   const [isReady, setIsReady] = useState(false)
+  const [chatOpen, setChatOpen] = useState(false)
   const { user, token, setUser, setToken, isAuthenticated, clearUser } = useUserStore()
   const version = useAtomValue(versionAtom)
 
@@ -90,7 +92,7 @@ export const UserBar = () => {
       <Button
         variant="secondary"
         className="w-full flex items-center justify-center gap-2 bg-secondary/30"
-        onClick={() => window.alert('TODO: Add AI chat component')}
+        onClick={() => setChatOpen(true)}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -170,6 +172,7 @@ export const UserBar = () => {
           </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
+      <AIChatDialog open={chatOpen} onOpenChange={setChatOpen} />
     </div>
   )
 }

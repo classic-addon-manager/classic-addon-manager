@@ -179,3 +179,119 @@
     align-items: center;
     justify-content: center;
 }
+
+/* AI Chat Dialog Styles */
+.chat-message,
+.chat-message * {
+  user-select: text !important;
+}
+
+.chat-message.assistant-message {
+  max-width: 100%;
+  overflow-wrap: break-word;
+}
+
+/* Markdown styling for assistant messages */
+.chat-message.assistant-message h1,
+.chat-message.assistant-message h2,
+.chat-message.assistant-message h3,
+.chat-message.assistant-message h4,
+.chat-message.assistant-message h5,
+.chat-message.assistant-message h6 {
+  @apply font-semibold mt-4 mb-2 text-foreground;
+}
+
+.chat-message.assistant-message h1 {
+  @apply text-xl;
+}
+
+.chat-message.assistant-message h2 {
+  @apply text-lg;
+}
+
+.chat-message.assistant-message h3 {
+  @apply text-base;
+}
+
+.chat-message.assistant-message p {
+  @apply mb-3 last:mb-0 leading-relaxed text-foreground;
+}
+
+.chat-message.assistant-message ul,
+.chat-message.assistant-message ol {
+  @apply mb-3 pl-4 space-y-1;
+}
+
+.chat-message.assistant-message li {
+  @apply text-foreground;
+}
+
+.chat-message.assistant-message ul li {
+  @apply list-disc;
+}
+
+.chat-message.assistant-message ol li {
+  @apply list-decimal;
+}
+
+.chat-message.assistant-message blockquote {
+  @apply border-l-4 border-primary/30 pl-4 py-2 my-3 bg-muted/30 rounded-r text-muted-foreground italic;
+}
+
+.chat-message.assistant-message a,
+.chat-message.assistant-message .wails-link {
+  @apply text-blue-400 hover:text-blue-500 hover:underline transition-all cursor-pointer;
+}
+
+.chat-message.assistant-message code {
+  @apply bg-gray-700 py-0.5 px-1 rounded-sm font-mono text-sm;
+}
+
+.chat-message.assistant-message code::before,
+.chat-message.assistant-message code::after {
+  content: none !important;
+}
+
+.chat-message.assistant-message pre {
+  @apply bg-neutral-900 p-4 my-4 overflow-x-auto rounded-md font-mono text-muted-foreground border;
+}
+
+.chat-message.assistant-message pre code {
+  @apply bg-transparent p-0 text-sm;
+}
+
+.chat-message.assistant-message strong {
+  @apply font-semibold text-foreground;
+}
+
+.chat-message.assistant-message em {
+  @apply italic text-muted-foreground;
+}
+
+.chat-message.assistant-message hr {
+  @apply border-t border-border my-4;
+}
+
+.chat-message.assistant-message table {
+  @apply w-full border-collapse border border-border my-3;
+}
+
+.chat-message.assistant-message th,
+.chat-message.assistant-message td {
+  @apply border border-border px-3 py-2 text-left;
+}
+
+.chat-message.assistant-message th {
+  @apply bg-muted font-semibold;
+}
+
+.copy-button {
+  @apply absolute top-1 right-1 p-1 rounded-md text-muted-foreground/60 hover:text-muted-foreground hover:bg-secondary/50 transition-all duration-150;
+  opacity: 0;
+  visibility: hidden;
+}
+
+.chat-message:hover .copy-button {
+  opacity: 1;
+  visibility: visible;
+}
