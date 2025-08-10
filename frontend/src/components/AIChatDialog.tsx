@@ -62,7 +62,9 @@ export const AIChatDialog = ({ open, onOpenChange }: AIChatDialogProps) => {
       }
     })
 
-    return () => DOMPurify.removeHook('afterSanitizeAttributes')
+    return () => {
+      DOMPurify.removeHook('afterSanitizeAttributes')
+    }
   }, [])
 
   // Auto-scroll to bottom
@@ -229,6 +231,7 @@ export const AIChatDialog = ({ open, onOpenChange }: AIChatDialogProps) => {
             cleanupConnection()
           }
         } catch (parseError) {
+          console.error('Error parsing SSE data:', parseError)
           // Treat as raw content chunk - append to ref first
           currentAssistantContentRef.current += event.data
           setChatHistory(prev => {
@@ -258,7 +261,7 @@ export const AIChatDialog = ({ open, onOpenChange }: AIChatDialogProps) => {
         })
         cleanupConnection()
       }
-    } catch (error) {
+    } catch {
       clearTimeout(timeoutId)
       currentAssistantContentRef.current = 'Sorry, I encountered an error processing your request.'
       setChatHistory(prev => {
