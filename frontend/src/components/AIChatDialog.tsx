@@ -1,7 +1,7 @@
 import { Browser } from '@wailsio/runtime'
 import DOMPurify from 'dompurify'
-import { marked } from 'marked'
 import { useAtomValue } from 'jotai'
+import { marked } from 'marked'
 import { useEffect, useRef, useState } from 'react'
 
 import supportDaru from '@/assets/images/support_daru.webp'
@@ -29,7 +29,6 @@ export const AIChatDialog = ({ open, onOpenChange }: AIChatDialogProps) => {
   const version = useAtomValue(versionAtom)
 
   // State
-  const [chatMessage, setChatMessage] = useState('')
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([])
   const [isWaitingForResponse, setIsWaitingForResponse] = useState(false)
   const [conversationId, setConversationId] = useState<string | null>(null)
@@ -135,18 +134,21 @@ export const AIChatDialog = ({ open, onOpenChange }: AIChatDialogProps) => {
   }
 
   const generateMessageId = () => {
-    return `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    return `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
   }
 
   const sendMessage = async () => {
-    if (!chatMessage.trim() || isWaitingForResponse) return
+    const inputValue = messageInputRef.current?.value?.trim() || ''
+    if (!inputValue || isWaitingForResponse) return
 
     cleanupConnection()
 
     // Add user message
     const userMessageId = generateMessageId()
-    const userMessage = chatMessage
-    setChatMessage('')
+    const userMessage = inputValue
+    if (messageInputRef.current) {
+      messageInputRef.current.value = ''
+    }
 
     setChatHistory(prev => [...prev, { role: 'user', content: userMessage, id: userMessageId }])
     setMessageAnimationStates(prev => new Set([...prev, userMessageId]))
@@ -504,8 +506,6 @@ export const AIChatDialog = ({ open, onOpenChange }: AIChatDialogProps) => {
                 <input
                   ref={messageInputRef}
                   type="text"
-                  value={chatMessage}
-                  onChange={e => setChatMessage(e.target.value)}
                   placeholder={
                     isWaitingForResponse
                       ? 'Daru is thinking...'
@@ -521,7 +521,7 @@ export const AIChatDialog = ({ open, onOpenChange }: AIChatDialogProps) => {
                   size="icon"
                   className="absolute right-1.5 top-1/2 -translate-y-1/2 transform rounded-full p-1.5"
                   variant="ghost"
-                  disabled={!chatMessage.trim() || isWaitingForResponse}
+                  disabled={isWaitingForResponse}
                 >
                   {isWaitingForResponse ? (
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
