@@ -1,6 +1,6 @@
 import { useAtomValue } from 'jotai'
 
-import aacLogo from '@/assets/images/aac-logo-wide.png'
+import aacLogo from '@/assets/images/aac-logo-wide.webp'
 import { activeComponentAtom } from '@/atoms/sidebarAtoms'
 import { Sidebar } from '@/components/sidebar'
 
