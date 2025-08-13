@@ -8,10 +8,6 @@ import { Card } from '@/components/ui/card'
 import type { ApplicationRelease } from '@/lib/wails'
 import { ApplicationService } from '@/lib/wails'
 
-function isNewerVersion(newVersion: string, currentVersion: string): boolean {
-  return semver.gt(newVersion, currentVersion)
-}
-
 export const UpdateCard = () => {
   const currentVersion = useAtomValue(versionAtom)
   const [updateAvailable, setUpdateAvailable] = useState(false)
@@ -22,7 +18,7 @@ export const UpdateCard = () => {
     const checkForUpdates = async () => {
       try {
         const releaseInfo = await ApplicationService.GetLatestRelease()
-        if (releaseInfo && isNewerVersion(releaseInfo.version, currentVersion)) {
+        if (releaseInfo && semver.gt(releaseInfo.version, currentVersion)) {
           setUpdateInformation(releaseInfo)
           setUpdateAvailable(true)
         }
