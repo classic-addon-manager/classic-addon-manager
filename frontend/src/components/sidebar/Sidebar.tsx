@@ -4,8 +4,8 @@ import { Blocks, Globe, Home, Settings2Icon, WrenchIcon } from 'lucide-react'
 
 import { versionAtom } from '@/atoms/applicationAtoms'
 import { activePageAtom, type PageId } from '@/atoms/sidebarAtoms'
-import { UpdateCard } from '@/components/sidebar/UpdateCard.tsx'
-import { UserBar } from '@/components/sidebar/UserBar.tsx'
+import { UpdateCard } from '@/components/sidebar/UpdateCard'
+import { UserBar } from '@/components/sidebar/UserBar'
 import { useAddonStore } from '@/stores/addonStore'
 
 import { SidebarItem } from './SidebarItem'
