@@ -25,6 +25,10 @@ func (s *LocalAddonService) IsInstalled(name string) bool {
 	return addon.IsInstalled(name)
 }
 
+func (s *LocalAddonService) GetAllInstalledAddonNames() []string {
+	return addon.GetInstalledAddonNames()
+}
+
 func (s *LocalAddonService) UninstallAddon(name string) bool {
 	if !addon.IsInstalled(name) {
 		return false

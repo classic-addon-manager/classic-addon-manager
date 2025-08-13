@@ -1,17 +1,17 @@
-import {type AddonManifest, LocalAddonService} from '$lib/wails'
-
-import addons from '../addons'
+import { repoGetManifest } from '@/lib/repo.ts'
+import { type AddonManifest, LocalAddonService } from '@/lib/wails'
+import { useAddonStore } from '@/stores/addonStore'
 
 export type DependencyInfo = {
-    manifest: AddonManifest;
-    isInstalled: boolean;
-    depth: number; // Track dependency depth for debugging/logging
-};
+  manifest: AddonManifest
+  isInstalled: boolean
+  depth: number // Track dependency depth for debugging/logging
+}
 
 export type DependencyResolutionResult = {
-    dependencies: DependencyInfo[];
-    errors: string[];
-};
+  dependencies: DependencyInfo[]
+  errors: string[]
+}
 
 /**
  * Recursively resolves all transitive dependencies for a given addon
@@ -27,7 +27,7 @@ export async function resolveTransitiveDependencies(
 ): Promise<DependencyResolutionResult> {
   const result: DependencyResolutionResult = {
     dependencies: [],
-    errors: []
+    errors: [],
   }
 
   // Prevent infinite recursion from circular dependencies
@@ -52,14 +52,14 @@ export async function resolveTransitiveDependencies(
   // Process each direct dependency
   for (const depName of addonManifest.dependencies) {
     try {
-      const depManifest = await addons.getManifest(depName)
+      const depManifest = await repoGetManifest(depName)
       const isInstalled = await LocalAddonService.IsInstalled(depName)
 
       // Add this dependency to our result
       const depInfo: DependencyInfo = {
         manifest: depManifest,
         isInstalled,
-        depth
+        depth,
       }
 
       // Only add if not already in our dependencies list
@@ -68,7 +68,11 @@ export async function resolveTransitiveDependencies(
       }
 
       // Recursively resolve this dependency's dependencies
-      const subResult = await resolveTransitiveDependencies(depManifest, new Set(visited), depth + 1)
+      const subResult = await resolveTransitiveDependencies(
+        depManifest,
+        new Set(visited),
+        depth + 1
+      )
 
       // Merge sub-dependencies, avoiding duplicates
       for (const subDep of subResult.dependencies) {
@@ -78,7 +82,6 @@ export async function resolveTransitiveDependencies(
       }
 
       result.errors.push(...subResult.errors)
-
     } catch (error) {
       result.errors.push(`Failed to resolve dependency ${depName}: ${error}`)
       console.error(`Failed to resolve dependency ${depName}:`, error)
@@ -94,7 +97,9 @@ export async function resolveTransitiveDependencies(
  * @param dependencies Array of dependencies to install
  * @returns Array of failed dependency names
  */
-export async function installDependenciesInOrder(dependencies: DependencyInfo[]): Promise<string[]> {
+export async function installDependenciesInOrder(
+  dependencies: DependencyInfo[]
+): Promise<string[]> {
   // Sort by depth (deepest first) to ensure dependencies are installed before their dependents
   const sortedDeps = [...dependencies].sort((a, b) => b.depth - a.depth)
 
@@ -102,13 +107,15 @@ export async function installDependenciesInOrder(dependencies: DependencyInfo[])
 
   for (const depInfo of sortedDeps) {
     if (depInfo.isInstalled) {
-      console.log(`Dependency ${depInfo.manifest.alias} already installed (depth: ${depInfo.depth}).`)
+      console.log(
+        `Dependency ${depInfo.manifest.alias} already installed (depth: ${depInfo.depth}).`
+      )
       continue
     }
 
     try {
       console.log(`Installing dependency ${depInfo.manifest.alias} (depth: ${depInfo.depth})...`)
-      const success = await addons.install(depInfo.manifest, 'latest')
+      const success = await useAddonStore.getState().install(depInfo.manifest, 'latest')
       if (success) {
         depInfo.isInstalled = true
         console.log(`Successfully installed dependency: ${depInfo.manifest.alias}`)

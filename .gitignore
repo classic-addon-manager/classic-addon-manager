@@ -5,6 +5,7 @@ node_modules
 frontend/dist
 frontend/.vscode
 frontend/bindings
+frontend-svelte/
 .idea
 .task
 /ClassicAddonManager.exe

@@ -1,5 +1,5 @@
 export * from '../../bindings/ClassicAddonManager/backend/addon'
 export * from '../../bindings/ClassicAddonManager/backend/api'
 export * from '../../bindings/ClassicAddonManager/backend/services'
-export {AddonManifest} from '../../bindings/ClassicAddonManager/backend/shared'
+export { AddonManifest } from '../../bindings/ClassicAddonManager/backend/shared'
 export * from '../../bindings/ClassicAddonManager/backend/util'

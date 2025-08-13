@@ -1,0 +1,163 @@
+import {
+  AlertTriangleIcon,
+  ArrowUpCircle,
+  CalendarDays,
+  LoaderCircle,
+  Package,
+  Tag,
+  User,
+} from 'lucide-react'
+import { useEffect, useState } from 'react'
+import Markdown from 'react-markdown'
+
+import { Badge } from '@/components/ui/badge'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { repoGetManifest } from '@/lib/repo.ts'
+import { formatToLocalTime, safeCall } from '@/lib/utils'
+import type { Addon, Release } from '@/lib/wails'
+import { useAddonStore } from '@/stores/addonStore'
+import { useUpdateDialogStore } from '@/stores/updateDialogStore'
+
+import { Button } from '../ui/button'
+import { toast } from '../ui/toast'
+
+interface Props {
+  addon: Addon
+  release: Release
+}
+
+export const LocalAddonUpdateDialog = ({ addon, release }: Props) => {
+  const [changelog, setChangelog] = useState<string>('')
+  const [isUpdating, setIsUpdating] = useState<boolean>(false)
+  const { open, setOpen } = useUpdateDialogStore()
+  const { install } = useAddonStore()
+
+  useEffect(() => {
+    if (open && release?.body) {
+      setChangelog(release.body)
+    } else {
+      setChangelog('No change log was provided')
+    }
+  }, [open, release.body])
+
+  const handleUpdateClick = async () => {
+    setIsUpdating(true)
+
+    const updateOperation = async () => {
+      const manifest = await repoGetManifest(addon.name)
+      return await install(manifest, release.tag_name)
+    }
+
+    const [didInstall, err] = await safeCall<boolean>(updateOperation())
+
+    if (err) {
+      if (err.message.includes('not found')) {
+        toast({
+          title: 'Error',
+          description: 'No release found for this addon',
+          icon: AlertTriangleIcon,
+        })
+      } else {
+        toast({
+          title: 'Error',
+          description: `Failed to update addon: ${err.message.substring(0, 100)}`,
+        })
+      }
+      setIsUpdating(false)
+      return
+    }
+
+    if (didInstall) {
+      toast({
+        title: 'Addon updated',
+        description: `${addon.alias} was updated to ${release.tag_name}`,
+        icon: ArrowUpCircle,
+      })
+    }
+    setIsUpdating(false)
+  }
+
+  const ReleaseInformation = () => {
+    if (!release) {
+      return <Badge variant="outline">No Release</Badge>
+    }
+    return (
+      <span className="inline-flex items-center gap-x-1.5">
+        <Badge variant="secondary" className="inline-flex items-center gap-1">
+          <Tag className="w-3 h-3" />
+          {release.tag_name}
+        </Badge>
+      </span>
+    )
+  }
+
+  return (
+    <Dialog onOpenChange={setOpen} open={open}>
+      <DialogContent className="max-w-0 min-w-[650px] md:max-w-[70svw] min-h-[500px] max-h-[90svh] lg:max-w-[850px] flex flex-col p-0">
+        <DialogHeader className="p-6 pb-4 shrink-0 border-b">
+          <DialogTitle className="text-2xl font-semibold mb-1">{addon.alias}</DialogTitle>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm mb-3 text-muted-foreground">
+            <span className="inline-flex items-center gap-1">
+              <User className="w-3.5 h-3.5" />
+              <span className="font-normal text-foreground/90">{addon.author}</span>
+            </span>
+            {ReleaseInformation()}
+          </div>
+          {addon.description && (
+            <DialogDescription className="text-sm text-muted-foreground">
+              {addon.description}
+            </DialogDescription>
+          )}
+        </DialogHeader>
+
+        <div className="flex-1 overflow-y-auto p-6">
+          {release ? (
+            <>
+              <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground mb-4">
+                <CalendarDays className="w-3.5 h-3.5" />
+                <span>Released on {formatToLocalTime(release.published_at)}</span>
+              </div>
+              <div className="border rounded-lg p-4 bg-card">
+                <div className="prose max-w-none text-sm text-foreground dark:text-foreground/90">
+                  <Markdown>{changelog}</Markdown>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground pt-10">
+              <Package className="w-12 h-12 mb-4 opacity-50" />
+              <p className="font-medium">No changelog available</p>
+              <p className="text-xs mt-1">The author hasn't provided release notes.</p>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter className="p-4 border-t">
+          {isUpdating ? (
+            <Button type="button" variant="default" disabled className="w-full sm:w-auto">
+              <LoaderCircle className="w-4 h-4 mr-2 animate-spin" />
+              Updating...
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="default"
+              onClick={handleUpdateClick}
+              className="w-full sm:w-auto"
+            >
+              <ArrowUpCircle className="w-5 h-4" />
+              Update to {release.tag_name}
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
