@@ -49,7 +49,7 @@ func AddToAddonsTxt(addonName string) bool {
 	}
 
 	lines = append(lines, addonName)
-	err := file.WriteLines(filepath.Join(config.GetString("general.aacPath"), "Addon", "addons.txt"), lines)
+	err := file.WriteLines(filepath.Join(config.GetAddonDir(), "addons.txt"), lines)
 	if err != nil {
 		logger.Error("Error adding addon to addons.txt:", err)
 		return false

@@ -4,12 +4,13 @@ import (
 	"ClassicAddonManager/backend/logger"
 	"errors"
 	"fmt"
-	"github.com/spf13/viper"
-	"github.com/sqweek/dialog"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
+
+	"github.com/spf13/viper"
+	"github.com/sqweek/dialog"
 )
 
 func LoadConfig() error {
@@ -193,7 +194,7 @@ func GetDataDir() string {
 func GetAACDir() string {
 	path := viper.GetString("general.aacpath")
 	if path == "" {
-		dialog.Message("path to AAClassic is empty, this should not happen").Title("Classic Addon Manager Error").Error()
+		dialog.Message("Path to AAC is empty, go to settings to override automatic detection and choose your path instead.").Title("Classic Addon Manager Error").Error()
 	}
 	return path
 }
