@@ -135,7 +135,7 @@ export const RemoteAddonDialog = ({
       <>
         <TooltipProvider>
           <Tooltip delayDuration={100}>
-            <TooltipTrigger>
+            <TooltipTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
@@ -163,7 +163,7 @@ export const RemoteAddonDialog = ({
         </TooltipProvider>
         <TooltipProvider>
           <Tooltip delayDuration={100}>
-            <TooltipTrigger>
+            <TooltipTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
