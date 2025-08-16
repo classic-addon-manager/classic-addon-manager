@@ -150,13 +150,13 @@
 }
 
 ::-webkit-scrollbar {
-  width: 5px;
+  width: 6px;
   margin-left: 5px;
 }
 
 ::-webkit-scrollbar-track {
   background-color: transparent;
-  margin-left: 5px;
+  margin-left: 6px;
 }
 
 ::-webkit-scrollbar-thumb {
