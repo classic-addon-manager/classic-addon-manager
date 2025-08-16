@@ -1,5 +1,6 @@
+import { Dialogs } from '@wailsio/runtime'
 import { useAtom, useAtomValue } from 'jotai'
-import { LoaderCircle, Package, RefreshCw, Search } from 'lucide-react'
+import { AlertTriangleIcon, LoaderCircle, Package, RefreshCw, Search, Upload } from 'lucide-react'
 import { Suspense, useEffect, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 
@@ -13,9 +14,12 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { toast } from '@/components/ui/toast.tsx'
+import { LocalAddonService } from '@/lib/wails'
 import { useAddonStore } from '@/stores/addonStore'
 
 import { LocalAddonDialog } from './dashboard/LocalAddonDialog'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip'
 
 export const Dashboard = () => {
   const { isCheckingForUpdates, performBulkUpdateCheck, updateInstalledAddons } = useAddonStore()
@@ -40,6 +44,55 @@ export const Dashboard = () => {
       performBulkUpdateCheck()
     })
   }, [])
+
+  const handleInstallZip = async () => {
+    try {
+      const selectedFile = await Dialogs.OpenFile({
+        Title: 'Select Addon ZIP File',
+        Message: 'Choose a ZIP file containing the addon to install',
+        ButtonText: 'Install',
+        CanChooseFiles: true,
+        CanChooseDirectories: false,
+        AllowsMultipleSelection: false,
+        Filters: [
+          {
+            DisplayName: 'ZIP Files',
+            Pattern: '*.zip',
+          },
+        ],
+      })
+
+      if (selectedFile) {
+        const name = await LocalAddonService.InstallZipAddon(selectedFile)
+        toast({
+          title: 'Addon Installed',
+          description: `${name} installed successfully!`,
+        })
+        // Refresh the addon list after installation
+        await updateInstalledAddons()
+      }
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        // Check if dialog was cancelled without making a selection
+        if (error.message.includes('shellItem is nil')) {
+          return
+        }
+        toast({
+          title: 'Error',
+          description: error.message,
+          icon: AlertTriangleIcon,
+        })
+        return
+      } else {
+        toast({
+          title: 'Error',
+          description: 'An unknown error occurred: ' + error,
+          icon: AlertTriangleIcon,
+        })
+        console.error('Error selecting ZIP file:', error)
+      }
+    }
+  }
 
   return (
     <div className="flex flex-col h-screen bg-background">
@@ -101,13 +154,38 @@ export const Dashboard = () => {
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
             {!isLoading && (
-              <Badge
-                variant="secondary"
-                className="flex text-muted-foreground items-center gap-1 px-2 py-1.5"
-              >
-                <Package className="size-3" />
-                {filteredAddons.length} {filteredAddons.length === 1 ? 'addon' : 'addons'} installed
-              </Badge>
+              <div className="flex items-center gap-3">
+                <TooltipProvider>
+                  <Tooltip delayDuration={100}>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleInstallZip}
+                        className="flex items-center gap-2 transition-all duration-200 hover:shadow-md"
+                      >
+                        <Upload className="size-3.5" />
+                        Install ZIP
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p className="flex gap-2">
+                        <AlertTriangleIcon className="size-4" />
+                        Only install addons from sources you trust!
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
+                <Badge
+                  variant="secondary"
+                  className="flex text-muted-foreground items-center gap-1 px-2 py-1.5"
+                >
+                  <Package className="size-3" />
+                  {filteredAddons.length} {filteredAddons.length === 1 ? 'addon' : 'addons'}{' '}
+                  installed
+                </Badge>
+              </div>
             )}
           </div>
 

@@ -6,6 +6,7 @@ import (
 	"ClassicAddonManager/backend/file"
 	"ClassicAddonManager/backend/logger"
 	"ClassicAddonManager/backend/shared"
+	"ClassicAddonManager/backend/util"
 	"encoding/json"
 	"errors"
 	"os"
@@ -118,4 +119,38 @@ func SaveManagedAddonsToDisk() {
 	}
 
 	logger.Info("Managed addons saved to disk")
+}
+
+func InstallZip(zipPath string) (string, error) {
+	fileName := filepath.Base(zipPath)
+	addonName := strings.TrimSuffix(fileName, filepath.Ext(fileName))
+
+	// Validate the zip file contains a main.lua file
+	err := file.ValidateAddonZip(zipPath)
+	if err != nil {
+		return "", err
+	}
+
+	// Copy the zip file to the cache directory
+	cachePath := filepath.Join(config.GetCacheDir(), addonName+".zip")
+	err = file.MoveFile(zipPath, cachePath)
+	if err != nil {
+		logger.Error("failed to copy zip file to cache directory", err)
+		return "", err
+	}
+
+	// Extract the zip file to the cache directory
+	err = util.ExtractAddonRelease(addonName+".zip", addonName)
+	if err != nil {
+		return "", err
+	}
+
+	// Move the extracted addon from cache to the addon directory
+	if !util.MoveAddonRelease(addonName) {
+		return "", errors.New("failed to move addon release")
+	}
+
+	AddToAddonsTxt(addonName)
+
+	return addonName, nil
 }

@@ -52,6 +52,10 @@ func (s *LocalAddonService) UninstallAddon(name string) bool {
 	return wasRemoved
 }
 
+func (s *LocalAddonService) InstallZipAddon(zipPath string) (string, error) {
+	return addon.InstallZip(zipPath)
+}
+
 func (s *LocalAddonService) UnmanageAddon(name string) bool {
 	return addon.RemoveManagedAddon(name)
 }

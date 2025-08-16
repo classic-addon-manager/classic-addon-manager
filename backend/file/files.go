@@ -2,10 +2,12 @@ package file
 
 import (
 	"ClassicAddonManager/backend/logger"
+	"archive/zip"
 	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func ListFiles(path string) ([]string, error) {
@@ -111,6 +113,32 @@ func WriteJSON(path string, data []byte) error {
 
 	if _, err = f.Write(data); err != nil {
 		return fmt.Errorf("failed to write data: %w", err)
+	}
+
+	return nil
+}
+
+func ValidateAddonZip(zipPath string) error {
+	archive, err := zip.OpenReader(zipPath)
+	if err != nil {
+		return err
+	}
+	defer archive.Close()
+
+	hasMainLua := false
+
+	for _, f := range archive.File {
+		// Iterate until we find main.lua
+		if !strings.HasSuffix(f.Name, "main.lua") {
+			continue
+		}
+
+		hasMainLua = true
+		break
+	}
+
+	if !hasMainLua {
+		return fmt.Errorf("invalid archive: main.lua not found in %s", zipPath)
 	}
 
 	return nil
