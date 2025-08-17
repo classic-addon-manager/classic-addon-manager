@@ -80,18 +80,16 @@ func WriteLines(path string, lines []string) error {
 	}
 	defer f.Close()
 
-	if lines != nil {
-		for i, line := range lines {
-			if i == len(lines)-1 {
-				_, err := f.WriteString(line)
-				if err != nil {
-					return err
-				}
-			} else {
-				_, err := f.WriteString(line + "\n")
-				if err != nil {
-					return err
-				}
+	for i, line := range lines {
+		if i == len(lines)-1 {
+			_, err := f.WriteString(line)
+			if err != nil {
+				return err
+			}
+		} else {
+			_, err := f.WriteString(line + "\n")
+			if err != nil {
+				return err
 			}
 		}
 	}
