@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-var Version = "3.0.2"
+var Version = "3.0.3"
 var AuthToken string
 
 type AddonManifest struct {
