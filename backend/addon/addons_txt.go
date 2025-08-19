@@ -55,7 +55,9 @@ func AddToAddonsTxt(addonName string) bool {
 		return false
 	}
 
+	installedAddonNamesMu.Lock()
 	installedAddonNames = lines
+	installedAddonNamesMu.Unlock()
 	return true
 }
 
@@ -86,6 +88,8 @@ func RemoveFromAddonsTxt(addonName string) bool {
 		return false
 	}
 
+	installedAddonNamesMu.Lock()
 	installedAddonNames = lines
+	installedAddonNamesMu.Unlock()
 	return true
 }
