@@ -1,8 +1,11 @@
+import { Browser } from '@wailsio/runtime'
 import { clsx } from 'clsx'
 import { useAtom } from 'jotai'
 import {
   AlertTriangleIcon,
+  BugIcon,
   CheckIcon,
+  GithubIcon,
   PackageIcon,
   RefreshCw,
   Tag,
@@ -264,9 +267,9 @@ export const LocalAddonDialog = ({ addon, onOpenChange, open }: LocalAddonDialog
         <DialogHeader className="p-6 pb-4 shrink-0 border-b">
           <DialogTitle className="text-2xl font-semibold mb-1">{addon.alias}</DialogTitle>
 
-          {/* Display author and version information for managed addons */}
+          {/* Display author, version, and description information for managed addons */}
           {addon.isManaged && (
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm mb-3 text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm mb-1 text-muted-foreground">
               <span className="inline-flex items-center gap-1">
                 <User className="w-3.5 h-3.5" />
                 <span className="font-normal text-foreground/90">{addon.author}</span>
@@ -280,13 +283,36 @@ export const LocalAddonDialog = ({ addon, onOpenChange, open }: LocalAddonDialog
               ) : (
                 <Badge variant="outline">No Version</Badge>
               )}
+
+              {addon.description && (
+                <DialogDescription className="text-sm text-muted-foreground">
+                  {addon.description}
+                </DialogDescription>
+              )}
             </div>
           )}
 
-          {addon.isManaged && addon.description && (
-            <DialogDescription className="text-sm text-muted-foreground">
-              {addon.description}
-            </DialogDescription>
+          {addon.isManaged && (
+            <div className="flex flex-wrap gap-2 text-sm">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-1"
+                onClick={() => Browser.OpenURL(`https://github.com/${addon.repo}`)}
+              >
+                <GithubIcon className="w-4 h-4" />
+                View Code
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-1"
+                onClick={() => Browser.OpenURL(`https://github.com/${addon.repo}/issues/new`)}
+              >
+                <BugIcon className="w-4 h-4" />
+                Report Issue
+              </Button>
+            </div>
           )}
         </DialogHeader>
 
