@@ -20,12 +20,13 @@ func (s *RemoteAddonService) InstallAddon(ad shared.AddonManifest, version strin
 		return false, err
 	}
 
-	ok := addon.AddToAddonsTxt(ad.Name)
-	if !ok {
-		logger.Warn(ad.Name + " - Error adding addon to addons.txt")
+	err = addon.AddToAddonsTxt(ad.Name)
+	if err != nil {
+		logger.Error(ad.Name+" - Error adding addon to addons.txt: ", err)
+		return false, err
 	}
 
-	return ok, nil
+	return true, nil
 }
 
 func (s *RemoteAddonService) GetLatestRelease(name string) (api.Release, error) {

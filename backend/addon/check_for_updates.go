@@ -63,8 +63,8 @@ func GenerateUpdateAddonLua(updates map[string]Addon) {
 		}
 	}
 
-	if !AddToAddonsTxt("AddonUpdateNotification") {
-		logger.Error("Error adding AddonUpdateNotification to addons.txt", nil)
+	if err := AddToAddonsTxt("AddonUpdateNotification"); err != nil {
+		logger.Error("Error adding AddonUpdateNotification to addons.txt", err)
 		return
 	}
 

@@ -150,7 +150,10 @@ func InstallZip(zipPath string) (string, error) {
 		return "", errors.New("failed to move addon release")
 	}
 
-	AddToAddonsTxt(addonName)
+	if err := AddToAddonsTxt(addonName); err != nil {
+		logger.Error("Error adding addon to addons.txt:", err)
+		return "", err
+	}
 
 	return addonName, nil
 }

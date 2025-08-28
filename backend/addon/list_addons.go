@@ -1,13 +1,20 @@
 package addon
 
 import (
+	"ClassicAddonManager/backend/logger"
 	"fmt"
 	"strings"
 )
 
 func GetAddons() []Addon {
 	var addons []Addon
-	for _, name := range ReadAddonsTxt() {
+	names, err := ReadAddonsTxt()
+	if err != nil {
+		logger.Error("Error reading addons.txt in GetAddons:", err)
+		return addons
+	}
+
+	for _, name := range names {
 		fmt.Println("Addon:", name)
 		alias := strings.ReplaceAll(name, "_", " ")
 

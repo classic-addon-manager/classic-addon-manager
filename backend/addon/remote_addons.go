@@ -60,9 +60,8 @@ func InstallAddon(manifest shared.AddonManifest, version string) (bool, error) {
 		return false, nil
 	}
 
-	ok := AddToAddonsTxt(manifest.Name)
-	if !ok {
-		return false, nil
+	if err := AddToAddonsTxt(manifest.Name); err != nil {
+		return false, err
 	}
 
 	if version == "" {

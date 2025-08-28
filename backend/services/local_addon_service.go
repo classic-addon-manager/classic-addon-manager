@@ -43,13 +43,20 @@ func (s *LocalAddonService) UninstallAddon(name string) bool {
 		return false
 	}
 
-	wasRemoved := addon.RemoveManagedAddon(name) && addon.RemoveFromAddonsTxt(name)
+	// Remove from managed addons
+	wasRemoved := addon.RemoveManagedAddon(name)
+
+	// Remove from addons.txt
+	if err := addon.RemoveFromAddonsTxt(name); err != nil {
+		logger.Error("Error removing addon from addons.txt:", err)
+		return false
+	}
 
 	if wasRemoved {
 		api.UnsubscribeFromAddon(name)
 	}
 
-	return wasRemoved
+	return true
 }
 
 func (s *LocalAddonService) InstallZipAddon(zipPath string) (string, error) {
