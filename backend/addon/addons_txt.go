@@ -23,6 +23,12 @@ func GetInstalledAddonNames() []string {
 	return installedAddonNames
 }
 
+func setInstalledAddonNames(names []string) {
+	installedAddonNamesMu.Lock()
+	defer installedAddonNamesMu.Unlock()
+	installedAddonNames = names
+}
+
 func ReadAddonsTxt() []string {
 	lines, err := file.ReadLines(filepath.Join(config.GetAddonDir(), "addons.txt"))
 	if err != nil {
@@ -35,9 +41,7 @@ func ReadAddonsTxt() []string {
 		lines = slices.Delete(lines, idx, idx+1)
 	}
 
-	installedAddonNamesMu.Lock()
-	installedAddonNames = lines
-	installedAddonNamesMu.Unlock()
+	setInstalledAddonNames(lines)
 	return lines
 }
 
@@ -55,9 +59,7 @@ func AddToAddonsTxt(addonName string) bool {
 		return false
 	}
 
-	installedAddonNamesMu.Lock()
-	installedAddonNames = lines
-	installedAddonNamesMu.Unlock()
+	setInstalledAddonNames(lines)
 	return true
 }
 
@@ -68,9 +70,7 @@ func CreateAddonsTxt() {
 		logger.Fatal("Error creating addons.txt:", err)
 		return
 	}
-	installedAddonNamesMu.Lock()
-	installedAddonNames = []string{}
-	installedAddonNamesMu.Unlock()
+	setInstalledAddonNames([]string{})
 }
 
 func RemoveFromAddonsTxt(addonName string) bool {
@@ -88,8 +88,6 @@ func RemoveFromAddonsTxt(addonName string) bool {
 		return false
 	}
 
-	installedAddonNamesMu.Lock()
-	installedAddonNames = lines
-	installedAddonNamesMu.Unlock()
+	setInstalledAddonNames(lines)
 	return true
 }
