@@ -29,6 +29,32 @@ var assets embed.FS
 
 const pipeName = `\\.\pipe\ClassicAddonManagerPipe`
 
+func checkWebView2Installation() {
+	const webView2RegistryPath = `SOFTWARE\\WOW6432Node\\Microsoft\\EdgeUpdate\\Clients\\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}`
+
+	key, err := registry.OpenKey(registry.LOCAL_MACHINE, webView2RegistryPath, registry.READ)
+	if err != nil {
+		// WebView2 not found in registry
+		err := fmt.Errorf("failed to open registry key: %w", err)
+		errorMsg := "Microsoft Edge WebView2 Runtime is not installed. Please install it from https://developer.microsoft.com/en-us/microsoft-edge/webview2"
+		logger.Error(errorMsg, err)
+		dialog.Message("%s", errorMsg).Title("Classic Addon Manager Error").Error()
+		os.Exit(1)
+	}
+	defer key.Close()
+
+	// Try to read the 'pv' value
+	_, _, err = key.GetStringValue("pv")
+	if err != nil {
+		// 'pv' key not found
+		err := fmt.Errorf("failed to read 'pv' value: %w", err)
+		errorMsg := "Microsoft Edge WebView2 Runtime is not properly installed. The 'pv' registry key is missing."
+		logger.Error(errorMsg, err)
+		dialog.Message("%s", errorMsg).Title("Classic Addon Manager Error").Error()
+		os.Exit(1)
+	}
+}
+
 func main() {
 	addonUpdateMode := flag.Bool("check-updates", false, "Run in headless mode to check for addon updates")
 	flag.Parse()
@@ -45,6 +71,9 @@ func main() {
 		)
 		os.Exit(0)
 	}
+
+	// Check if Edge WebView2 dependency is installed (debloated Windows usually doesn't come with it)
+	checkWebView2Installation()
 
 	// Check if another instance is running
 	timeout := 2 * time.Second
