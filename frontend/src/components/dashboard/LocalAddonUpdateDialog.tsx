@@ -37,7 +37,7 @@ export const LocalAddonUpdateDialog = ({ addon, release }: Props) => {
   const [changelog, setChangelog] = useState<string>('')
   const [isUpdating, setIsUpdating] = useState<boolean>(false)
   const { open, setOpen } = useUpdateDialogStore()
-  const { install } = useAddonStore()
+  const { update } = useAddonStore()
 
   useEffect(() => {
     if (open && release?.body) {
@@ -52,7 +52,7 @@ export const LocalAddonUpdateDialog = ({ addon, release }: Props) => {
 
     const updateOperation = async () => {
       const manifest = await repoGetManifest(addon.name)
-      return await install(manifest, release.tag_name)
+      return await update(manifest, release.tag_name)
     }
 
     const [didInstall, err] = await safeCall<boolean>(updateOperation())

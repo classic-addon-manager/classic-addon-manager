@@ -18,6 +18,7 @@ interface AddonState {
   updateInstalledAddons: () => Promise<void>
 
   install: (manifest: AddonManifest, version: string) => Promise<boolean>
+  update: (manifest: AddonManifest, version: string) => Promise<boolean>
 
   uninstall: (addon: Addon) => Promise<boolean>
   unmanage: (addon: Addon) => Promise<boolean>
@@ -98,6 +99,23 @@ export const useAddonStore = create<AddonState>((set, get) => ({
     const [result, err] = await safeCall(RemoteAddonService.InstallAddon(manifest, version))
     if (err) {
       console.error('[AddonStore] Failed to install addon:', err)
+      return false
+    }
+
+    if (result) {
+      await get().updateInstalledAddons()
+      // Recompute available updates so the sidebar badge updates immediately
+      await get().performBulkUpdateCheck()
+      return true
+    }
+
+    return false
+  },
+
+  update: async (manifest: AddonManifest, version: string) => {
+    const [result, err] = await safeCall(RemoteAddonService.UpdateAddon(manifest, version))
+    if (err) {
+      console.error('[AddonStore] Failed to update addon:', err)
       return false
     }
 

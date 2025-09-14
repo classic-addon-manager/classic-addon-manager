@@ -29,6 +29,16 @@ func (s *RemoteAddonService) InstallAddon(ad shared.AddonManifest, version strin
 	return true, nil
 }
 
+func (s *RemoteAddonService) UpdateAddon(ad shared.AddonManifest, version string) (bool, error) {
+	_, err := addon.UpdateAddon(ad, version)
+	if err != nil {
+		logger.Error("Error updating addon:", err)
+		return false, err
+	}
+
+	return true, nil
+}
+
 func (s *RemoteAddonService) GetLatestRelease(name string) (api.Release, error) {
 	release, err := api.GetAddonRelease(name, "latest")
 	if err != nil {

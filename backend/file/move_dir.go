@@ -21,7 +21,7 @@ func MoveDir(src string, dest string) error {
 	}
 
 	// If rename fails, do a manual copy and delete (handles cross-device moves)
-	if err := copyDir(src, dest); err != nil {
+	if err := CopyDir(src, dest); err != nil {
 		return fmt.Errorf("failed to copy directory: %w", err)
 	}
 
@@ -33,7 +33,7 @@ func MoveDir(src string, dest string) error {
 	return nil
 }
 
-func copyDir(src string, dest string) error {
+func CopyDir(src string, dest string) error {
 	entries, err := os.ReadDir(src)
 	if err != nil {
 		return err
@@ -48,7 +48,7 @@ func copyDir(src string, dest string) error {
 		destPath := filepath.Join(dest, entry.Name())
 
 		if entry.IsDir() {
-			if err := copyDir(srcPath, destPath); err != nil {
+			if err := CopyDir(srcPath, destPath); err != nil {
 				return err
 			}
 		} else {
