@@ -7,6 +7,7 @@ import { useAddonStore } from '@/stores/addonStore'
 export const searchQueryAtom = atom<string>('')
 export const selectedAddonAtom = atom<Addon | null>(null)
 export const isAddonDialogOpenAtom = atom<boolean>(false)
+export const versionSelectAtom = atom<Addon | null>(null)
 
 const addonStoreAtom = atomWithStore(useAddonStore)
 

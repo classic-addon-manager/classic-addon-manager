@@ -10,6 +10,7 @@ import {
   isAddonDialogOpenAtom,
   searchQueryAtom,
   selectedAddonAtom,
+  versionSelectAtom,
 } from '@/components/dashboard/atoms'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -18,7 +19,7 @@ import { toast } from '@/components/ui/toast.tsx'
 import { LocalAddonService } from '@/lib/wails'
 import { useAddonStore } from '@/stores/addonStore'
 
-import { LocalAddonDialog } from './dashboard/LocalAddonDialog'
+import { LocalAddonDialog, LocalAddonVersionSelectDialog } from './dashboard/index'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip'
 
 export const Dashboard = () => {
@@ -28,6 +29,7 @@ export const Dashboard = () => {
   const [isAddonDialogOpen, setIsAddonDialogOpen] = useAtom(isAddonDialogOpenAtom)
   const [, setSearchQuery] = useAtom(searchQueryAtom)
   const filteredAddons = useAtomValue(filteredAddonsAtom)
+  const versionSelectAddon = useAtomValue(versionSelectAtom)
 
   const debouncedSetSearch = useDebouncedCallback((value: string) => {
     setSearchQuery(value)
@@ -148,6 +150,8 @@ export const Dashboard = () => {
           }}
         />
       )}
+
+      {versionSelectAddon && <LocalAddonVersionSelectDialog addon={versionSelectAddon} />}
 
       <main className="flex-1 overflow-auto">
         <div className="container mx-auto px-4 pt-4">

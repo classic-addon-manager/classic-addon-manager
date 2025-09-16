@@ -1,14 +1,17 @@
 import { Browser } from '@wailsio/runtime'
+import { useSetAtom } from 'jotai'
 import {
   AlertTriangleIcon,
   BugIcon,
   CheckIcon,
   FolderOpen,
+  GitBranchIcon,
   GithubIcon,
   Trash2Icon,
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 
+import { versionSelectAtom } from '@/components/dashboard/atoms'
 import {
   ContextMenu,
   ContextMenuContent,
@@ -33,6 +36,7 @@ export const LocalAddonContextMenu = ({
   onOpenChange,
 }: LocalAddonContextMenuProps) => {
   const { uninstall, unmanage } = useAddonStore()
+  const openVersionSelect = useSetAtom(versionSelectAtom)
 
   const openDirectory = async () => {
     const [, err] = await safeCall(LocalAddonService.OpenDirectory(addon.name))
@@ -99,6 +103,11 @@ export const LocalAddonContextMenu = ({
             >
               <BugIcon size={16} />
               <span>Report issue</span>
+            </ContextMenuItem>
+
+            <ContextMenuItem onClick={() => openVersionSelect(addon)}>
+              <GitBranchIcon size={16} />
+              <span>Install other version</span>
             </ContextMenuItem>
 
             <ContextMenuItem variant="warning" onClick={() => handleAddonAction('unmanage')}>
