@@ -1,6 +1,7 @@
 import { useSetAtom } from 'jotai'
 import { AlertCircle, CalendarDays, CheckCircle2Icon, LoaderCircle, TagIcon } from 'lucide-react'
-import { Suspense, use, useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
+import usePromise from 'react-promise-suspense'
 
 import { versionSelectAtom } from '@/components/dashboard/atoms.ts'
 import { Button } from '@/components/ui/button.tsx'
@@ -185,8 +186,7 @@ interface ReleasesProps {
 }
 
 const Releases = ({ addon, selectedVersion, onVersionChange, onReleasesLoaded }: ReleasesProps) => {
-  const releasesPromise = fetchReleases(addon)
-  const releases = use(releasesPromise)
+  const releases = usePromise(fetchReleases, [addon])
 
   useEffect(() => {
     if (releases.length > 0) {
