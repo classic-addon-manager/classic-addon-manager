@@ -23,8 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
-import type { Addon } from '@/lib/wails'
-import type { Release } from '@/lib/wails'
+import type { Addon, Release } from '@/lib/wails'
 
 interface ApiResponse {
   status: boolean
@@ -140,8 +139,6 @@ const fetchReleases = async (addon: Addon): Promise<Release[]> => {
     return releaseCache.get(cacheKey)!
   }
 
-  console.debug(`Fetching releases for ${addon.name}`)
-
   const promise = (async () => {
     try {
       const response = await fetch(`https://aac.gaijin.dev/addon/${addon.name}/releases`)
@@ -158,11 +155,8 @@ const fetchReleases = async (addon: Addon): Promise<Release[]> => {
             uniqueReleasesMap.set(release.tag_name, release)
           }
         }
-        const uniqueReleases = Array.from(uniqueReleasesMap.values())
-        console.debug(
-          `Fetched ${result.data.length} releases, ${uniqueReleases.length} unique versions for ${addon.name}`
-        )
-        return uniqueReleases
+
+        return Array.from(uniqueReleasesMap.values())
       } else {
         throw new Error(result.message || 'Failed to fetch releases: Invalid API response')
       }
@@ -286,6 +280,13 @@ export const LocalAddonVersionSelectDialog = ({ addon }: Props) => {
           onReleasesLoaded={setReleases}
           onVersionChange={setSelectedVersion}
         />
+
+        {error && (
+          <div className="flex items-center gap-2 p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+            <AlertCircle size={16} />
+            <span>{error}</span>
+          </div>
+        )}
 
         <DialogFooter className="border-t pt-4 gap-2">
           <Button variant="outline" onClick={() => setOpen(false)}>
