@@ -1,7 +1,6 @@
 import { useSetAtom } from 'jotai'
 import { AlertCircle, CalendarDays, CheckCircle2Icon, LoaderCircle, TagIcon } from 'lucide-react'
 import { Suspense, use, useEffect, useState } from 'react'
-import { toast } from 'sonner'
 
 import { versionSelectAtom } from '@/components/dashboard/atoms.ts'
 import { Button } from '@/components/ui/button.tsx'
@@ -22,8 +21,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { toast } from '@/components/ui/toast.tsx'
 import { cn } from '@/lib/utils'
 import type { Addon, Release } from '@/lib/wails'
+import { RemoteAddonService } from '@/lib/wails'
+import { useAddonStore } from '@/stores/addonStore'
 
 interface ApiResponse {
   status: boolean
@@ -163,7 +165,10 @@ const fetchReleases = async (addon: Addon): Promise<Release[]> => {
     } catch (e: unknown) {
       console.error(`Failed to fetch releases for ${addon.name}:`, e)
       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.'
-      toast.error(`Failed to load versions: ${errorMessage}`)
+      toast({
+        title: 'Error',
+        description: `Failed to load versions: ${errorMessage}`,
+      })
       throw e
     }
   })()
@@ -234,6 +239,7 @@ export const LocalAddonVersionSelectDialog = ({ addon }: Props) => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [releases, setReleases] = useState<Release[]>([])
+  const { update } = useAddonStore()
 
   const handleInstall = async () => {
     if (!selectedVersion) return
@@ -241,8 +247,23 @@ export const LocalAddonVersionSelectDialog = ({ addon }: Props) => {
     setIsLoading(true)
     setError(null)
     try {
-      // TODO: Implement install logic
-      console.log(`Installing version ${selectedVersion} for ${addon.name}`)
+      const manifest = (await RemoteAddonService.GetAddonManifest()).find(
+        m => m.name === addon.name
+      )
+      if (!manifest) {
+        throw new Error('Failed to fetch addon manifest')
+      }
+      const didInstall = await update(manifest, selectedVersion)
+      if (didInstall) {
+        toast({
+          title: 'Success',
+          description: `Installed ${addon.alias} version ${selectedVersion}`,
+        })
+        setOpen(false)
+        setAddon(null)
+      } else {
+        throw new Error('Installation failed')
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to install')
     } finally {
