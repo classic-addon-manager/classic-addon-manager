@@ -211,34 +211,27 @@ const Releases = ({ addon, selectedVersion, onVersionChange, onReleasesLoaded }:
 
 interface VersionSelectSuspenseProps {
   addon: Addon
+  selectedVersion: string | null
   onReleasesLoaded: (releases: Release[]) => void
   onVersionChange: (version: string) => void
 }
 
 const VersionSelectSuspense = ({
   addon,
+  selectedVersion,
   onReleasesLoaded,
   onVersionChange,
 }: VersionSelectSuspenseProps) => {
-  const [selectedVersion, setSelectedVersion] = useState<string | null>(null)
-
   return (
     <Suspense fallback={<LoadingState />}>
       <Releases
         addon={addon}
         selectedVersion={selectedVersion}
-        onVersionChange={version => {
-          setSelectedVersion(version)
-          onVersionChange(version)
-        }}
+        onVersionChange={onVersionChange}
         onReleasesLoaded={onReleasesLoaded}
       />
     </Suspense>
   )
-}
-
-interface Props {
-  addon: Addon
 }
 
 export const LocalAddonVersionSelectDialog = ({ addon }: Props) => {
@@ -289,6 +282,7 @@ export const LocalAddonVersionSelectDialog = ({ addon }: Props) => {
         </DialogHeader>
         <VersionSelectSuspense
           addon={addon}
+          selectedVersion={selectedVersion}
           onReleasesLoaded={setReleases}
           onVersionChange={setSelectedVersion}
         />
