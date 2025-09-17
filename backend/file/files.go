@@ -39,12 +39,14 @@ func ListFiles(path string) ([]string, error) {
 func FileExists(path string) bool {
 	_, err := os.Stat(path)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return false
+		}
 		logger.Error("Error checking if file exists:", err)
-	}
-	if os.IsNotExist(err) {
 		return false
 	}
-	return err == nil
+
+	return true
 }
 
 func ReadLines(path string) ([]string, error) {
