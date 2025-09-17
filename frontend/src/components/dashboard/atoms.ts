@@ -16,6 +16,9 @@ export const filteredAddonsAtom = atom(get => {
   const addons = get(addonStoreAtom)
   const { installedAddons } = addons
 
+  if (!searchQuery.trim()) return installedAddons
+  const normalizedQuery = searchQuery.trim().toLowerCase()
+
   return installedAddons.filter(addon => {
     return (
       !searchQuery.trim() ||
