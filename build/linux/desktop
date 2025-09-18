@@ -9,5 +9,4 @@ Type=Application
 Icon=classicaddonmanager
 Categories=Utility;
 StartupWMClass=classicaddonmanager
-
- 
+MimeType=x-scheme-handler/classicaddonmanager;
