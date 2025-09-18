@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Name=Classic Addon Manager
+Comment=An addon manager for ArcheAge Classic
+# The Exec line includes %u to pass the URL to the application
+Exec=/usr/local/bin/classicaddonmanager %u
+Terminal=false
+Type=Application
+Icon=classicaddonmanager
+Categories=Utility;
+StartupWMClass=classicaddonmanager
+
+ 
