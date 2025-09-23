@@ -71,7 +71,7 @@ export const Settings = () => {
       </header>
 
       <main className="flex-1 overflow-auto">
-        <div className="container px-4 py-6 max-w-4xl">
+        <div className="container mx-auto px-4 py-6 max-w-4xl">
           <Card className="shadow-sm">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">

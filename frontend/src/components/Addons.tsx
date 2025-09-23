@@ -64,7 +64,7 @@ const Header = () => {
 
   return (
     <header className="bg-background/95 backdrop-blur-sm supports-[backdrop-filter]:bg-background/60 border-b">
-      <div className="container flex h-16 items-center gap-4 px-4">
+      <div className="container mx-auto flex h-16 items-center gap-4 px-4">
         <div className="relative flex-1">
           <SearchIcon className="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform" />
           <Input
@@ -134,7 +134,7 @@ export const Addons = () => {
       )}
 
       <div className="flex-1 overflow-auto">
-        <div className="container px-4">
+        <div className="container mx-auto px-4">
           <AddonList />
         </div>
       </div>

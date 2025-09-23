@@ -322,7 +322,7 @@ export const Troubleshooting = () => {
     <div className="flex flex-col h-screen">
       <Header />
       <main className="flex-1 overflow-auto">
-        <div className="container px-4 py-6">
+        <div className="container mx-auto px-4 py-6">
           <div className="mx-auto max-w-3xl">
             <Accordion type="single" className="space-y-4">
               {accordionItems.map(item => (
