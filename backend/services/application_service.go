@@ -8,11 +8,12 @@ import (
 	"ClassicAddonManager/backend/shared"
 	"ClassicAddonManager/backend/util"
 	"fmt"
-	"github.com/wailsapp/wails/v3/pkg/application"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sync"
+
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 var authMutex = &sync.Mutex{}
