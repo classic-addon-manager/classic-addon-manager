@@ -136,3 +136,11 @@ func (s *ApplicationService) SettingsSetAutoDetectPath(enabled bool) {
 func (s *ApplicationService) GetConfig() map[string]any {
 	return config.GetAll()
 }
+
+func (s *ApplicationService) OpenCacheDir() error {
+	return file.OpenDirectory(config.GetCacheDir())
+}
+
+func (s *ApplicationService) OpenDataDir() error {
+	return file.OpenDirectory(config.GetDataDir())
+}

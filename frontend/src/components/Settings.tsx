@@ -9,6 +9,8 @@ import { toast } from '@/components/ui/toast'
 import { ApplicationService } from '@/lib/wails'
 import { useSettingsStore } from '@/stores/settingsStore'
 
+import { QuickActions } from './settings/QuickActions'
+
 const DIALOG_TITLE = 'Select ArcheAge Classic Documents directory'
 const SUCCESS_TITLE = 'Success'
 const ERROR_TITLE = 'Error during directory selection.'
@@ -152,6 +154,15 @@ export const Settings = () => {
           </Card>
         </div>
       </main>
+
+      <footer className="border-t bg-muted/30">
+        <div className="container px-4 py-4 max-w-4xl">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">Quick Actions</div>
+            <QuickActions />
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }

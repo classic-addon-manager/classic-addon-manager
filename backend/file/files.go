@@ -6,7 +6,9 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -116,6 +118,21 @@ func WriteJSON(path string, data []byte) error {
 	}
 
 	return nil
+}
+
+func OpenDirectory(path string) error {
+	var cmd *exec.Cmd
+
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("explorer", path)
+	case "linux":
+		cmd = exec.Command("xdg-open", path)
+	default:
+		return fmt.Errorf("unsupported platform")
+	}
+
+	return cmd.Start()
 }
 
 func ValidateAddonZip(zipPath string) error {
