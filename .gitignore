@@ -1,6 +1,8 @@
 build/bin
 build/darwin
 build/windows/installer
+build/linux/appimage/*
+!build/linux/appimage/build.sh
 node_modules
 frontend/dist
 frontend/.vscode
