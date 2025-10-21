@@ -8,14 +8,14 @@ import { versionAtom } from '@/atoms/applicationAtoms'
 import { toast } from '@/components/ui/toast'
 import { useUserStore } from '@/stores/userStore'
 
-import type { ChatMessageType } from './types'
+import type { ChatHistoryItem } from './types'
 
 export const useChatLogic = () => {
   const { token } = useUserStore()
   const version = useAtomValue(versionAtom)
 
   // State
-  const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([])
+  const [chatHistory, setChatHistory] = useState<ChatHistoryItem[]>([])
   const [isWaitingForResponse, setIsWaitingForResponse] = useState(false)
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [remainingLimit, setRemainingLimit] = useState(0)
@@ -65,13 +65,19 @@ export const useChatLogic = () => {
 
     // Add user message
     const userMessageId = generateMessageId()
-    setChatHistory(prev => [...prev, { role: 'user', content: message, id: userMessageId }])
+    setChatHistory(prev => [
+      ...prev,
+      { id: userMessageId, type: 'message', role: 'user', content: message },
+    ])
     setMessageAnimationStates(prev => new Set([...prev, userMessageId]))
 
     // Add empty assistant message for streaming
     const assistantMessageId = generateMessageId()
     currentAssistantContentRef.current = '' // Reset content ref
-    setChatHistory(prev => [...prev, { role: 'assistant', content: '', id: assistantMessageId }])
+    setChatHistory(prev => [
+      ...prev,
+      { id: assistantMessageId, type: 'message', role: 'assistant', content: '' },
+    ])
     setMessageAnimationStates(prev => new Set([...prev, assistantMessageId]))
 
     setIsWaitingForResponse(true)
@@ -81,9 +87,16 @@ export const useChatLogic = () => {
       setChatHistory(prev => {
         const newHistory = [...prev]
         const assistantMessageIndex = newHistory.findIndex(msg => msg.id === assistantMessageId)
-        if (assistantMessageIndex !== -1 && !newHistory[assistantMessageIndex].content) {
-          newHistory[assistantMessageIndex].content =
-            'Sorry adventurer, locating the Daru merchants is taking longer than expected. I am still working on your question. 🐸'
+        if (
+          assistantMessageIndex !== -1 &&
+          newHistory[assistantMessageIndex].type === 'message' &&
+          !newHistory[assistantMessageIndex].content
+        ) {
+          newHistory[assistantMessageIndex] = {
+            ...newHistory[assistantMessageIndex],
+            content:
+              'Sorry adventurer, locating the Daru merchants is taking longer than expected. I am still working on your question. 🐸',
+          }
         }
         return newHistory
       })
@@ -116,11 +129,34 @@ export const useChatLogic = () => {
                 msg => msg.id === assistantMessageId
               )
               if (assistantMessageIndex !== -1) {
-                newHistory[assistantMessageIndex].content = currentAssistantContentRef.current
+                const target = newHistory[assistantMessageIndex]
+                if (target.type === 'message') {
+                  newHistory[assistantMessageIndex] = {
+                    ...target,
+                    content: currentAssistantContentRef.current,
+                  }
+                }
               }
               return newHistory
             })
 
+            if (data.conversation_id) setConversationId(data.conversation_id)
+            if (data.remaining_limit !== undefined) setRemainingLimit(data.remaining_limit)
+          } else if (data.type === 'tool_call') {
+            const toolCallId = generateMessageId()
+            const action = typeof data.data === 'string' ? data.data : 'unknown_tool'
+            setChatHistory(prev => {
+              const newHistory = [...prev]
+              const toolCallEntry: ChatHistoryItem = { id: toolCallId, type: 'tool_call', action }
+              const assistantIndex = newHistory.findIndex(item => item.id === assistantMessageId)
+              if (assistantIndex === -1) {
+                newHistory.push(toolCallEntry)
+              } else {
+                newHistory.splice(assistantIndex, 0, toolCallEntry)
+              }
+              return newHistory
+            })
+            setMessageAnimationStates(prev => new Set([...prev, toolCallId]))
             if (data.conversation_id) setConversationId(data.conversation_id)
             if (data.remaining_limit !== undefined) setRemainingLimit(data.remaining_limit)
           } else if (data.type === 'complete') {
@@ -135,7 +171,13 @@ export const useChatLogic = () => {
                 msg => msg.id === assistantMessageId
               )
               if (assistantMessageIndex !== -1) {
-                newHistory[assistantMessageIndex].content = currentAssistantContentRef.current
+                const target = newHistory[assistantMessageIndex]
+                if (target.type === 'message') {
+                  newHistory[assistantMessageIndex] = {
+                    ...target,
+                    content: currentAssistantContentRef.current,
+                  }
+                }
               }
               return newHistory
             })
@@ -149,7 +191,13 @@ export const useChatLogic = () => {
             const newHistory = [...prev]
             const assistantMessageIndex = newHistory.findIndex(msg => msg.id === assistantMessageId)
             if (assistantMessageIndex !== -1) {
-              newHistory[assistantMessageIndex].content = currentAssistantContentRef.current
+              const target = newHistory[assistantMessageIndex]
+              if (target.type === 'message') {
+                newHistory[assistantMessageIndex] = {
+                  ...target,
+                  content: currentAssistantContentRef.current,
+                }
+              }
             }
             return newHistory
           })
@@ -166,7 +214,13 @@ export const useChatLogic = () => {
           const newHistory = [...prev]
           const assistantMessageIndex = newHistory.findIndex(msg => msg.id === assistantMessageId)
           if (assistantMessageIndex !== -1) {
-            newHistory[assistantMessageIndex].content = currentAssistantContentRef.current
+            const target = newHistory[assistantMessageIndex]
+            if (target.type === 'message') {
+              newHistory[assistantMessageIndex] = {
+                ...target,
+                content: currentAssistantContentRef.current,
+              }
+            }
           }
           return newHistory
         })
@@ -179,7 +233,13 @@ export const useChatLogic = () => {
         const newHistory = [...prev]
         const assistantMessageIndex = newHistory.findIndex(msg => msg.id === assistantMessageId)
         if (assistantMessageIndex !== -1) {
-          newHistory[assistantMessageIndex].content = currentAssistantContentRef.current
+          const target = newHistory[assistantMessageIndex]
+          if (target.type === 'message') {
+            newHistory[assistantMessageIndex] = {
+              ...target,
+              content: currentAssistantContentRef.current,
+            }
+          }
         }
         return newHistory
       })
@@ -244,7 +304,7 @@ export const useWailsLinkHandler = () => {
 }
 
 export const useAutoScroll = (
-  chatHistory: ChatMessageType[],
+  chatHistory: ChatHistoryItem[],
   chatContainerRef: React.RefObject<HTMLDivElement | null>
 ) => {
   useEffect(() => {

@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react'
+import { WrenchIcon } from 'lucide-react'
 import * as React from 'react'
+import { useEffect, useRef } from 'react'
 
 import {
   ChatHeader,
@@ -20,6 +21,48 @@ interface AIChatDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
 }
+
+const TOOL_CALL_MESSAGES: Record<string, string> = {
+  list_addons: 'Getting addons...',
+  get_latest_release: 'Checking the latest release...',
+  get_addon_readme: 'Opening the addon README...',
+  get_addon_manager_documentation: 'Fetching manager instructions...',
+  get_addon_details: 'Gathering addon details...',
+  search_archeage_wiki: 'Searching the ArcheAge Classic wiki...',
+  get_archeage_wiki_page_content: 'Reading the wiki page...',
+}
+
+const getToolCallMessage = (action: string) => {
+  if (action in TOOL_CALL_MESSAGES) {
+    return TOOL_CALL_MESSAGES[action]
+  }
+  return 'Unknown tool call'
+}
+
+interface ToolCallEntryProps {
+  action: string
+  isAnimating: boolean
+}
+
+const ToolCallEntry = ({ action, isAnimating }: ToolCallEntryProps) => (
+  <div
+    className={`flex justify-center px-4 ${
+      isAnimating ? 'animate-in fade-in-0 slide-in-from-bottom-2 duration-600' : ''
+    }`}
+  >
+    <div className="flex items-center gap-3 rounded-md border border-dashed border-border bg-muted/50 px-4 py-2 text-sm text-muted-foreground">
+      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary">
+        <WrenchIcon className="h-4 w-4" />
+      </span>
+      <div className="flex flex-col">
+        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground/80">
+          Tool call
+        </span>
+        <span className="text-sm text-foreground">{getToolCallMessage(action)}</span>
+      </div>
+    </div>
+  </div>
+)
 
 export const AIChatDialog = ({ open, onOpenChange }: AIChatDialogProps) => {
   // Refs
@@ -87,24 +130,37 @@ export const AIChatDialog = ({ open, onOpenChange }: AIChatDialogProps) => {
                 <EmptyState />
               ) : (
                 <div className="space-y-6">
-                  {chatHistory.map(message => {
-                    if (message.role === 'user') {
+                  {chatHistory.map(historyItem => {
+                    if (historyItem.type === 'tool_call') {
+                      return (
+                        <ToolCallEntry
+                          key={historyItem.id}
+                          action={historyItem.action}
+                          isAnimating={messageAnimationStates.has(historyItem.id)}
+                        />
+                      )
+                    }
+                    if (historyItem.type === 'message' && historyItem.role === 'user') {
                       return (
                         <ChatMessage
-                          key={message.id}
-                          message={message}
-                          isAnimating={messageAnimationStates.has(message.id)}
+                          key={historyItem.id}
+                          message={historyItem}
+                          isAnimating={messageAnimationStates.has(historyItem.id)}
                           onCopyMessage={copyToClipboard}
                           parseMarkdown={parseMarkdown}
                         />
                       )
                     }
-                    if (message.role === 'assistant' && message.content.trim()) {
+                    if (
+                      historyItem.type === 'message' &&
+                      historyItem.role === 'assistant' &&
+                      historyItem.content.trim()
+                    ) {
                       return (
                         <ChatMessage
-                          key={message.id}
-                          message={message}
-                          isAnimating={messageAnimationStates.has(message.id)}
+                          key={historyItem.id}
+                          message={historyItem}
+                          isAnimating={messageAnimationStates.has(historyItem.id)}
                           onCopyMessage={copyToClipboard}
                           parseMarkdown={parseMarkdown}
                         />
