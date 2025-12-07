@@ -121,6 +121,13 @@ func registerDeeplink() {
 		return
 	}
 
+	// Check if .desktop file already exists
+	desktopFile := filepath.Join(applicationsDir, "classic-addon-manager.desktop")
+	if _, err := os.Stat(desktopFile); err == nil {
+		logger.Info("Deeplink handler already registered.")
+		return
+	}
+
 	// Create .desktop file content
 	desktopContent := fmt.Sprintf(`[Desktop Entry]
 Version=1.0
@@ -134,8 +141,6 @@ Categories=Utility;
 StartupWMClass=classicaddonmanager
 MimeType=x-scheme-handler/classicaddonmanager;
 `, exePath)
-
-	desktopFile := filepath.Join(applicationsDir, "classic-addon-manager.desktop")
 
 	// Write .desktop file
 	if err := os.WriteFile(desktopFile, []byte(desktopContent), 0644); err != nil {
