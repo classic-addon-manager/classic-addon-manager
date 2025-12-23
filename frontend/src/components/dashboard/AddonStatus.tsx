@@ -19,7 +19,7 @@ const RenderStatus = ({ addon }: { addon: Addon }) => {
     if (isCheckingForUpdates) {
       return (
         <div className="flex justify-center">
-          <LoaderCircle className="mr-1 animate-spin" size={20} />
+          <LoaderCircle className="mr-1 animate-spin text-primary" size={20} />
         </div>
       )
     } else if (latestRelease) {
@@ -27,7 +27,8 @@ const RenderStatus = ({ addon }: { addon: Addon }) => {
         // Update available
         return (
           <Badge
-            className="py-1 cursor-pointer flex-shrink-0 flex-grow-0"
+            variant="outline"
+            className="py-1 cursor-pointer flex-shrink-0 flex-grow-0 text-primary border-primary/20 bg-primary/10 hover:bg-primary/20"
             onClick={e => {
               e.preventDefault()
               e.stopPropagation()
@@ -36,19 +37,20 @@ const RenderStatus = ({ addon }: { addon: Addon }) => {
               }
             }}
           >
-            <div style={{ width: 14, height: 14 }}>
-              <Download size={14} className="mr-1" />
-            </div>
+            <Download size={14} className="mr-1" />
             Update ({latestRelease.tag_name})
           </Badge>
         )
       } else {
         // Up to date
         return (
-          <div className="flex justify-center">
-            <Check size={20} className="text-green-600 mr-2" />
+          <Badge
+            variant="outline"
+            className="py-1 text-green-600 border-green-600/20 bg-green-500/10 hover:bg-green-500/20"
+          >
+            <Check size={14} className="mr-1" />
             Up to date
-          </div>
+          </Badge>
         )
       }
     }
