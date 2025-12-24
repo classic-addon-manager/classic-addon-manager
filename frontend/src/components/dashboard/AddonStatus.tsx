@@ -28,7 +28,7 @@ const RenderStatus = ({ addon }: { addon: Addon }) => {
         return (
           <Badge
             variant="outline"
-            className="py-1 cursor-pointer flex-shrink-0 flex-grow-0 text-primary border-primary/20 bg-primary/10 hover:bg-primary/20"
+            className="py-1 cursor-pointer flex-shrink-0 flex-grow-0 text-amber-600 border-amber-600/20 bg-amber-500/10 hover:bg-amber-500/20"
             onClick={e => {
               e.preventDefault()
               e.stopPropagation()
@@ -57,7 +57,10 @@ const RenderStatus = ({ addon }: { addon: Addon }) => {
   } else {
     // Not managed addon
     return (
-      <Badge className="py-1 cursor-pointer" variant="warning">
+      <Badge
+        className="py-1 cursor-pointer flex-shrink-0 flex-grow-0 text-orange-600 border-orange-600/20 bg-orange-500/10 hover:bg-orange-500/20"
+        variant="outline"
+      >
         <ShieldQuestion size={14} className="mr-2" />
         Not managed
       </Badge>

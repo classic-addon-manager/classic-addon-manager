@@ -25,7 +25,7 @@ export const RemoteAddon = ({ manifest, installed }: RemoteAddonProps) => {
     if (hasIcon) {
       return (
         <img
-          className="h-10 w-10 rounded-md object-cover"
+          className="h-10 w-10 rounded-lg object-cover border border-border/50 shadow-xs"
           src={iconUrl}
           alt={`${manifest.alias} icon`}
           loading="lazy"
@@ -35,8 +35,8 @@ export const RemoteAddon = ({ manifest, installed }: RemoteAddonProps) => {
     }
 
     return (
-      <div className="flex items-center justify-center h-10 w-10 rounded-md bg-background border">
-        <BlocksIcon className="h-5 w-5 opacity-50 stroke-2" />
+      <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-background border border-border/50 shadow-xs">
+        <BlocksIcon className="h-5 w-5 opacity-40 stroke-[1.5]" />
       </div>
     )
   }
@@ -44,7 +44,7 @@ export const RemoteAddon = ({ manifest, installed }: RemoteAddonProps) => {
   const NewBadge = () => {
     if (!isNew) return null
     return (
-      <div className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[8px] font-bold px-1 py-0.5 rounded-full shadow-md">
+      <div className="absolute -top-1.5 -right-1.5 bg-red-500/15 text-red-600 border border-red-600/40 text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-xs backdrop-blur-[2px] z-10">
         NEW
       </div>
     )
@@ -87,13 +87,15 @@ export const RemoteAddon = ({ manifest, installed }: RemoteAddonProps) => {
         {manifest.tags.slice(0, 4).map((tag, index) => (
           <span
             key={`${tag}-${index}`}
-            className="text-xs bg-secondary text-secondary-foreground px-1.5 py-0.5 rounded whitespace-nowrap transition-all"
+            className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-secondary/50 border border-secondary/50 text-secondary-foreground shadow-xs whitespace-nowrap transition-all"
           >
             {tag}
           </span>
         ))}
         {manifest.tags.length > 4 && (
-          <span className="text-xs text-muted-foreground">+{manifest.tags.length - 4} more</span>
+          <span className="text-[10px] text-muted-foreground">
+            +{manifest.tags.length - 4} more
+          </span>
         )}
       </div>
     )
@@ -101,7 +103,7 @@ export const RemoteAddon = ({ manifest, installed }: RemoteAddonProps) => {
 
   return (
     <div
-      className="grid grid-cols-12 items-center gap-2 bg-muted/50 hover:bg-muted/70 h-16 w-full rounded-lg cursor-pointer transition-all px-3 py-2 group"
+      className="grid grid-cols-12 items-center gap-2 bg-muted/30 hover:bg-muted/50 h-16 w-full rounded-xl cursor-pointer transition-all px-4 py-2 border border-border/50 hover:border-primary/30 hover:shadow-sm hover:ring-1 hover:ring-primary/10 group"
       onClick={() => {
         setSelectedManifest(manifest)
         setDialogOpen(true)

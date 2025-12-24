@@ -35,7 +35,7 @@ export const LocalAddon = ({ addon }: LocalAddonProps) => {
     if (iconUrl && hasIcon) {
       return (
         <img
-          className="h-10 w-10 rounded-md object-cover"
+          className="h-10 w-10 rounded-lg object-cover border border-border/50 shadow-xs"
           src={iconUrl}
           alt={`${addon.alias} icon`}
           loading="lazy"
@@ -44,8 +44,8 @@ export const LocalAddon = ({ addon }: LocalAddonProps) => {
       )
     }
     return (
-      <div className="flex items-center justify-center h-10 w-10 rounded-md bg-background border">
-        <BlocksIcon className="h-5 w-5 opacity-50 stroke-2" />
+      <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-background border border-border/50 shadow-xs">
+        <BlocksIcon className="h-5 w-5 opacity-40 stroke-[1.5]" />
       </div>
     )
   }
@@ -66,8 +66,8 @@ export const LocalAddon = ({ addon }: LocalAddonProps) => {
       <LocalAddonContextMenu addon={addon} onOpenChange={setIsContextMenuOpen}>
         <div
           className={cn(
-            'group grid grid-cols-12 items-center gap-2 bg-muted/50 hover:bg-muted/70 h-16 w-full rounded-lg cursor-pointer transition-all px-3 py-2',
-            isContextMenuOpen && 'ring-1 ring-primary/30 bg-muted/70'
+            'group grid grid-cols-12 items-center gap-2 bg-muted/30 hover:bg-muted/50 h-16 w-full rounded-xl cursor-pointer transition-all px-4 py-2 border border-border/50 hover:border-primary/30 hover:shadow-sm hover:ring-1 hover:ring-primary/10',
+            isContextMenuOpen && 'ring-1 ring-primary/30 bg-muted/50 border-primary/30'
           )}
           onClick={() => {
             setSelectedAddon(addon)
@@ -85,8 +85,8 @@ export const LocalAddon = ({ addon }: LocalAddonProps) => {
                 <span className="truncate">{addon.alias}</span>
                 {hasUpdate && (
                   <Badge
-                    variant="destructive"
-                    className="ml-0.5 px-1.5 py-0.5 text-[9px] font-bold rounded-full shadow-md flex items-center gap-0.5 shrink-0"
+                    variant="outline"
+                    className="ml-0.5 px-1.5 py-0.5 text-[9px] font-bold rounded-full shadow-sm flex items-center gap-0.5 shrink-0 text-amber-600 border-amber-600/20 bg-amber-500/10"
                   >
                     Outdated
                   </Badge>
@@ -100,7 +100,7 @@ export const LocalAddon = ({ addon }: LocalAddonProps) => {
                 )}
 
                 {!addon.isManaged && (
-                  <div className="px-1.5 py-0.5 rounded text-[10px] font-medium tracking-wide bg-background border text-muted-foreground">
+                  <div className="px-1.5 py-0.5 rounded-md text-[10px] font-medium tracking-wide bg-secondary/50 border border-secondary text-secondary-foreground shadow-xs">
                     Manual
                   </div>
                 )}
