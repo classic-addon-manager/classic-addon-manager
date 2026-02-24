@@ -19,7 +19,7 @@ You need to install the following dependencies for Wails to be operational.
     NPM (Node 15+)
 Once that is done visit the following link to install the Wails CLI
 
-https://v3alpha.wails.io/getting-started/installatio
+https://v3alpha.wails.io/getting-started/installation
 
 _It's important to note that we are using the Wails v3 alpha version, please make sure you are installing the correct version._
 ## Live Development
