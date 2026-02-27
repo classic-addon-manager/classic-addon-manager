@@ -5,9 +5,9 @@ import { marked } from 'marked'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { versionAtom } from '@/atoms/applicationAtoms'
-import { toast } from '@/components/ui/toast'
 import { useUserStore } from '@/stores/userStore'
 
+import { copyToClipboard, generateMessageId, parseMarkdown } from './chatUtils'
 import type { ChatHistoryItem } from './types'
 
 export const useChatLogic = () => {
@@ -25,10 +25,6 @@ export const useChatLogic = () => {
   const activeEventSourceRef = useRef<EventSource | null>(null)
   const currentAssistantContentRef = useRef<string>('')
 
-  const generateMessageId = () => {
-    return `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
-  }
-
   const cleanupConnection = useCallback(() => {
     if (activeEventSourceRef.current) {
       activeEventSourceRef.current.close()
@@ -37,70 +33,84 @@ export const useChatLogic = () => {
     setIsWaitingForResponse(false)
   }, [])
 
-  const parseMarkdown = (content: string) => {
-    return DOMPurify.sanitize(marked.parse(content, { async: false }) as string, {
-      ADD_ATTR: ['data-url', 'onclick'],
-    })
+  // --- Helpers ---
+
+  const updateAssistantMessage = (assistantMessageId: string, content: string) => {
+    setChatHistory(prev =>
+      prev.map(msg =>
+        msg.id === assistantMessageId && msg.type === 'message' ? { ...msg, content } : msg
+      )
+    )
   }
 
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      toast({
-        title: 'Success',
-        description: 'Copied to clipboard',
-      })
-    } catch {
-      toast({
-        title: 'Error',
-        description: 'Failed to copy text',
-      })
-    }
+  const syncMetadata = (data: { conversation_id?: string; remaining_limit?: number }) => {
+    if (data.conversation_id) setConversationId(data.conversation_id)
+    if (data.remaining_limit !== undefined) setRemainingLimit(data.remaining_limit)
   }
 
-  const sendMessage = async (message: string) => {
-    if (!message.trim() || isWaitingForResponse) return
-
-    cleanupConnection()
-
-    // Add user message
-    const userMessageId = generateMessageId()
-    setChatHistory(prev => [
-      ...prev,
-      { id: userMessageId, type: 'message', role: 'user', content: message },
-    ])
-    setMessageAnimationStates(prev => new Set([...prev, userMessageId]))
-
-    // Add empty assistant message for streaming
-    const assistantMessageId = generateMessageId()
-    currentAssistantContentRef.current = '' // Reset content ref
-    setChatHistory(prev => [
-      ...prev,
-      { id: assistantMessageId, type: 'message', role: 'assistant', content: '' },
-    ])
-    setMessageAnimationStates(prev => new Set([...prev, assistantMessageId]))
-
-    setIsWaitingForResponse(true)
-
-    // Timeout for slow response
-    const timeoutId = setTimeout(() => {
-      setChatHistory(prev => {
-        const newHistory = [...prev]
-        const assistantMessageIndex = newHistory.findIndex(msg => msg.id === assistantMessageId)
-        if (
-          assistantMessageIndex !== -1 &&
-          newHistory[assistantMessageIndex].type === 'message' &&
-          !newHistory[assistantMessageIndex].content
-        ) {
-          newHistory[assistantMessageIndex] = {
-            ...newHistory[assistantMessageIndex],
-            content:
-              'Sorry adventurer, locating the Daru merchants is taking longer than expected. I am still working on your question. 🐸',
-          }
-        }
-        return newHistory
-      })
+  const startSlowResponseTimeout = (assistantMessageId: string) => {
+    return setTimeout(() => {
+      setChatHistory(prev =>
+        prev.map(msg =>
+          msg.id === assistantMessageId && msg.type === 'message' && !msg.content
+            ? {
+                ...msg,
+                content:
+                  'Sorry adventurer, locating the Daru merchants is taking longer than expected. I am still working on your question. 🐸',
+              }
+            : msg
+        )
+      )
     }, 10000)
+  }
+
+  // --- SSE Event Handlers ---
+
+  const handleMessageChunk = (
+    data: { data?: string; conversation_id?: string; remaining_limit?: number },
+    assistantMessageId: string
+  ) => {
+    currentAssistantContentRef.current += data.data || ''
+    updateAssistantMessage(assistantMessageId, currentAssistantContentRef.current)
+    syncMetadata(data)
+  }
+
+  const handleToolCall = (
+    data: { data?: string; conversation_id?: string; remaining_limit?: number },
+    assistantMessageId: string
+  ) => {
+    const toolCallId = generateMessageId()
+    const action = typeof data.data === 'string' ? data.data : 'unknown_tool'
+    const toolCallEntry = { id: toolCallId, type: 'tool_call' as const, action }
+    setChatHistory(prev => {
+      const found = prev.some(item => item.id === assistantMessageId)
+      if (!found) return [...prev, toolCallEntry]
+      return prev.flatMap(item => (item.id === assistantMessageId ? [toolCallEntry, item] : [item]))
+    })
+    setMessageAnimationStates(prev => new Set([...prev, toolCallId]))
+    syncMetadata(data)
+  }
+
+  const handleComplete = (data: { conversation_id?: string; remaining_limit?: number }) => {
+    syncMetadata(data)
+    cleanupConnection()
+  }
+
+  const handleStreamError = (data: { message?: string }, assistantMessageId: string) => {
+    currentAssistantContentRef.current = `Sorry, I encountered an error: ${data.message || 'Server error'}`
+    updateAssistantMessage(assistantMessageId, currentAssistantContentRef.current)
+    cleanupConnection()
+  }
+
+  const handleRawChunk = (rawData: string, assistantMessageId: string) => {
+    currentAssistantContentRef.current += rawData
+    updateAssistantMessage(assistantMessageId, currentAssistantContentRef.current)
+  }
+
+  // --- Stream Response ---
+
+  const streamResponse = (message: string, assistantMessageId: string) => {
+    const timeoutId = startSlowResponseTimeout(assistantMessageId)
 
     try {
       const params = new URLSearchParams({
@@ -115,92 +125,25 @@ export const useChatLogic = () => {
 
       eventSource.onmessage = event => {
         clearTimeout(timeoutId)
-
         try {
           const data = JSON.parse(event.data)
-
-          if (data.type === 'message') {
-            // Append to ref first to prevent race conditions
-            currentAssistantContentRef.current += data.data || ''
-
-            setChatHistory(prev => {
-              const newHistory = [...prev]
-              const assistantMessageIndex = newHistory.findIndex(
-                msg => msg.id === assistantMessageId
-              )
-              if (assistantMessageIndex !== -1) {
-                const target = newHistory[assistantMessageIndex]
-                if (target.type === 'message') {
-                  newHistory[assistantMessageIndex] = {
-                    ...target,
-                    content: currentAssistantContentRef.current,
-                  }
-                }
-              }
-              return newHistory
-            })
-
-            if (data.conversation_id) setConversationId(data.conversation_id)
-            if (data.remaining_limit !== undefined) setRemainingLimit(data.remaining_limit)
-          } else if (data.type === 'tool_call') {
-            const toolCallId = generateMessageId()
-            const action = typeof data.data === 'string' ? data.data : 'unknown_tool'
-            setChatHistory(prev => {
-              const newHistory = [...prev]
-              const toolCallEntry: ChatHistoryItem = { id: toolCallId, type: 'tool_call', action }
-              const assistantIndex = newHistory.findIndex(item => item.id === assistantMessageId)
-              if (assistantIndex === -1) {
-                newHistory.push(toolCallEntry)
-              } else {
-                newHistory.splice(assistantIndex, 0, toolCallEntry)
-              }
-              return newHistory
-            })
-            setMessageAnimationStates(prev => new Set([...prev, toolCallId]))
-            if (data.conversation_id) setConversationId(data.conversation_id)
-            if (data.remaining_limit !== undefined) setRemainingLimit(data.remaining_limit)
-          } else if (data.type === 'complete') {
-            if (data.conversation_id) setConversationId(data.conversation_id)
-            if (data.remaining_limit !== undefined) setRemainingLimit(data.remaining_limit)
-            cleanupConnection()
-          } else if (data.type === 'error') {
-            currentAssistantContentRef.current = `Sorry, I encountered an error: ${data.message || 'Server error'}`
-            setChatHistory(prev => {
-              const newHistory = [...prev]
-              const assistantMessageIndex = newHistory.findIndex(
-                msg => msg.id === assistantMessageId
-              )
-              if (assistantMessageIndex !== -1) {
-                const target = newHistory[assistantMessageIndex]
-                if (target.type === 'message') {
-                  newHistory[assistantMessageIndex] = {
-                    ...target,
-                    content: currentAssistantContentRef.current,
-                  }
-                }
-              }
-              return newHistory
-            })
-            cleanupConnection()
+          switch (data.type) {
+            case 'message':
+              handleMessageChunk(data, assistantMessageId)
+              break
+            case 'tool_call':
+              handleToolCall(data, assistantMessageId)
+              break
+            case 'complete':
+              handleComplete(data)
+              break
+            case 'error':
+              handleStreamError(data, assistantMessageId)
+              break
           }
-        } catch (parseError) {
-          console.error('Error parsing SSE data:', parseError)
-          // Treat as raw content chunk - append to ref first
-          currentAssistantContentRef.current += event.data
-          setChatHistory(prev => {
-            const newHistory = [...prev]
-            const assistantMessageIndex = newHistory.findIndex(msg => msg.id === assistantMessageId)
-            if (assistantMessageIndex !== -1) {
-              const target = newHistory[assistantMessageIndex]
-              if (target.type === 'message') {
-                newHistory[assistantMessageIndex] = {
-                  ...target,
-                  content: currentAssistantContentRef.current,
-                }
-              }
-            }
-            return newHistory
-          })
+        } catch {
+          console.error('Error parsing SSE data')
+          handleRawChunk(event.data, assistantMessageId)
         }
       }
 
@@ -210,41 +153,41 @@ export const useChatLogic = () => {
           currentAssistantContentRef.current =
             'Sorry, I encountered an error processing your request.'
         }
-        setChatHistory(prev => {
-          const newHistory = [...prev]
-          const assistantMessageIndex = newHistory.findIndex(msg => msg.id === assistantMessageId)
-          if (assistantMessageIndex !== -1) {
-            const target = newHistory[assistantMessageIndex]
-            if (target.type === 'message') {
-              newHistory[assistantMessageIndex] = {
-                ...target,
-                content: currentAssistantContentRef.current,
-              }
-            }
-          }
-          return newHistory
-        })
+        updateAssistantMessage(assistantMessageId, currentAssistantContentRef.current)
         cleanupConnection()
       }
     } catch {
       clearTimeout(timeoutId)
       currentAssistantContentRef.current = 'Sorry, I encountered an error processing your request.'
-      setChatHistory(prev => {
-        const newHistory = [...prev]
-        const assistantMessageIndex = newHistory.findIndex(msg => msg.id === assistantMessageId)
-        if (assistantMessageIndex !== -1) {
-          const target = newHistory[assistantMessageIndex]
-          if (target.type === 'message') {
-            newHistory[assistantMessageIndex] = {
-              ...target,
-              content: currentAssistantContentRef.current,
-            }
-          }
-        }
-        return newHistory
-      })
+      updateAssistantMessage(assistantMessageId, currentAssistantContentRef.current)
       cleanupConnection()
     }
+  }
+
+  // --- Public API ---
+
+  const sendMessage = async (message: string) => {
+    if (!message.trim() || isWaitingForResponse) return
+
+    cleanupConnection()
+
+    const userMessageId = generateMessageId()
+    setChatHistory(prev => [
+      ...prev,
+      { id: userMessageId, type: 'message', role: 'user', content: message },
+    ])
+    setMessageAnimationStates(prev => new Set([...prev, userMessageId]))
+
+    const assistantMessageId = generateMessageId()
+    currentAssistantContentRef.current = ''
+    setChatHistory(prev => [
+      ...prev,
+      { id: assistantMessageId, type: 'message', role: 'assistant', content: '' },
+    ])
+    setMessageAnimationStates(prev => new Set([...prev, assistantMessageId]))
+
+    setIsWaitingForResponse(true)
+    streamResponse(message, assistantMessageId)
   }
 
   return {
