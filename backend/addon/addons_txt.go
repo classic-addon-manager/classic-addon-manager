@@ -89,19 +89,11 @@ func RemoveFromAddonsTxt(addonName string) error {
 	defer installedAddonNamesMu.Unlock()
 
 	// Find and remove addon
-	found := false
-	for i, name := range installedAddonNames {
-		if name == addonName {
-			installedAddonNames = slices.Delete(installedAddonNames, i, i+1)
-			found = true
-			break
-		}
-	}
-
-	// If not found, nothing to do
-	if !found {
+	idx := slices.Index(installedAddonNames, addonName)
+	if idx < 0 {
 		return nil
 	}
+	installedAddonNames = slices.Delete(installedAddonNames, idx, idx+1)
 
 	// Write to file
 	err := file.WriteLines(filepath.Join(config.GetAddonDir(), "addons.txt"), installedAddonNames)
