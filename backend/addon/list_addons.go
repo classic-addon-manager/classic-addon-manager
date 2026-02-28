@@ -2,34 +2,31 @@ package addon
 
 import (
 	"ClassicAddonManager/backend/logger"
-	"fmt"
 	"strings"
 )
 
 func GetAddons() []Addon {
-	var addons []Addon
 	names, err := ReadAddonsTxt()
 	if err != nil {
 		logger.Error("Error reading addons.txt in GetAddons:", err)
-		return addons
+		return nil
 	}
 
+	addons := make([]Addon, 0, len(names))
 	for _, name := range names {
-		fmt.Println("Addon:", name)
-		alias := strings.ReplaceAll(name, "_", " ")
+		addon := Addon{
+			Name:  name,
+			Alias: strings.ReplaceAll(name, "_", " "),
+		}
 
 		if local := FindLocalAddonByName(name); local != nil {
-			fmt.Println("Addon found:", local)
-			if local.Alias == "" {
-				local.Alias = alias
+			addon = *local
+			if addon.Alias == "" {
+				addon.Alias = strings.ReplaceAll(name, "_", " ")
 			}
-			addons = append(addons, *local)
-		} else {
-			addons = append(addons, Addon{
-				Name:  name,
-				Alias: alias,
-			})
 		}
+
+		addons = append(addons, addon)
 	}
 	return addons
 }
