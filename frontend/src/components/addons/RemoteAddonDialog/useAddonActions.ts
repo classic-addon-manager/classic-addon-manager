@@ -3,13 +3,8 @@ import { useCallback, useState } from 'react'
 
 import { toast } from '@/components/ui/toast.tsx'
 import { getMyRating, rateAddon } from '@/lib/addon.ts'
-import {
-  type DependencyInfo,
-  installDependenciesInOrder,
-  resolveTransitiveDependencies,
-} from '@/lib/dependency-resolver.ts'
 import { safeCall } from '@/lib/utils.ts'
-import type { AddonManifest, Release } from '@/lib/wails'
+import type { AddonInstallStatus, AddonManifest, DependencyInfo, Release } from '@/lib/wails'
 import { LocalAddonService, RemoteAddonService } from '@/lib/wails'
 import { useAddonStore } from '@/stores/addonStore.ts'
 import { useUserStore } from '@/stores/userStore.ts'
@@ -65,58 +60,61 @@ export const useAddonActions = ({
 
     setIsProcessing(true)
     let didInstall = false
+    const refreshAddonStore = async () => {
+      await useAddonStore.getState().updateInstalledAddons()
+      await useAddonStore.getState().performBulkUpdateCheck()
+    }
 
     try {
-      // Handle dependencies if any
-      if (dependencies.length > 0) {
-        const uninstalledDeps = dependencies.filter(d => !d.isInstalled)
-
-        if (uninstalledDeps.length > 0) {
-          const failedDepNames = await installDependenciesInOrder(dependencies)
-
-          if (failedDepNames.length > 0) {
-            const failedDepAliases = failedDepNames
-              .map(name => {
-                const dep = dependencies.find(d => d.manifest.name === name)
-                return dep ? dep.manifest.alias : name
-              })
-              .join(', ')
-
-            toast({
-              title: 'Dependency installation failed',
-              description: `Failed: ${failedDepAliases}`,
-              icon: AlertTriangleIcon,
-            })
-            setIsProcessing(false)
-            return
-          }
-
-          // Show a success toast for each dependency that was installed
-          uninstalledDeps.forEach(depInfo => {
-            // after installDependenciesInOrder, depInfo.isInstalled will be true if it succeeded
-            if (depInfo.isInstalled) {
-              toast({
-                title: 'Dependency installed',
-                description: `${depInfo.manifest.alias} installed successfully`,
-              })
-            }
-          })
-        } else {
-          console.log('All dependencies already installed.')
-        }
+      const [installResult, installErr] = await safeCall(
+        RemoteAddonService.InstallAddonWithDependencies(manifest, 'latest')
+      )
+      if (installErr || !installResult) {
+        throw installErr ?? new Error('Install failed')
       }
 
-      // Install main addon via store to keep global state in sync
-      const success = await useAddonStore.getState().install(manifest, 'latest')
-      didInstall = success
-
-      if (!success) {
+      if (installResult.dependencyWarnings.length > 0) {
         toast({
-          title: 'Error',
-          description: `Failed to install ${manifest.alias}`,
+          title: 'Dependency resolution warning',
+          description: installResult.dependencyWarnings[0],
           icon: AlertTriangleIcon,
         })
       }
+
+      const installedDependencies = installResult.dependencies.filter(
+        (dep: AddonInstallStatus) => dep.success && !dep.skipped
+      )
+      installedDependencies.forEach((dep: AddonInstallStatus) => {
+        toast({
+          title: 'Dependency installed',
+          description: `${dep.alias} installed successfully`,
+        })
+      })
+
+      if (!installResult.success) {
+        await refreshAddonStore()
+        const failedDeps = installResult.dependencies.filter(
+          (dep: AddonInstallStatus) => !dep.success
+        )
+        if (failedDeps.length > 0) {
+          toast({
+            title: 'Dependency installation failed',
+            description: `Failed: ${failedDeps.map(dep => dep.alias || dep.name).join(', ')}`,
+            icon: AlertTriangleIcon,
+          })
+        } else {
+          const msg = installResult.mainAddon.error || `Failed to install ${manifest.alias}`
+          toast({
+            title: 'Error',
+            description: msg,
+            icon: AlertTriangleIcon,
+          })
+        }
+        return
+      }
+
+      didInstall = true
+      await refreshAddonStore()
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err)
 
@@ -224,7 +222,7 @@ export const useAddonActions = ({
       return
     }
 
-    const [result, err] = await safeCall(resolveTransitiveDependencies(manifest))
+    const [result, err] = await safeCall(RemoteAddonService.ResolveDependencies(manifest))
     if (err || !result) {
       toast({
         title: 'Error',
@@ -247,13 +245,13 @@ export const useAddonActions = ({
 
     setDependencies(result.dependencies)
     console.log(
-      `Found ${dependencies.length} total dependencies (including transitive) for ${manifest.alias}`
+      `Found ${result.dependencies.length} total dependencies (including transitive) for ${manifest.alias}`
     )
 
     // Log dependency tree for debugging
-    if (dependencies.length > 0) {
+    if (result.dependencies.length > 0) {
       console.log('Dependency tree:')
-      dependencies.forEach(dep => {
+      result.dependencies.forEach(dep => {
         console.log(
           `  ${'  '.repeat(dep.depth)}${dep.manifest.alias} (${dep.isInstalled ? 'installed' : 'not installed'})`
         )

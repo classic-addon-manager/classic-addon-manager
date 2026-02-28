@@ -1,6 +1,5 @@
 import { Badge } from '@/components/ui/badge.tsx'
-import type { DependencyInfo } from '@/lib/dependency-resolver.ts'
-import type { AddonManifest } from '@/lib/wails'
+import type { AddonManifest, DependencyInfo } from '@/lib/wails'
 
 interface DependenciesTabProps {
   dependencies: DependencyInfo[]

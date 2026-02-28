@@ -22,3 +22,29 @@ type AddonManifest struct {
 	AddedAt      time.Time `json:"added_at"`
 	Warning      *string   `json:"warning,omitempty"`
 }
+
+type DependencyInfo struct {
+	Manifest    AddonManifest `json:"manifest"`
+	IsInstalled bool          `json:"isInstalled"`
+	Depth       int           `json:"depth"`
+}
+
+type DependencyResolutionResult struct {
+	Dependencies []DependencyInfo `json:"dependencies"`
+	Errors       []string         `json:"errors"`
+}
+
+type AddonInstallStatus struct {
+	Name    string `json:"name"`
+	Alias   string `json:"alias"`
+	Success bool   `json:"success"`
+	Skipped bool   `json:"skipped"`
+	Error   string `json:"error,omitempty"`
+}
+
+type InstallWithDependenciesResult struct {
+	Success            bool                 `json:"success"`
+	DependencyWarnings []string             `json:"dependencyWarnings"`
+	Dependencies       []AddonInstallStatus `json:"dependencies"`
+	MainAddon          AddonInstallStatus   `json:"mainAddon"`
+}
