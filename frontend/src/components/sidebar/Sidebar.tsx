@@ -1,37 +1,14 @@
 import { Browser } from '@wailsio/runtime'
 import { useAtom, useAtomValue } from 'jotai'
-import { Blocks, Globe, Home, Settings2Icon, WrenchIcon } from 'lucide-react'
+import { Globe } from 'lucide-react'
 
 import { versionAtom } from '@/atoms/applicationAtoms'
-import { activePageAtom, type PageId } from '@/atoms/sidebarAtoms'
+import { activePageAtom, PAGE_DEFINITIONS } from '@/atoms/sidebarAtoms'
 import { UpdateCard } from '@/components/sidebar/UpdateCard'
 import { UserBar } from '@/components/sidebar/UserBar'
 import { useAddonStore } from '@/stores/addonStore'
 
 import { SidebarItem } from './SidebarItem'
-
-const SIDEBAR_ITEMS = [
-  {
-    id: 'dashboard' as PageId,
-    name: 'Dashboard',
-    icon: <Home className="h-4 w-4" />,
-  },
-  {
-    id: 'addons' as PageId,
-    name: 'Addons',
-    icon: <Blocks className="h-4 w-4" />,
-  },
-  {
-    id: 'troubleshooting' as PageId,
-    name: 'Troubleshooting',
-    icon: <WrenchIcon className="h-4 w-4" />,
-  },
-  {
-    id: 'settings' as PageId,
-    name: 'Settings',
-    icon: <Settings2Icon className="h-4 w-4" />,
-  },
-] as const
 
 export const Sidebar = () => {
   const [activeItem, setActiveItem] = useAtom(activePageAtom)
@@ -42,7 +19,7 @@ export const Sidebar = () => {
     <>
       <div className="flex-1 relative">
         <nav className="grid items-start px-2 text-sm font-medium gap-1 relative z-10">
-          {SIDEBAR_ITEMS.map(item => (
+          {PAGE_DEFINITIONS.map(item => (
             <SidebarItem
               key={item.id}
               name={item.name}
