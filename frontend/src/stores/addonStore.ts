@@ -52,7 +52,7 @@ export const useAddonStore = create<AddonState>((set, get) => ({
       // Reset state if no managed addons
       if (addonNames.length === 0) {
         set({
-          latestReleasesMap: new Map(),
+          latestReleasesMap: new Map<string, Release>(),
           updatesAvailableCount: 0,
         })
         return
@@ -64,14 +64,18 @@ export const useAddonStore = create<AddonState>((set, get) => ({
       if (err || !releases) {
         console.error('[AddonStore] Failed to perform bulk update check:', err)
         set({
-          latestReleasesMap: new Map(),
+          latestReleasesMap: new Map<string, Release>(),
           updatesAvailableCount: 0,
         })
         return
       }
 
       // Create map of latest releases and count updates
-      const latestReleasesMap = new Map(Object.entries(releases))
+      const latestReleasesMap = new Map<string, Release>(
+        Object.entries(releases).filter(
+          (entry): entry is [string, Release] => entry[1] !== undefined,
+        ),
+      )
 
       const updatesAvailableCount = managedAddons.reduce((count, addon) => {
         const latestRelease = latestReleasesMap.get(addon.name)
@@ -82,7 +86,7 @@ export const useAddonStore = create<AddonState>((set, get) => ({
     } catch (error) {
       console.error('[AddonStore] Unexpected error caught in performBulkUpdateCheck:', error)
       set({
-        latestReleasesMap: new Map(),
+        latestReleasesMap: new Map<string, Release>(),
         updatesAvailableCount: 0,
       })
     } finally {
