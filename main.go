@@ -32,6 +32,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	if !file.FileExists(filepath.Join(config.GetAddonDir(), "addons.txt")) {
+		logger.Info(fmt.Sprintf("addons.txt not found, creating it. Attempted path: %s", filepath.Join(config.GetAddonDir(), "addons.txt")))
+		addon.CreateAddonsTxt()
+	}
+
 	if *addonUpdateMode {
 		addon.GenerateUpdateAddonLua(
 			addon.CheckForUpdates(),
@@ -45,11 +50,6 @@ func main() {
 	// Check if another instance is running
 	if checkForRunningInstance() {
 		os.Exit(0)
-	}
-
-	if !file.FileExists(filepath.Join(config.GetAddonDir(), "addons.txt")) {
-		logger.Info(fmt.Sprintf("addons.txt not found, creating it. Attempted path: %s", filepath.Join(config.GetAddonDir(), "addons.txt")))
-		addon.CreateAddonsTxt()
 	}
 
 	a := application.New(application.Options{
