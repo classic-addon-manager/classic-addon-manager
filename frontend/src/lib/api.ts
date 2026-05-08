@@ -37,12 +37,16 @@ class ApiClient {
     return ApiClient.instance
   }
 
+  private getToken(): string {
+    return useUserStore.getState().token || localStorage.getItem('token') || ''
+  }
+
   async get(url: string): Promise<Response> {
     await this.initPromise
 
     return fetch(API_URL + url, {
       method: 'GET',
-      headers: createHeaders(this.version!, useUserStore.getState().token),
+      headers: createHeaders(this.version!, this.getToken()),
     })
   }
 
@@ -51,7 +55,7 @@ class ApiClient {
 
     return fetch(API_URL + url, {
       method: 'POST',
-      headers: createHeaders(this.version!, useUserStore.getState().token),
+      headers: createHeaders(this.version!, this.getToken()),
       body: JSON.stringify(data),
     })
   }

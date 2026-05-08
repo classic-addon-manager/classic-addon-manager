@@ -28,13 +28,16 @@ export const UserBar = () => {
   const version = useAtomValue(versionAtom)
 
   const getAccount = async () => {
-    if (!token) return
+    const currentToken = useUserStore.getState().token
+    if (!currentToken) return
 
     try {
       const resp = await apiClient.get('/me')
       if (resp.status === 200) {
         const userData = await resp.json()
         setUser(userData)
+      } else if (resp.status === 401) {
+        clearUser()
       }
     } catch (error) {
       console.error('Error fetching user data:', error)
@@ -54,7 +57,6 @@ export const UserBar = () => {
 
       if (typeof tokenValue === 'string') {
         setToken(tokenValue)
-        await getAccount()
         toast({
           title: 'Success',
           description: 'You have successfully signed in.',
@@ -70,9 +72,9 @@ export const UserBar = () => {
       }
     }
 
-    Events.On('authTokenReceived', handleAuthToken)
+    const unsubscribe = Events.On('authTokenReceived', handleAuthToken)
     return () => {
-      Events.Off('authTokenReceived')
+      unsubscribe()
     }
   }, [])
 
