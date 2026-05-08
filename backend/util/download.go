@@ -1,6 +1,7 @@
 package util
 
 import (
+	"ClassicAddonManager/backend/auth"
 	"ClassicAddonManager/backend/logger"
 	"ClassicAddonManager/backend/shared"
 	"io"
@@ -15,8 +16,8 @@ func DownloadFile(url string, path string) error {
 		return err
 	}
 	// Set the authorization header if the token is set
-	if shared.AuthToken != "" {
-		req.Header.Set("X-Token", shared.AuthToken)
+	if token := auth.GetToken(); token != "" {
+		req.Header.Set("X-Token", token)
 	}
 	req.Header.Set("X-Client", "Classic Addon Manager v"+shared.Version)
 	client := &http.Client{}

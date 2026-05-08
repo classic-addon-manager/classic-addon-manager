@@ -2,6 +2,7 @@ package main
 
 import (
 	"ClassicAddonManager/backend/addon"
+	"ClassicAddonManager/backend/auth"
 	"ClassicAddonManager/backend/config"
 	"ClassicAddonManager/backend/file"
 	"ClassicAddonManager/backend/logger"
@@ -97,6 +98,8 @@ func main() {
 }
 
 func startup() {
+	auth.LoadFromDisk()
+
 	if !file.FileExists(filepath.Join(config.GetDataDir(), "managed_addons.json")) {
 		jsonData, err := json.Marshal([]addon.Addon{})
 		if err != nil {

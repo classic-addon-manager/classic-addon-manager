@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 
+import { apiClient } from '@/lib/api'
 import { ApplicationService } from '@/lib/wails'
 
 interface User {
@@ -9,47 +10,40 @@ interface User {
 }
 
 interface UserState {
-  // State
   user: User
   token: string
+  authBootstrapComplete: boolean
 
-  // Actions
   isAuthenticated: () => boolean
   setUser: (newUser: User) => void
-  setToken: (token: string) => void
-  clearUser: () => void
+  saveToken: (token: string) => Promise<void>
+  fetchCurrentUser: () => Promise<void>
+  bootstrapAuth: () => Promise<void>
+  signOut: () => Promise<void>
+  clearLocalAuthState: () => void
 }
 
-const initialState = {
-  user: {
-    username: '',
-    avatar: '',
-    discord_id: '',
-  },
-  token: localStorage.getItem('token') || '',
-}
-
-// Initialize the auth token in the application service if it exists
-if (initialState.token) {
-  ApplicationService.SetAuthToken(initialState.token)
+const emptyUser: User = {
+  username: '',
+  avatar: '',
+  discord_id: '',
 }
 
 export const useUserStore = create<UserState>((set, get) => ({
-  ...initialState,
+  user: { ...emptyUser },
+  token: '',
+  authBootstrapComplete: false,
 
-  // Actions
   isAuthenticated: () => {
     const { user } = get()
     return user.discord_id !== ''
   },
 
   setUser: (newUser: User) => {
-    // Ensure we never set an invalid user object
     if (!newUser) {
       console.error('Attempted to set invalid user object:', newUser)
       return
     }
-
     set({
       user: {
         username: newUser.username ?? '',
@@ -59,15 +53,64 @@ export const useUserStore = create<UserState>((set, get) => ({
     })
   },
 
-  setToken: (token: string) => {
+  saveToken: async (token: string) => {
+    if (!token || typeof token !== 'string') {
+      throw new Error('Invalid token')
+    }
+    await ApplicationService.SaveAuthToken(token)
     set({ token })
-    localStorage.setItem('token', token)
-    ApplicationService.SetAuthToken(token)
+    await get().fetchCurrentUser()
   },
 
-  clearUser: () => {
-    set({ ...initialState })
-    localStorage.removeItem('token')
-    ApplicationService.SetAuthToken('')
+  fetchCurrentUser: async () => {
+    const currentToken = get().token
+    if (!currentToken) return
+
+    try {
+      const resp = await apiClient.get('/me')
+      if (resp.status === 200) {
+        const userData = await resp.json()
+        get().setUser(userData)
+      } else if (resp.status === 401) {
+        await ApplicationService.ClearAuthToken()
+        get().clearLocalAuthState()
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error)
+    }
+  },
+
+  bootstrapAuth: async () => {
+    try {
+      localStorage.removeItem('token')
+    } catch {
+      // ignore
+    }
+
+    try {
+      const session = await ApplicationService.GetAuthSession()
+      if (session?.token) {
+        set({ token: session.token })
+        await get().fetchCurrentUser()
+      }
+    } catch (error) {
+      console.error('Auth bootstrap failed:', error)
+    } finally {
+      set({ authBootstrapComplete: true })
+    }
+  },
+
+  signOut: async () => {
+    try {
+      await ApplicationService.ClearAuthToken()
+      get().clearLocalAuthState()
+    } catch (error) {
+      console.error('Sign out failed:', error)
+      throw error
+    }
+  },
+
+  clearLocalAuthState: () => {
+    set({ token: '', user: { ...emptyUser } })
   },
 }))

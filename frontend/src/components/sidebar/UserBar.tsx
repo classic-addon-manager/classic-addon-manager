@@ -1,10 +1,8 @@
 import { Browser, Events } from '@wailsio/runtime'
-import { useAtomValue } from 'jotai'
 import { AlertTriangleIcon, CheckIcon } from 'lucide-react'
 import type { WailsEvent } from 'node_modules/@wailsio/runtime/types/events'
 import { useEffect, useState } from 'react'
 
-import { versionAtom } from '@/atoms/applicationAtoms'
 import { AIChatDialog } from '@/components/AIChatDialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -18,50 +16,31 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { toast } from '@/components/ui/toast'
-import { apiClient } from '@/lib/api'
 import { useUserStore } from '@/stores/userStore.ts'
 
 export const UserBar = () => {
-  const [isReady, setIsReady] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
-  const { user, token, setUser, setToken, isAuthenticated, clearUser } = useUserStore()
-  const version = useAtomValue(versionAtom)
-
-  const getAccount = async () => {
-    const currentToken = useUserStore.getState().token
-    if (!currentToken) return
-
-    try {
-      const resp = await apiClient.get('/me')
-      if (resp.status === 200) {
-        const userData = await resp.json()
-        setUser(userData)
-      } else if (resp.status === 401) {
-        clearUser()
-      }
-    } catch (error) {
-      console.error('Error fetching user data:', error)
-    }
-  }
-
-  const signOut = () => {
-    clearUser()
-    setTimeout(() => {
-      window.location.href = '/'
-    }, 100)
-  }
+  const { user, isAuthenticated, saveToken, signOut } = useUserStore()
 
   useEffect(() => {
     const handleAuthToken = async (event: WailsEvent) => {
       const tokenValue = Array.isArray(event.data) ? (event.data as unknown[])[0] : event.data
 
-      if (typeof tokenValue === 'string') {
-        setToken(tokenValue)
-        toast({
-          title: 'Success',
-          description: 'You have successfully signed in.',
-          icon: CheckIcon,
-        })
+      if (typeof tokenValue === 'string' && tokenValue.length > 0) {
+        try {
+          await saveToken(tokenValue)
+          toast({
+            title: 'Success',
+            description: 'You have successfully signed in.',
+            icon: CheckIcon,
+          })
+        } catch {
+          toast({
+            title: 'Error',
+            description: 'Failed to save authentication session.',
+            icon: AlertTriangleIcon,
+          })
+        }
       } else {
         console.error('Unexpected auth token data:', event.data)
         toast({
@@ -76,16 +55,22 @@ export const UserBar = () => {
     return () => {
       unsubscribe()
     }
-  }, [])
+  }, [saveToken])
 
-  useEffect(() => {
-    getAccount().then(() => {
-      setIsReady(true)
-    })
-  }, [token, version])
-
-  if (!isReady) {
-    return null
+  const handleSignOut = async () => {
+    try {
+      await signOut()
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Failed to sign out. Session persists.',
+        icon: AlertTriangleIcon,
+      })
+      return
+    }
+    setTimeout(() => {
+      window.location.href = '/'
+    }, 100)
   }
 
   const AIChatButton = () => {
@@ -167,7 +152,10 @@ export const UserBar = () => {
             <DropdownMenuLabel>Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem>
-              <button className="w-full text-left cursor-pointer text-red-500" onClick={signOut}>
+              <button
+                className="w-full text-left cursor-pointer text-red-500"
+                onClick={handleSignOut}
+              >
                 Sign out
               </button>
             </DropdownMenuItem>

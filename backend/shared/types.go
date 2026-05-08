@@ -4,8 +4,11 @@ import (
 	"time"
 )
 
-var Version = "3.0.7"
-var AuthToken string
+var Version = "3.0.8"
+
+type AuthSessionState struct {
+	Token string `json:"token"`
+}
 
 type AddonManifest struct {
 	Name         string    `json:"name"`

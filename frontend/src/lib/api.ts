@@ -38,7 +38,7 @@ class ApiClient {
   }
 
   private getToken(): string {
-    return useUserStore.getState().token || localStorage.getItem('token') || ''
+    return useUserStore.getState().token || ''
   }
 
   async get(url: string): Promise<Response> {

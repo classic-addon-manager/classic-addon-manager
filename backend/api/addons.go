@@ -1,6 +1,7 @@
 package api
 
 import (
+	"ClassicAddonManager/backend/auth"
 	"ClassicAddonManager/backend/logger"
 	"ClassicAddonManager/backend/shared"
 	"encoding/json"
@@ -20,11 +21,11 @@ func UnsubscribeFromAddon(addonName string) {
 	}
 
 	req.Header.Set("X-Client", GetApiClientHeader())
-	req.Header.Set("X-Token", shared.AuthToken)
+	req.Header.Set("X-Token", auth.GetToken())
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		logger.Error("Error sending request:", err)
+		logger.Error("Error creating request:", err)
 		return
 	}
 	defer resp.Body.Close()
@@ -51,7 +52,7 @@ func GetSubscribedAddons() ([]shared.AddonManifest, error) {
 	}
 
 	req.Header.Set("X-Client", GetApiClientHeader())
-	req.Header.Set("X-Token", shared.AuthToken)
+	req.Header.Set("X-Token", auth.GetToken())
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {

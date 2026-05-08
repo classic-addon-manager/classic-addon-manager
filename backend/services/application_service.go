@@ -2,6 +2,7 @@ package services
 
 import (
 	"ClassicAddonManager/backend/api"
+	"ClassicAddonManager/backend/auth"
 	"ClassicAddonManager/backend/config"
 	"ClassicAddonManager/backend/file"
 	"ClassicAddonManager/backend/logger"
@@ -11,12 +12,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sync"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
-
-var authMutex = &sync.Mutex{}
 
 type ApplicationService struct {
 	App *application.App
@@ -35,10 +33,16 @@ func (s *ApplicationService) GetLatestRelease() (api.ApplicationRelease, error) 
 	return release, nil
 }
 
-func (s *ApplicationService) SetAuthToken(token string) {
-	authMutex.Lock()
-	shared.AuthToken = token
-	authMutex.Unlock()
+func (s *ApplicationService) GetAuthSession() shared.AuthSessionState {
+	return shared.AuthSessionState{Token: auth.GetToken()}
+}
+
+func (s *ApplicationService) SaveAuthToken(token string) error {
+	return auth.SaveToDisk(token)
+}
+
+func (s *ApplicationService) ClearAuthToken() error {
+	return auth.DeleteFromDisk()
 }
 
 func (s *ApplicationService) SelfUpdate(updateURL string) error {
