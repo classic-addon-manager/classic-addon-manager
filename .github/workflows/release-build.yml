@@ -34,7 +34,7 @@ jobs:
             pkg-config
 
       - name: Install Wails CLI
-        run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha.85
 
       - name: Build and package .deb
         run: wails3 task linux:package
