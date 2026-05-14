@@ -24,6 +24,7 @@ import { AddonRepositoryMatch } from '@/components/dashboard/AddonRepositoryMatc
 import { RemoteAddonReadme } from '@/components/shared/RemoteAddonReadme'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { toast } from '@/components/ui/toast'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { getMyRating, rateAddon } from '@/lib/addon'
@@ -436,7 +437,7 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6 py-4">
+      <ScrollArea className="flex-1 min-h-0 px-6 py-4">
         {addon.isManaged && readme === 'loading' ? (
           <div className="flex flex-col items-center justify-center h-32 text-center text-muted-foreground">
             <PackageIcon className="w-10 h-10 mb-3 opacity-50" />
@@ -447,7 +448,7 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
         ) : null}
 
         <UnmanagedNotice />
-      </div>
+      </ScrollArea>
     </div>
   )
 }
