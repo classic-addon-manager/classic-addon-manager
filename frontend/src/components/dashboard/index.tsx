@@ -1,3 +1,6 @@
+export { AddonDetailsPane } from './AddonDetailsPane'
 export { AddonList } from './AddonList'
+export { AddonListItem } from './AddonListItem'
 export { LocalAddonDialog } from './LocalAddonDialog'
 export { LocalAddonVersionSelectDialog } from './LocalAddonVersionSelectDialog'
+export { useDashboardController } from './useDashboardController'

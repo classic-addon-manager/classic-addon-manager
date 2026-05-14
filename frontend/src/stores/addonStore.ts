@@ -73,8 +73,8 @@ export const useAddonStore = create<AddonState>((set, get) => ({
       // Create map of latest releases and count updates
       const latestReleasesMap = new Map<string, Release>(
         Object.entries(releases).filter(
-          (entry): entry is [string, Release] => entry[1] !== undefined,
-        ),
+          (entry): entry is [string, Release] => entry[1] !== undefined
+        )
       )
 
       const updatesAvailableCount = managedAddons.reduce((count, addon) => {
