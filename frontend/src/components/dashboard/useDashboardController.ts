@@ -6,7 +6,6 @@ import { useDebouncedCallback } from 'use-debounce'
 
 import {
   filteredAddonsAtom,
-  isAddonDialogOpenAtom,
   searchQueryAtom,
   selectedAddonAtom,
   versionSelectAtom,
@@ -19,7 +18,6 @@ export function useDashboardController() {
   const { isCheckingForUpdates, performBulkUpdateCheck, updateInstalledAddons } = useAddonStore()
   const [isLoading, setIsLoading] = useState(false)
   const [selectedAddon, setSelectedAddon] = useAtom(selectedAddonAtom)
-  const [isAddonDialogOpen, setIsAddonDialogOpen] = useAtom(isAddonDialogOpenAtom)
   const setSearchQuery = useSetAtom(searchQueryAtom)
   const filteredAddons = useAtomValue(filteredAddonsAtom)
   const versionSelectAddon = useAtomValue(versionSelectAtom)
@@ -90,30 +88,15 @@ export function useDashboardController() {
     }
   }
 
-  const openAddonDialog = (addon: typeof selectedAddon) => {
-    setSelectedAddon(addon)
-    if (addon) {
-      setIsAddonDialogOpen(true)
-    }
-  }
-
-  const closeAddonDialog = () => {
-    setIsAddonDialogOpen(false)
-    setTimeout(() => setSelectedAddon(null), 200)
-  }
-
   return {
     isLoading,
     isCheckingForUpdates,
     filteredAddons,
     selectedAddon,
     setSelectedAddon,
-    isAddonDialogOpen,
     versionSelectAddon,
     debouncedSetSearch,
     performBulkUpdateCheck,
     handleInstallZip,
-    openAddonDialog,
-    closeAddonDialog,
   }
 }

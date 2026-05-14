@@ -17,7 +17,7 @@ import { activePageAtom } from '@/atoms/sidebarAtoms'
 import { AddonDetailsPane } from '@/components/dashboard/AddonDetailsPane'
 import { AddonListItem } from '@/components/dashboard/AddonListItem'
 import { versionSelectAtom } from '@/components/dashboard/atoms'
-import { LocalAddonDialog, LocalAddonVersionSelectDialog } from '@/components/dashboard/index'
+import { LocalAddonVersionSelectDialog } from '@/components/dashboard/index'
 import { LocalAddonUpdateDialog } from '@/components/dashboard/LocalAddonUpdateDialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -74,12 +74,10 @@ export const Dashboard = () => {
     filteredAddons,
     selectedAddon,
     setSelectedAddon,
-    isAddonDialogOpen,
     versionSelectAddon,
     debouncedSetSearch,
     performBulkUpdateCheck,
     handleInstallZip,
-    closeAddonDialog,
   } = useDashboardController()
 
   const { installedAddons, updatesAvailableCount, latestReleasesMap } = useAddonStore()
@@ -149,16 +147,6 @@ export const Dashboard = () => {
         onCheckUpdates={() => performBulkUpdateCheck()}
         onInstallZip={handleInstallZip}
       />
-
-      {selectedAddon && isAddonDialogOpen && (
-        <LocalAddonDialog
-          addon={selectedAddon}
-          open={isAddonDialogOpen}
-          onOpenChange={open => {
-            if (!open) closeAddonDialog()
-          }}
-        />
-      )}
 
       {selectedAddon &&
         latestReleaseForSelected &&
