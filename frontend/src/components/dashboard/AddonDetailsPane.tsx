@@ -166,7 +166,7 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
   const RateAddonButtons = () => {
     if (!addon.isManaged) return null
 
-    if (!isAuthenticated) {
+    if (!isAuthenticated()) {
       return (
         <Tooltip>
           <TooltipTrigger asChild>
@@ -178,7 +178,9 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
               <ThumbsDownIcon className="w-4 h-4 text-muted-foreground" />
             </span>
           </TooltipTrigger>
-          <TooltipContent className="font-bold">Log in to rate addons</TooltipContent>
+          <TooltipContent className="font-bold">
+            Sign in using Discord to rate addons
+          </TooltipContent>
         </Tooltip>
       )
     }
