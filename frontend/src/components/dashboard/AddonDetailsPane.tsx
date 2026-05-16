@@ -72,6 +72,11 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
       ? `https://raw.githubusercontent.com/${addon.repo}/${addon.branch}/icon.png`
       : null
 
+  // Reset on addon switch so a failed icon doesn't hide valid icons for subsequent addons
+  useEffect(() => {
+    setHasIcon(true)
+  }, [addon.name, iconUrl])
+
   const getReadme = useCallback(async () => {
     const fallbackReadme = addon.description || 'No description provided'
 
