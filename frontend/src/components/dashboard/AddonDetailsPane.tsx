@@ -419,12 +419,14 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
             </div>
           )}
 
-          <div>
-            <span className="text-muted-foreground">Rating</span>
-            <div className="font-medium">
-              <RateAddonButtons />
+          {addon.isManaged && (
+            <div>
+              <span className="text-muted-foreground">Rating</span>
+              <div className="font-medium">
+                <RateAddonButtons />
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
