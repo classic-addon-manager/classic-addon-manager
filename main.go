@@ -84,8 +84,8 @@ func main() {
 		Name:             "main",
 		Width:            985,
 		Height:           640,
-		MinHeight:        600,
-		MinWidth:         950,
+		MinHeight:        640,
+		MinWidth:         985,
 		DisableResize:    false,
 		BackgroundColour: application.NewRGBA(27, 38, 54, 1),
 	})
