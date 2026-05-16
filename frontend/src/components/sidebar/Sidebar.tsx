@@ -1,11 +1,14 @@
 import { Browser } from '@wailsio/runtime'
 import { useAtom, useAtomValue } from 'jotai'
-import { Globe } from 'lucide-react'
+import { ArrowUpCircle, Globe } from 'lucide-react'
 
-import { versionAtom } from '@/atoms/applicationAtoms'
+import {
+  updateAvailableAtom,
+  updateDialogOpenAtom,
+  versionAtom,
+} from '@/atoms/applicationAtoms'
 import { activePageAtom } from '@/atoms/sidebarAtoms'
 import { PAGE_DEFINITIONS } from '@/components/sidebar/pageDefinitions.ts'
-import { UpdateCard } from '@/components/sidebar/UpdateCard'
 import { UserBar } from '@/components/sidebar/UserBar'
 import { useAddonStore } from '@/stores/addonStore'
 
@@ -14,6 +17,8 @@ import { SidebarItem } from './SidebarItem'
 export const Sidebar = () => {
   const [activeItem, setActiveItem] = useAtom(activePageAtom)
   const version = useAtomValue(versionAtom)
+  const updateAvailable = useAtomValue(updateAvailableAtom)
+  const [, setUpdateDialogOpen] = useAtom(updateDialogOpenAtom)
   const { updatesAvailableCount } = useAddonStore()
 
   return (
@@ -40,7 +45,16 @@ export const Sidebar = () => {
         </nav>
       </div>
 
-      <UpdateCard />
+      {updateAvailable && (
+        <button
+          type="button"
+          onClick={() => setUpdateDialogOpen(true)}
+          className="mx-2 mb-1 flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-400 select-none cursor-pointer hover:bg-emerald-500/20 transition-colors"
+        >
+          <ArrowUpCircle className="w-3.5 h-3.5 shrink-0" />
+          <span className="truncate">Update Available</span>
+        </button>
+      )}
 
       <div className="w-full">
         <UserBar />
