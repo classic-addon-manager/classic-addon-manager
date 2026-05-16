@@ -10,6 +10,7 @@ import {
   GitBranchIcon,
   GithubIcon,
   LoaderCircle,
+  MenuIcon,
   PackageIcon,
   RefreshCw,
   Tag,
@@ -24,6 +25,13 @@ import { AddonRepositoryMatch } from '@/components/dashboard/AddonRepositoryMatc
 import { RemoteAddonReadme } from '@/components/shared/RemoteAddonReadme'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { toast } from '@/components/ui/toast'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -279,7 +287,7 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
           <div className="flex-1 min-w-0">
             <h2 className="text-xl font-semibold truncate">{addon.alias}</h2>
 
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-sm text-muted-foreground">
+            <div className="flex items-center gap-x-3 mt-1 text-sm text-muted-foreground overflow-hidden">
               {addon.isManaged && (
                 <span className="inline-flex items-center gap-1">
                   <User className="w-3.5 h-3.5" />
@@ -303,19 +311,6 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
                 </Badge>
               )}
 
-              {hasUpdate && (
-                <Badge
-                  variant="outline"
-                  className="text-xs text-amber-600 border-amber-600/20 bg-amber-500/10 cursor-pointer"
-                  onClick={() => {
-                    if (!updateDialogOpen) setUpdateDialogOpen(true)
-                  }}
-                >
-                  <Download className="w-3 h-3 mr-0.5" />
-                  Update ({latestRelease!.tag_name})
-                </Badge>
-              )}
-
               {addon.isManaged && !hasUpdate && latestRelease && !isCheckingForUpdates && (
                 <Badge
                   variant="outline"
@@ -325,8 +320,58 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
                 </Badge>
               )}
             </div>
+
+            {hasUpdate && (
+              <Badge
+                variant="outline"
+                className="mt-2 mx-auto flex items-center gap-1.5 text-sm px-3 py-1 text-amber-600 border-amber-600/20 bg-amber-500/10 cursor-pointer hover:bg-amber-500/20"
+                onClick={() => {
+                  if (!updateDialogOpen) setUpdateDialogOpen(true)
+                }}
+              >
+                <Download className="w-4 h-4" />
+                Update to {latestRelease!.tag_name}
+              </Badge>
+            )}
           </div>
 
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="shrink-0 data-[state=open]:bg-accent">
+                <MenuIcon className="w-5 h-5" />
+                <span className="sr-only">Open menu</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleOpenDirectory}>
+                <FolderOpen className="w-4 h-4" />
+                Open Directory
+              </DropdownMenuItem>
+              {addon.isManaged && (
+                <>
+                  <DropdownMenuItem
+                    onClick={() => Browser.OpenURL(`https://github.com/${addon.repo}/issues/new`)}
+                  >
+                    <BugIcon className="w-4 h-4" />
+                    Report Issue
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onOpenVersionSelect(addon)}>
+                    <GitBranchIcon className="w-4 h-4" />
+                    Other Version
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleReinstall}>
+                    <RefreshCw className="w-4 h-4" />
+                    Reinstall
+                  </DropdownMenuItem>
+                </>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem variant="destructive" onClick={handleUninstall}>
+                <Trash2Icon className="w-4 h-4" />
+                Uninstall
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -380,62 +425,6 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
               <RateAddonButtons />
             </div>
           </div>
-        </div>
-      </div>
-
-      <div className="shrink-0 px-6 py-3 border-b">
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 text-xs gap-1.5"
-            onClick={handleOpenDirectory}
-          >
-            <FolderOpen className="w-3.5 h-3.5" />
-            Open Directory
-          </Button>
-
-          {addon.isManaged && (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 text-xs gap-1.5"
-                onClick={() => Browser.OpenURL(`https://github.com/${addon.repo}/issues/new`)}
-              >
-                <BugIcon className="w-3.5 h-3.5" />
-                Report Issue
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 text-xs gap-1.5"
-                onClick={() => onOpenVersionSelect(addon)}
-              >
-                <GitBranchIcon className="w-3.5 h-3.5" />
-                Other Version
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 text-xs gap-1.5"
-                onClick={handleReinstall}
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                Reinstall
-              </Button>
-            </>
-          )}
-
-          <Button
-            variant="destructive"
-            size="sm"
-            className="h-8 text-xs gap-1.5"
-            onClick={handleUninstall}
-          >
-            <Trash2Icon className="w-3.5 h-3.5" />
-            Uninstall
-          </Button>
         </div>
       </div>
 
