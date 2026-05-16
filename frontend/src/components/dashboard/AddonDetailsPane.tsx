@@ -327,7 +327,6 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
             </div>
           </div>
 
-          <RateAddonButtons />
         </div>
       </div>
 
@@ -347,7 +346,10 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
                 </p>
               </div>
               <div>
-                <span className="text-muted-foreground flex items-center gap-1"><GithubIcon className="w-3.5 h-3.5" />Source</span>
+                <span className="text-muted-foreground flex items-center gap-1">
+                  <GithubIcon className="w-3.5 h-3.5" />
+                  Source
+                </span>
                 {addon.repo ? (
                   <a
                     href={`https://github.com/${addon.repo}`}
@@ -371,6 +373,13 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
               <p className="font-medium">Not managed</p>
             </div>
           )}
+
+          <div>
+            <span className="text-muted-foreground">Rating</span>
+            <div className="font-medium">
+              <RateAddonButtons />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -388,7 +397,6 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
 
           {addon.isManaged && (
             <>
-
               <Button
                 variant="outline"
                 size="sm"
