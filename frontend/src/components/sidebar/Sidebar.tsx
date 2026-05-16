@@ -3,7 +3,8 @@ import { useAtom, useAtomValue } from 'jotai'
 import { Globe } from 'lucide-react'
 
 import { versionAtom } from '@/atoms/applicationAtoms'
-import { activePageAtom, PAGE_DEFINITIONS } from '@/atoms/sidebarAtoms'
+import { activePageAtom } from '@/atoms/sidebarAtoms'
+import { PAGE_DEFINITIONS } from '@/components/sidebar/pageDefinitions.ts'
 import { UpdateCard } from '@/components/sidebar/UpdateCard'
 import { UserBar } from '@/components/sidebar/UserBar'
 import { useAddonStore } from '@/stores/addonStore'
@@ -32,7 +33,7 @@ export const Sidebar = () => {
           <SidebarItem
             key="website"
             name="AAC Website"
-            icon={<Globe className="h-4 w-4" />}
+            icon={Globe}
             isActive={false}
             onClick={() => Browser.OpenURL('https://aa-classic.com')}
           />

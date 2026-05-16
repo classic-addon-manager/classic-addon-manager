@@ -1,10 +1,10 @@
-import type { ReactNode } from 'react'
+import type { ComponentType, SVGProps } from 'react'
 
 import { cn } from '@/lib/utils'
 
 interface SidebarItemProps {
   name: string
-  icon: ReactNode
+  icon: ComponentType<SVGProps<SVGSVGElement>>
   isActive?: boolean
   badgeCount?: number
   onClick: () => void
@@ -12,7 +12,7 @@ interface SidebarItemProps {
 
 export const SidebarItem = ({
   name,
-  icon,
+  icon: Icon,
   isActive = false,
   badgeCount = -1,
   onClick,
@@ -39,7 +39,7 @@ export const SidebarItem = ({
             isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'
           )}
         >
-          {icon}
+          <Icon className="h-4 w-4" />
         </span>
         <span
           className={cn(
