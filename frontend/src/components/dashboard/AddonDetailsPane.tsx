@@ -347,7 +347,7 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
                 </p>
               </div>
               <div>
-                <span className="text-muted-foreground">Source</span>
+                <span className="text-muted-foreground flex items-center gap-1"><GithubIcon className="w-3.5 h-3.5" />Source</span>
                 {addon.repo ? (
                   <a
                     href={`https://github.com/${addon.repo}`}
@@ -388,15 +388,7 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
 
           {addon.isManaged && (
             <>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 text-xs gap-1.5"
-                onClick={() => Browser.OpenURL(`https://github.com/${addon.repo}`)}
-              >
-                <GithubIcon className="w-3.5 h-3.5" />
-                View Code
-              </Button>
+
               <Button
                 variant="outline"
                 size="sm"
