@@ -280,10 +280,12 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
             <h2 className="text-xl font-semibold truncate">{addon.alias}</h2>
 
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-sm text-muted-foreground">
-              <span className="inline-flex items-center gap-1">
-                <User className="w-3.5 h-3.5" />
-                <span className="text-foreground/90">{addon.author}</span>
-              </span>
+              {addon.isManaged && (
+                <span className="inline-flex items-center gap-1">
+                  <User className="w-3.5 h-3.5" />
+                  <span className="text-foreground/90">{addon.author}</span>
+                </span>
+              )}
 
               {addon.isManaged && addon.version && (
                 <Badge variant="secondary" className="inline-flex items-center gap-1 text-xs">
@@ -335,12 +337,13 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
             <span className="text-muted-foreground">Name</span>
             <p className="font-medium truncate">{addon.name}</p>
           </div>
-          <div>
-            <span className="text-muted-foreground">Author</span>
-            <p className="font-medium truncate">{addon.author}</p>
-          </div>
+
           {addon.isManaged && (
             <>
+              <div>
+                <span className="text-muted-foreground">Author</span>
+                <p className="font-medium truncate">{addon.author}</p>
+              </div>
               <div>
                 <span className="text-muted-foreground">Version</span>
                 <p className="font-medium truncate">{addon.version || '—'}</p>
