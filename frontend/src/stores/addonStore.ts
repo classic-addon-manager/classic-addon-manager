@@ -90,7 +90,9 @@ export const useAddonStore = create<AddonState>((set, get) => ({
         updatesAvailableCount: 0,
       })
     } finally {
-      set({ isCheckingForUpdates: false })
+      setTimeout(() => {
+        set({ isCheckingForUpdates: false })
+      }, 250)
     }
   },
 

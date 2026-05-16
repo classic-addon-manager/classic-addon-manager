@@ -249,12 +249,12 @@ const Toolbar = ({
           {isCheckingForUpdates ? (
             <>
               <LoaderCircle className="mr-1.5 size-3.5 animate-spin" />
-              Checking...
+              Refresh
             </>
           ) : (
             <>
               <RefreshCw className="mr-1.5 size-3.5" />
-              Check Updates
+              Refresh
             </>
           )}
         </Button>
