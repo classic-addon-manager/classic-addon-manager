@@ -15,12 +15,18 @@ import { LocalAddonService } from '@/lib/wails'
 import { useAddonStore } from '@/stores/addonStore'
 
 export function useDashboardController() {
-  const { isCheckingForUpdates, performBulkUpdateCheck, updateInstalledAddons } = useAddonStore()
+  const { installedAddons, isCheckingForUpdates, performBulkUpdateCheck, updateInstalledAddons } = useAddonStore()
   const [isLoading, setIsLoading] = useState(false)
   const [selectedAddon, setSelectedAddon] = useAtom(selectedAddonAtom)
   const setSearchQuery = useSetAtom(searchQueryAtom)
   const filteredAddons = useAtomValue(filteredAddonsAtom)
   const versionSelectAddon = useAtomValue(versionSelectAtom)
+
+  useEffect(() => {
+    if (!selectedAddon) return
+    const fresh = installedAddons.find(a => a.name === selectedAddon.name)
+    if (fresh && fresh !== selectedAddon) setSelectedAddon(fresh)
+  }, [installedAddons, selectedAddon, setSelectedAddon])
 
   const storeActionsRef = useRef({ updateInstalledAddons, performBulkUpdateCheck })
   storeActionsRef.current = { updateInstalledAddons, performBulkUpdateCheck }
