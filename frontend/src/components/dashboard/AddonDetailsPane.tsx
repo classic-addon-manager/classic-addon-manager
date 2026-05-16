@@ -341,14 +341,6 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
           {addon.isManaged && (
             <>
               <div>
-                <span className="text-muted-foreground">Author</span>
-                <p className="font-medium truncate">{addon.author}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Version</span>
-                <p className="font-medium truncate">{addon.version || '—'}</p>
-              </div>
-              <div>
                 <span className="text-muted-foreground">Updated</span>
                 <p className="font-medium truncate">
                   {addon.updatedAt ? formatToLocalTime(addon.updatedAt, 'short') : '—'}
