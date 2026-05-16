@@ -351,7 +351,7 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
               <div>
                 <span className="text-muted-foreground">Updated</span>
                 <p className="font-medium truncate">
-                  {addon.updatedAt ? formatToLocalTime(addon.updatedAt) : '—'}
+                  {addon.updatedAt ? formatToLocalTime(addon.updatedAt, 'short') : '—'}
                 </p>
               </div>
               <div>
