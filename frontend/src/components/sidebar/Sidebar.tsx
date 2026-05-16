@@ -2,11 +2,7 @@ import { Browser } from '@wailsio/runtime'
 import { useAtom, useAtomValue } from 'jotai'
 import { ArrowUpCircle, Globe } from 'lucide-react'
 
-import {
-  updateAvailableAtom,
-  updateDialogOpenAtom,
-  versionAtom,
-} from '@/atoms/applicationAtoms'
+import { updateAvailableAtom, updateDialogOpenAtom, versionAtom } from '@/atoms/applicationAtoms'
 import { activePageAtom } from '@/atoms/sidebarAtoms'
 import { PAGE_DEFINITIONS } from '@/components/sidebar/pageDefinitions.ts'
 import { UserBar } from '@/components/sidebar/UserBar'

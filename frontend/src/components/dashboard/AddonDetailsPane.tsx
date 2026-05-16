@@ -1,5 +1,4 @@
 import { Browser } from '@wailsio/runtime'
-import { clsx } from 'clsx'
 import {
   AlertTriangleIcon,
   BlocksIcon,
@@ -14,13 +13,12 @@ import {
   PackageIcon,
   RefreshCw,
   Tag,
-  ThumbsDownIcon,
-  ThumbsUpIcon,
   Trash2Icon,
   User,
 } from 'lucide-react'
 import { Suspense, useCallback, useEffect, useState } from 'react'
 
+import { AddonRatingButtons } from '@/components/dashboard/AddonRatingButtons'
 import { AddonRepositoryMatch } from '@/components/dashboard/AddonRepositoryMatch'
 import { RemoteAddonReadme } from '@/components/shared/RemoteAddonReadme'
 import { Badge } from '@/components/ui/badge'
@@ -34,15 +32,12 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { toast } from '@/components/ui/toast'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { getMyRating, rateAddon } from '@/lib/addon'
 import { repoGetManifest } from '@/lib/repo'
 import { formatToLocalTime, safeCall } from '@/lib/utils'
 import type { Addon, AddonManifest } from '@/lib/wails'
 import { LocalAddonService } from '@/lib/wails'
 import { useAddonStore } from '@/stores/addonStore'
 import { useUpdateDialogStore } from '@/stores/updateDialogStore'
-import { useUserStore } from '@/stores/userStore'
 
 interface AddonDetailsPaneProps {
   addon: Addon
@@ -66,10 +61,8 @@ const DetailsLoading = () => (
 
 const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPaneProps) => {
   const { install, uninstall, latestReleasesMap, isCheckingForUpdates } = useAddonStore()
-  const { isAuthenticated } = useUserStore()
   const { open: updateDialogOpen, setOpen: setUpdateDialogOpen } = useUpdateDialogStore()
   const [readme, setReadme] = useState<string>('loading')
-  const [rating, setRating] = useState(0)
 
   const latestRelease = latestReleasesMap.get(addon.name)
   const hasUpdate = addon.isManaged && latestRelease && latestRelease.published_at > addon.updatedAt
@@ -80,7 +73,6 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
       ? `https://raw.githubusercontent.com/${addon.repo}/${addon.branch}/icon.png`
       : null
 
-  // Reset on addon switch so a failed icon doesn't hide valid icons for subsequent addons
   useEffect(() => {
     setHasIcon(true)
   }, [addon.name, iconUrl])
@@ -106,18 +98,9 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
     setReadme(text)
   }, [addon.repo, addon.branch, addon.description])
 
-  const handleGetMyRating = useCallback(async () => {
-    await getMyRating(addon.name, isAuthenticated(), setRating)
-  }, [addon.name, isAuthenticated])
-
   useEffect(() => {
-    handleGetMyRating().catch(e => console.error('Failed to fetch rating: ', e))
     getReadme().catch(e => console.error('Failed to fetch readme: ', e))
-  }, [addon.name, handleGetMyRating, getReadme])
-
-  const handleRateAddon = async (newRating: number) => {
-    await rateAddon(addon.name, addon.alias, newRating, rating, setRating)
-  }
+  }, [addon.name, getReadme])
 
   const handleReinstall = async () => {
     const [manifest, manifestError] = await safeCall<AddonManifest>(repoGetManifest(addon.name))
@@ -174,68 +157,6 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
         description: `Failed to open directory for addon "${addon.alias}".`,
       })
     }
-  }
-
-  const RateAddonButtons = () => {
-    if (!addon.isManaged) return null
-
-    if (!isAuthenticated()) {
-      return (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span
-              className="flex items-center gap-3 p-2 cursor-not-allowed opacity-50"
-              aria-label="Log in to rate addons"
-            >
-              <ThumbsUpIcon className="w-4 h-4 text-muted-foreground" />
-              <ThumbsDownIcon className="w-4 h-4 text-muted-foreground" />
-            </span>
-          </TooltipTrigger>
-          <TooltipContent className="font-bold">
-            Sign in using Discord to rate addons
-          </TooltipContent>
-        </Tooltip>
-      )
-    }
-
-    return (
-      <div className="flex gap-1 items-center">
-        <Button
-          variant="ghost"
-          size="icon"
-          className={clsx(
-            'h-7 w-7 transition-all duration-200 hover:bg-blue-100 dark:hover:bg-blue-900/30',
-            rating === 1 && 'bg-blue-100 dark:bg-blue-900/30 border border-blue-500 text-blue-500'
-          )}
-          onClick={() => handleRateAddon(1)}
-          aria-label="Like addon"
-        >
-          <ThumbsUpIcon
-            className={clsx('w-4 h-4', {
-              'text-blue-500': rating === 1,
-              'text-muted-foreground': rating !== 1,
-            })}
-          />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className={clsx(
-            'h-7 w-7 transition-all duration-200 hover:bg-red-100 dark:hover:bg-red-900/30',
-            rating === -1 && 'bg-red-100 dark:bg-red-900/30 border border-red-500 text-red-500'
-          )}
-          onClick={() => handleRateAddon(-1)}
-          aria-label="Dislike addon"
-        >
-          <ThumbsDownIcon
-            className={clsx('w-4 h-4', {
-              'text-red-500': rating === -1,
-              'text-muted-foreground': rating !== -1,
-            })}
-          />
-        </Button>
-      </div>
-    )
   }
 
   const UnmanagedNotice = () => {
@@ -423,7 +344,11 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
             <div>
               <span className="text-muted-foreground">Rating</span>
               <div className="font-medium">
-                <RateAddonButtons />
+                <AddonRatingButtons
+                  addonName={addon.name}
+                  addonAlias={addon.alias}
+                  isManaged={addon.isManaged}
+                />
               </div>
             </div>
           )}
