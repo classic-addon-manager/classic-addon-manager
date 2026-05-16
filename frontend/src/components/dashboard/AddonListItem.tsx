@@ -119,5 +119,5 @@ const AddonListItemIndicator = ({
     return <Check size={16} className="text-green-600" />
   }
 
-  return <span className="w-2 h-2 rounded-full bg-orange-500/60" />
+  return <span className="w-2 h-2 rounded-full bg-orange-600" />
 }
