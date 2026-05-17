@@ -297,7 +297,7 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
       </div>
 
       <div className="shrink-0 border-b px-6 py-3">
-        <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm w-lg">
           <div>
             <span className="text-muted-foreground">Name</span>
             <p className="font-medium truncate">{addon.name}</p>
