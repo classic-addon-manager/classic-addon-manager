@@ -245,7 +245,7 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
             {hasUpdate && (
               <Badge
                 variant="outline"
-                className="mt-2 mx-auto flex items-center gap-1.5 text-sm px-3 py-1 text-amber-600 border-amber-600/20 bg-amber-500/10 cursor-pointer hover:bg-amber-500/20"
+                className="mt-2 flex items-center gap-1.5 text-sm px-3 py-1 text-amber-600 border-amber-600/20 bg-amber-500/10 cursor-pointer hover:bg-amber-500/20"
                 onClick={() => {
                   if (!updateDialogOpen) setUpdateDialogOpen(true)
                 }}
