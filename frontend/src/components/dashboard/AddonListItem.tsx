@@ -1,7 +1,6 @@
 import { BlocksIcon, Check, Download, LoaderCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
-import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { Addon } from '@/lib/wails'
 import { useAddonStore } from '@/stores/addonStore'
@@ -57,18 +56,10 @@ export const AddonListItem = ({ addon, isSelected, onClick }: AddonListItemProps
       </div>
 
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5">
-          <span className={cn('truncate text-sm font-medium', isSelected && 'text-primary')}>
+        <div className="min-w-0">
+          <span className={cn('block truncate text-sm font-medium', isSelected && 'text-primary')}>
             {addon.alias}
           </span>
-          {hasUpdate && (
-            <Badge
-              variant="outline"
-              className="ml-0.5 px-1.5 py-0 text-[8px] font-bold rounded-full shrink-0 text-amber-600 border-amber-600/20 bg-amber-500/10"
-            >
-              Update
-            </Badge>
-          )}
         </div>
         <div className="flex items-center gap-2 mt-0.5">
           {addon.isManaged ? (
