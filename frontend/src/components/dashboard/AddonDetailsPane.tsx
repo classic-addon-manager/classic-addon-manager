@@ -60,7 +60,7 @@ const DetailsLoading = () => (
 )
 
 const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPaneProps) => {
-  const { install, uninstall, latestReleasesMap, isCheckingForUpdates } = useAddonStore()
+  const { install, uninstall, unmanage, latestReleasesMap, isCheckingForUpdates } = useAddonStore()
   const { open: updateDialogOpen, setOpen: setUpdateDialogOpen } = useUpdateDialogStore()
   const [readme, setReadme] = useState<string>('loading')
 
@@ -144,6 +144,23 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
     toast({
       title: 'Addon uninstalled',
       description: `${addon.alias} was uninstalled`,
+      icon: CheckIcon,
+    })
+  }
+
+  const handleUnmanage = async () => {
+    const didUnmanage = await unmanage(addon)
+    if (!didUnmanage) {
+      toast({
+        title: 'Error',
+        description: 'Failed to unmanage addon, check log file for more information',
+        icon: AlertTriangleIcon,
+      })
+      return
+    }
+    toast({
+      title: 'Addon unmanaged',
+      description: `${addon.alias} is no longer managed`,
       icon: CheckIcon,
     })
   }
@@ -285,6 +302,12 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
                     Reinstall
                   </DropdownMenuItem>
                 </>
+              )}
+              {addon.isManaged && (
+                <DropdownMenuItem variant="warning" onClick={handleUnmanage}>
+                  <AlertTriangleIcon className="w-4 h-4" />
+                  Unmanage
+                </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
               <DropdownMenuItem variant="destructive" onClick={handleUninstall}>
