@@ -4,6 +4,7 @@ import {
   BlocksIcon,
   BugIcon,
   CheckIcon,
+  CloudOffIcon,
   Download,
   FolderOpen,
   GitBranchIcon,
@@ -179,14 +180,17 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
   const UnmanagedNotice = () => {
     if (addon.isManaged) return null
     return (
-      <div className="border rounded-lg p-4 bg-card">
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <PackageIcon className="w-4 h-4" />
-            <p className="text-sm font-medium">
-              This addon is not managed by Classic Addon Manager
-            </p>
+      <div className="border rounded-lg p-4 bg-card flex-1 flex flex-col">
+        <div className="flex flex-col items-center justify-center text-center py-8 flex-1">
+          <div className="flex items-center justify-center w-12 h-12 rounded-full bg-orange-500/10 mb-4">
+            <CloudOffIcon className="w-6 h-6 text-orange-500" />
           </div>
+          <p className="text-sm font-medium text-foreground mb-1">Manage This Addon?</p>
+          <p className="text-sm text-muted-foreground mb-5 max-w-xs">
+            You installed this one yourself.
+            <br />
+            We can take over updates if you'd like.
+          </p>
           <Suspense
             fallback={
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -378,18 +382,22 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
         </div>
       </div>
 
-      <ScrollArea className="flex-1 min-h-0 px-6 py-4">
-        {addon.isManaged && readme === 'loading' ? (
-          <div className="flex flex-col items-center justify-center h-32 text-center text-muted-foreground">
-            <PackageIcon className="w-10 h-10 mb-3 opacity-50" />
-            <p className="text-sm font-medium">Loading description...</p>
-          </div>
-        ) : addon.isManaged ? (
-          <RemoteAddonReadme readme={readme} />
-        ) : null}
-
-        <UnmanagedNotice />
-      </ScrollArea>
+      {addon.isManaged ? (
+        <ScrollArea className="flex-1 min-h-0 px-6 py-4">
+          {readme === 'loading' ? (
+            <div className="flex flex-col items-center justify-center h-32 text-center text-muted-foreground">
+              <PackageIcon className="w-10 h-10 mb-3 opacity-50" />
+              <p className="text-sm font-medium">Loading description...</p>
+            </div>
+          ) : (
+            <RemoteAddonReadme readme={readme} />
+          )}
+        </ScrollArea>
+      ) : (
+        <div className="flex-1 min-h-0 px-6 py-4 flex flex-col">
+          <UnmanagedNotice />
+        </div>
+      )}
     </div>
   )
 }
