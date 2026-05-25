@@ -39,6 +39,6 @@ export const filteredAddonsAtom = atom(get => {
     const bHasUpdate = hasUpdate(b, latestReleasesMap)
     if (aHasUpdate && !bHasUpdate) return -1
     if (!aHasUpdate && bHasUpdate) return 1
-    return 0
+    return a.name.localeCompare(b.name)
   })
 })
