@@ -17,13 +17,16 @@ export const safeCall = async <T>(promise: Promise<T>): Promise<[T | null, Error
 /**
  * Formats a go date string to a human-readable date string.
  */
-export function formatToLocalTime(dateString: string): string {
+export function formatToLocalTime(
+  dateString: string,
+  monthFormat: 'short' | 'long' = 'long'
+): string {
   const date = new Date(dateString)
   const options: Intl.DateTimeFormatOptions = {
     hour: '2-digit',
     minute: '2-digit',
     day: '2-digit',
-    month: 'long',
+    month: monthFormat,
     year: 'numeric',
   }
   return date.toLocaleString(undefined, options).replace(',', '')

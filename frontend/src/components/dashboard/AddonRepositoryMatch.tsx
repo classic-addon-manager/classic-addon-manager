@@ -77,12 +77,11 @@ export const AddonRepositoryMatch = ({ name }: { name: string }) => {
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">
-        Good news! This addon was found in our repository. Would you like Classic Addon Manager to
-        handle updates for you?
+        It's in our repository, we can keep it up to date for you.
       </p>
       <Button className="w-full sm:w-auto" onClick={handleMatchAddon}>
         <ArrowUpCircle className="w-4 h-4 mr-2" />
-        Yes, manage this addon
+        Yes, keep it updated
       </Button>
     </div>
   )

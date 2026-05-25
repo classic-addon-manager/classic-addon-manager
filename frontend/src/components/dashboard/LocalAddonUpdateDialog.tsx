@@ -80,6 +80,7 @@ export const LocalAddonUpdateDialog = ({ addon, release }: Props) => {
         description: `${addon.alias} was updated to ${release.tag_name}`,
         icon: ArrowUpCircle,
       })
+      setOpen(false)
     }
     setIsUpdating(false)
   }
