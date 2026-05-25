@@ -3,14 +3,13 @@ Support development of this project by buying me a ko-fi.
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/X8X219OKGE)
 
+<img align="center" width="700" alt="image" src="https://github.com/user-attachments/assets/4a5d13a8-dc4d-481e-85a5-5fdc0ce4f98b" />
 
-<img align="center" src="https://github.com/user-attachments/assets/8f521ae7-cf14-4915-a58e-6a6d074d74f1" width="700">
+<img align="center" width="700" alt="image" src="https://github.com/user-attachments/assets/c1ee5165-ff20-4717-810f-d4b065945521" />
 
-<img align="center" src="https://github.com/user-attachments/assets/f0243db8-8dc8-4c00-b244-00a32429b31c" width="700">
+<img align="center" width="700" alt="image" src="https://github.com/user-attachments/assets/a1bc8d7f-b2de-4b0e-bed8-ac4eeeacd683" />
 
-<img align="center" src="https://github.com/user-attachments/assets/3d3e21e1-aad8-43e8-856f-da112b8d3da2" width="700">
-
-<img align="center" src="https://github.com/user-attachments/assets/5b081507-ddfa-4128-8ced-b104766b7d6e" width="700">
+<img align="center" width="700" alt="image" src="https://github.com/user-attachments/assets/5e9906bf-667b-4242-930a-d04af6d21f34" />
 
 
 ## Development requirements
