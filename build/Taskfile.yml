@@ -24,10 +24,6 @@ tasks:
   build:frontend:
     summary: Build the frontend project
     dir: frontend
-    sources:
-      - "**/*"
-    generates:
-      - dist/*
     deps:
       - task: install:frontend:deps
       - task: generate:bindings
