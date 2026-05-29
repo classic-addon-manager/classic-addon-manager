@@ -209,7 +209,13 @@ func GetBool(option string) bool {
 
 func SetBool(option string, value bool) {
 	viper.Set(option, value)
-	_ = SaveConfig()
+	err := SaveConfig()
+	if err != nil {
+		dialog.Message("Could not save config: %s", err.Error()).Title("Classic Addon Manager Error").Error()
+		logger.Error("Could not save config: ", err)
+		return
+	}
+	logger.Info("Set config option: " + option + " to " + fmt.Sprintf("%v", value))
 }
 
 func GetString(option string) string {
@@ -222,6 +228,7 @@ func SetString(option string, value string) {
 	if err != nil {
 		dialog.Message("could not save config: %s", err.Error()).Title("Classic Addon Manager Error").Error()
 		logger.Error("Could not save config: ", err)
+		return
 	}
 	logger.Info("Set config option: " + option + " to " + value)
 }
