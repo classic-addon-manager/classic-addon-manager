@@ -68,9 +68,8 @@ func UpdateAddon(manifest shared.AddonManifest, version string) (bool, error) {
 	return true, nil
 }
 
-// GetAddonManifest https://aac.gaijin.dev/addons
 func GetAddonManifest() []shared.AddonManifest {
-	req, err := http.NewRequest("GET", "https://aac.gaijin.dev/addons", nil)
+	req, err := http.NewRequest("GET", api.ApiURL+"/addons", nil)
 	if err != nil {
 		logger.Error("GetAddonManifest Error:", err)
 		return []shared.AddonManifest{}
