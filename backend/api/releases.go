@@ -15,16 +15,13 @@ import (
 )
 
 func GetAddonRelease(name string, version string) (Release, error) {
+	path := fmt.Sprintf("/addon/%s/release/%s", name, version)
 
-	url := fmt.Sprintf("%s/addon/%s/release/%s", ApiURL, name, version)
-
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := newApiRequest(nil, http.MethodGet, path, nil)
 	if err != nil {
 		return Release{}, err
 	}
-	req.Header.Set("X-Client", GetApiClientHeader())
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := apiClient.Do(req)
 	if err != nil {
 		return Release{}, err
 	}
@@ -84,15 +81,11 @@ func GetAddonRelease(name string, version string) (Release, error) {
 }
 
 func GetLatestApplicationRelease() (ApplicationRelease, error) {
-	url := ApiURL + "/latest_application_release"
-
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := newApiRequest(nil, http.MethodGet, "/latest_application_release", nil)
 	if err != nil {
 		return ApplicationRelease{}, err
 	}
-	req.Header.Set("X-Client", GetApiClientHeader())
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := apiClient.Do(req)
 	if err != nil {
 		return ApplicationRelease{}, err
 	}
@@ -143,17 +136,13 @@ func GetLatestReleasesBulk(names []string) (map[string]Release, error) {
 	}
 
 	// Create and send the POST request
-	url := ApiURL + "/latest_releases"
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(requestBody))
+	req, err := newApiRequest(nil, http.MethodPost, "/latest_releases", bytes.NewBuffer(requestBody))
 	if err != nil {
 		logger.Error("GetLatestReleasesBulk Error creating request:", err)
 		return nil, err
 	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Client", GetApiClientHeader())
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := apiClient.Do(req)
 	if err != nil {
 		logger.Error("GetLatestReleasesBulk Error sending request:", err)
 		return nil, err

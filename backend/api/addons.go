@@ -1,7 +1,6 @@
 package api
 
 import (
-	"ClassicAddonManager/backend/auth"
 	"ClassicAddonManager/backend/logger"
 	"ClassicAddonManager/backend/shared"
 	"encoding/json"
@@ -12,18 +11,15 @@ import (
 )
 
 func UnsubscribeFromAddon(addonName string) {
-	url := fmt.Sprintf("%s/addon/%s/unsubscribe", ApiURL, addonName)
+	path := fmt.Sprintf("/addon/%s/unsubscribe", addonName)
 
-	req, err := http.NewRequest("POST", url, nil)
+	req, err := newAuthenticatedApiRequest(nil, http.MethodPost, path, nil)
 	if err != nil {
 		logger.Error("Error creating request:", err)
 		return
 	}
 
-	req.Header.Set("X-Client", GetApiClientHeader())
-	req.Header.Set("X-Token", auth.GetToken())
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := apiClient.Do(req)
 	if err != nil {
 		logger.Error("Error creating request:", err)
 		return
@@ -43,18 +39,13 @@ type SubscribedAddonsResponse struct {
 }
 
 func GetSubscribedAddons() ([]shared.AddonManifest, error) {
-	url := fmt.Sprintf("%s/me/addons", ApiURL)
-
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := newAuthenticatedApiRequest(nil, http.MethodGet, "/me/addons", nil)
 	if err != nil {
 		logger.Error("Error creating request:", err)
 		return nil, err
 	}
 
-	req.Header.Set("X-Client", GetApiClientHeader())
-	req.Header.Set("X-Token", auth.GetToken())
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := apiClient.Do(req)
 	if err != nil {
 		logger.Error("Error sending request:", err)
 		return nil, err
