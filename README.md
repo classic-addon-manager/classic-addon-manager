@@ -2,7 +2,7 @@
 
 A desktop application for managing addons in **ArcheAge**. Browse, install, update, and troubleshoot your addons all from one place.
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/X8X219OKGE)
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/gaijindev)
 
 <img align="center" width="700" alt="Dashboard screenshot" src="https://github.com/user-attachments/assets/4a5d13a8-dc4d-481e-85a5-5fdc0ce4f98b" />
 
