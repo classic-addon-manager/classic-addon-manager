@@ -109,13 +109,18 @@ func getOrCreateConfig() error {
 	}
 
 	// Ensure the config file exists
+	created := false
 	_, err = os.Stat(filepath.Join(managerDir, "config.toml"))
 	if err != nil {
 		if os.IsNotExist(err) {
-			_, err = os.Create(filepath.Join(managerDir, "config.toml"))
+			f, err := os.Create(filepath.Join(managerDir, "config.toml"))
 			if err != nil {
 				return errors.New("could not create config file")
 			}
+			if err := f.Close(); err != nil {
+				return fmt.Errorf("could not close config file: %w", err)
+			}
+			created = true
 		}
 	}
 
@@ -131,9 +136,11 @@ func getOrCreateConfig() error {
 		}
 	}
 
-	err = viper.WriteConfigAs(filepath.Join(managerDir, "config.toml"))
-	if err != nil {
-		return fmt.Errorf("could not write config file: %w", err)
+	if created {
+		err = viper.WriteConfigAs(filepath.Join(managerDir, "config.toml"))
+		if err != nil {
+			return fmt.Errorf("could not write config file: %w", err)
+		}
 	}
 
 	return nil
