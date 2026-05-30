@@ -3,7 +3,6 @@ package logger
 import (
 	"fmt"
 	"log"
-	"net/url"
 	"os"
 	"path/filepath"
 	"time"
@@ -22,23 +21,20 @@ func GetLogPath() string {
 	return filepath.Join(path, "ClassicAddonManager", "app.log")
 }
 
-func newWinFileSink(u *url.URL) (zap.Sink, error) {
-	// Remove leading slash left by url.Parse()
-	return os.OpenFile(u.Path[1:], os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
-}
+func buildLogger(outputPaths []string) *zap.SugaredLogger {
+	if err := os.MkdirAll(filepath.Dir(GetLogPath()), 0700); err != nil {
+		log.Fatalf("Error creating log directory: %v", err)
+	}
 
-func initLogger() {
-	_ = zap.RegisterSink("winfile", newWinFileSink)
 	c := zap.NewProductionConfig()
 	c.EncoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout(time.RFC3339)
-	c.OutputPaths = []string{"winfile:///" + GetLogPath()}
+	c.OutputPaths = outputPaths
 	l, err := c.Build(zap.AddCaller(), zap.AddCallerSkip(1))
-
 	if err != nil {
 		log.Fatalf("Error initializing logger: %v", err)
 	}
 
-	logger = l.Sugar()
+	return l.Sugar()
 }
 
 func getLogger() *zap.SugaredLogger {
