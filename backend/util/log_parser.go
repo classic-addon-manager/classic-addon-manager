@@ -3,6 +3,7 @@ package util
 import (
 	"ClassicAddonManager/backend/config"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -15,7 +16,7 @@ type LogParseResult struct {
 }
 
 func parseLogFile() ([]LogParseResult, error) {
-	logPath := config.GetAACDir() + "/ArcheAge.log"
+	logPath := filepath.Join(config.GetAACDir(), "ArcheAge.log")
 	data, err := os.ReadFile(logPath)
 	if err != nil {
 		return nil, err

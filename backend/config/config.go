@@ -30,7 +30,7 @@ func LoadConfig() error {
 		return err
 	}
 
-	aacPath := path + "\\Documents"
+	aacPath := filepath.Join(path, "Documents")
 	SetString("general.aacpath", aacPath)
 
 	return nil
