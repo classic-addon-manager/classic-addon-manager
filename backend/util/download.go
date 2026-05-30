@@ -4,6 +4,7 @@ import (
 	"ClassicAddonManager/backend/auth"
 	"ClassicAddonManager/backend/logger"
 	"ClassicAddonManager/backend/shared"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -27,6 +28,10 @@ func DownloadFile(url string, path string) error {
 		return err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		return fmt.Errorf("download failed with status code %d", resp.StatusCode)
+	}
 
 	out, err := os.Create(path)
 	if err != nil {
