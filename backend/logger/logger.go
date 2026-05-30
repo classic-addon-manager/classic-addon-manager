@@ -2,13 +2,14 @@ package logger
 
 import (
 	"fmt"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"log"
 	"net/url"
 	"os"
 	"path/filepath"
 	"time"
+
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 var logger *zap.SugaredLogger
@@ -37,10 +38,7 @@ func initLogger() {
 		log.Fatalf("Error initializing logger: %v", err)
 	}
 
-	sugar := l.Sugar()
-	defer sugar.Sync()
-
-	logger = sugar
+	logger = l.Sugar()
 }
 
 func getLogger() *zap.SugaredLogger {
@@ -48,6 +46,12 @@ func getLogger() *zap.SugaredLogger {
 		initLogger()
 	}
 	return logger
+}
+
+func Sync() {
+	if logger != nil {
+		_ = logger.Sync()
+	}
 }
 
 func Info(msg string) {

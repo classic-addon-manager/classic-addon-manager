@@ -28,6 +28,7 @@ func checkWebView2Installation() {
 		errorMsg := "Microsoft Edge WebView2 Runtime is not installed. Please install it from https://developer.microsoft.com/en-us/microsoft-edge/webview2"
 		logger.Error(errorMsg, err)
 		dialog.Message("%s", errorMsg).Title("Classic Addon Manager Error").Error()
+		logger.Sync()
 		os.Exit(1)
 	}
 	defer key.Close()
@@ -40,6 +41,7 @@ func checkWebView2Installation() {
 		errorMsg := "Microsoft Edge WebView2 Runtime is not properly installed. The 'pv' registry key is missing."
 		logger.Error(errorMsg, err)
 		dialog.Message("%s", errorMsg).Title("Classic Addon Manager Error").Error()
+		logger.Sync()
 		os.Exit(1)
 	}
 }

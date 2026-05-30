@@ -105,6 +105,7 @@ exit
 	}
 
 	logger.Info("Update script started, exiting application.")
+	logger.Sync()
 	os.Exit(0)
 
 	return nil

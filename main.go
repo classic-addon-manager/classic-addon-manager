@@ -26,10 +26,12 @@ var assets embed.FS
 func main() {
 	addonUpdateMode := flag.Bool("check-updates", false, "Run in headless mode to check for addon updates")
 	flag.Parse()
+	defer logger.Sync()
 
 	err := config.LoadConfig()
 	if err != nil {
 		dialog.Message("%s", err.Error()).Title("Classic Addon Manager Error").Error()
+		logger.Sync()
 		os.Exit(1)
 	}
 
@@ -42,6 +44,7 @@ func main() {
 		addon.GenerateUpdateAddonLua(
 			addon.CheckForUpdates(),
 		)
+		logger.Sync()
 		os.Exit(0)
 	}
 
@@ -50,6 +53,7 @@ func main() {
 
 	// Check if another instance is running
 	if checkForRunningInstance() {
+		logger.Sync()
 		os.Exit(0)
 	}
 
