@@ -13,13 +13,13 @@ import (
 func UnsubscribeFromAddon(addonName string) {
 	path := fmt.Sprintf("/addon/%s/unsubscribe", addonName)
 
-	req, err := newAuthenticatedApiRequest(nil, http.MethodPost, path, nil)
+	req, err := NewAuthenticatedApiRequest(nil, http.MethodPost, path, nil)
 	if err != nil {
 		logger.Error("Error creating request:", err)
 		return
 	}
 
-	resp, err := apiClient.Do(req)
+	resp, err := Client.Do(req)
 	if err != nil {
 		logger.Error("Error creating request:", err)
 		return
@@ -39,13 +39,13 @@ type SubscribedAddonsResponse struct {
 }
 
 func GetSubscribedAddons() ([]shared.AddonManifest, error) {
-	req, err := newAuthenticatedApiRequest(nil, http.MethodGet, "/me/addons", nil)
+	req, err := NewAuthenticatedApiRequest(nil, http.MethodGet, "/me/addons", nil)
 	if err != nil {
 		logger.Error("Error creating request:", err)
 		return nil, err
 	}
 
-	resp, err := apiClient.Do(req)
+	resp, err := Client.Do(req)
 	if err != nil {
 		logger.Error("Error sending request:", err)
 		return nil, err

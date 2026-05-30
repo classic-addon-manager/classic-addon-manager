@@ -11,11 +11,11 @@ import (
 
 const ApiURL = "https://aac.gaijin.dev"
 
-var apiClient = &http.Client{
+var Client = &http.Client{
 	Timeout: time.Second * 30,
 }
 
-func newApiRequest(ctx context.Context, method string, path string, body io.Reader) (*http.Request, error) {
+func NewApiRequest(ctx context.Context, method string, path string, body io.Reader) (*http.Request, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -25,14 +25,14 @@ func newApiRequest(ctx context.Context, method string, path string, body io.Read
 		return nil, err
 	}
 
-	req.Header.Set("X-Client", GetApiClientHeader())
+	req.Header.Set("X-Client", GetClientHeader())
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
 	return req, nil
 }
 
-func newAuthenticatedApiRequest(ctx context.Context, method string, path string, body io.Reader) (*http.Request, error) {
-	req, err := newApiRequest(ctx, method, path, body)
+func NewAuthenticatedApiRequest(ctx context.Context, method string, path string, body io.Reader) (*http.Request, error) {
+	req, err := NewApiRequest(ctx, method, path, body)
 	if err != nil {
 		return nil, err
 	}
@@ -41,6 +41,6 @@ func newAuthenticatedApiRequest(ctx context.Context, method string, path string,
 	return req, nil
 }
 
-func GetApiClientHeader() string {
+func GetClientHeader() string {
 	return "Classic Addon Manager " + shared.Version
 }

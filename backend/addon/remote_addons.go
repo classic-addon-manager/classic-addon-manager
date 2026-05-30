@@ -69,14 +69,13 @@ func UpdateAddon(manifest shared.AddonManifest, version string) (bool, error) {
 }
 
 func GetAddonManifest() []shared.AddonManifest {
-	req, err := http.NewRequest("GET", api.ApiURL+"/addons", nil)
+	req, err := api.NewApiRequest(nil, http.MethodGet, "/addons", nil)
 	if err != nil {
 		logger.Error("GetAddonManifest Error:", err)
 		return []shared.AddonManifest{}
 	}
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := api.Client.Do(req)
 	if err != nil {
 		logger.Error("GetAddonManifest Error:", err)
 		return []shared.AddonManifest{}

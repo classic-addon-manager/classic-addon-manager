@@ -17,11 +17,11 @@ import (
 func GetAddonRelease(name string, version string) (Release, error) {
 	path := fmt.Sprintf("/addon/%s/release/%s", name, version)
 
-	req, err := newApiRequest(nil, http.MethodGet, path, nil)
+	req, err := NewApiRequest(nil, http.MethodGet, path, nil)
 	if err != nil {
 		return Release{}, err
 	}
-	resp, err := apiClient.Do(req)
+	resp, err := Client.Do(req)
 	if err != nil {
 		return Release{}, err
 	}
@@ -81,11 +81,11 @@ func GetAddonRelease(name string, version string) (Release, error) {
 }
 
 func GetLatestApplicationRelease() (ApplicationRelease, error) {
-	req, err := newApiRequest(nil, http.MethodGet, "/latest_application_release", nil)
+	req, err := NewApiRequest(nil, http.MethodGet, "/latest_application_release", nil)
 	if err != nil {
 		return ApplicationRelease{}, err
 	}
-	resp, err := apiClient.Do(req)
+	resp, err := Client.Do(req)
 	if err != nil {
 		return ApplicationRelease{}, err
 	}
@@ -136,13 +136,13 @@ func GetLatestReleasesBulk(names []string) (map[string]Release, error) {
 	}
 
 	// Create and send the POST request
-	req, err := newApiRequest(nil, http.MethodPost, "/latest_releases", bytes.NewBuffer(requestBody))
+	req, err := NewApiRequest(nil, http.MethodPost, "/latest_releases", bytes.NewBuffer(requestBody))
 	if err != nil {
 		logger.Error("GetLatestReleasesBulk Error creating request:", err)
 		return nil, err
 	}
 
-	resp, err := apiClient.Do(req)
+	resp, err := Client.Do(req)
 	if err != nil {
 		logger.Error("GetLatestReleasesBulk Error sending request:", err)
 		return nil, err
