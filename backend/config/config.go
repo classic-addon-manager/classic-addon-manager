@@ -19,7 +19,7 @@ func LoadConfig() error {
 		return err
 	}
 
-	if !GetBool("general.autodetectpath") {
+	if !GetBool("general.autodetectpath", true) {
 		logger.Info("Settings: Override path is enabled, will not detect AAC path")
 		return nil
 	}
@@ -210,7 +210,10 @@ func GetAddonDir() string {
 	return filepath.Join(GetAACDir(), "Addon")
 }
 
-func GetBool(option string) bool {
+func GetBool(option string, defaultValue bool) bool {
+	if !viper.IsSet(option) {
+		return defaultValue
+	}
 	return viper.GetBool(option)
 }
 
@@ -222,10 +225,13 @@ func SetBool(option string, value bool) {
 		logger.Error("Could not save config: ", err)
 		return
 	}
-	logger.Info("Set config option: " + option + " to " + fmt.Sprintf("%v", value))
+	logger.Info("Config update: " + option + " -> " + fmt.Sprintf("%v", value))
 }
 
-func GetString(option string) string {
+func GetString(option string, defaultValue string) string {
+	if !viper.IsSet(option) {
+		return defaultValue
+	}
 	return viper.GetString(option)
 }
 
@@ -237,7 +243,7 @@ func SetString(option string, value string) {
 		logger.Error("Could not save config: ", err)
 		return
 	}
-	logger.Info("Set config option: " + option + " to " + value)
+	logger.Info("Config update: " + option + " to " + value)
 }
 
 func GetAll() map[string]any {
