@@ -104,7 +104,7 @@ func getOrCreateConfig() error {
 			if err != nil {
 				return errors.New("could not create config directory")
 			}
-			fmt.Println("Created config directory")
+			logger.Info(fmt.Sprintf("Created config directory: %s", managerDir))
 		}
 	}
 
@@ -158,10 +158,10 @@ func GetCacheDir() string {
 		if os.IsNotExist(err) {
 			err := os.Mkdir(cacheDir, 0700)
 			if err != nil {
-				fmt.Println("Could not create cache directory")
+				logger.Error("Could not create cache directory", err)
 				return ""
 			}
-			fmt.Println("Created cache directory")
+			logger.Info(fmt.Sprintf("Created cache directory: %s", cacheDir))
 		}
 	}
 	return cacheDir
@@ -184,7 +184,7 @@ func GetDataDir() string {
 				dialog.Message("could not create config directory: %s", err.Error()).Title("Classic Addon Manager Error").Error()
 				return ""
 			}
-			fmt.Println("Created config directory")
+			logger.Info(fmt.Sprintf("Created config directory: %s", managerDir))
 		}
 	}
 
