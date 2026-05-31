@@ -4,6 +4,7 @@ package main
 
 import (
 	"ClassicAddonManager/backend/logger"
+	"bufio"
 	"fmt"
 	"net"
 	"net/url"
@@ -25,7 +26,7 @@ func checkForRunningInstance() bool {
 	if err == nil {
 		// Send deeplink to the existing instance
 		if len(os.Args) > 1 {
-			_, _ = fmt.Fprintln(conn, os.Args[1])
+			_, _ = fmt.Fprintf(conn, "%s\n", os.Args[1])
 		}
 		_ = conn.Close()
 		return true
@@ -64,11 +65,16 @@ func startIPCServer(a *application.App) {
 func handleIPCConnection(conn net.Conn, a *application.App) {
 	defer conn.Close()
 
-	var deeplink string
-	if _, err := fmt.Fscanln(conn, &deeplink); err != nil {
-		logger.Error("Error reading from socket:", err)
+	scanner := bufio.NewScanner(conn)
+	if !scanner.Scan() {
+		if err := scanner.Err(); err != nil {
+			logger.Error("Error reading from socket:", err)
+		} else {
+			logger.Warn("Received empty data from socket (no deeplink URL provided by client)")
+		}
 		return
 	}
+	deeplink := scanner.Text()
 
 	// Handle the deeplink in the existing instance
 	parsedURL, err := url.Parse(deeplink)
