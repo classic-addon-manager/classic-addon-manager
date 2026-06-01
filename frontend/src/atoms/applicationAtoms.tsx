@@ -12,3 +12,4 @@ export const versionAtom = atomWithDefault<Promise<string>>(async () => {
 export const updateAvailableAtom = atom(false)
 export const updateInformationAtom = atom<ApplicationRelease | null>(null)
 export const updateDialogOpenAtom = atom(false)
+export const updateCheckCompleteAtom = atom(false)

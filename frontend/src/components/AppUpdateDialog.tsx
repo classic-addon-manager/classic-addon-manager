@@ -5,6 +5,7 @@ import semver from 'semver'
 
 import {
   updateAvailableAtom,
+  updateCheckCompleteAtom,
   updateDialogOpenAtom,
   updateInformationAtom,
   versionAtom,
@@ -25,6 +26,7 @@ export const AppUpdateDialog = () => {
   const [updateAvailable, setUpdateAvailable] = useAtom(updateAvailableAtom)
   const [updateInformation, setUpdateInformation] = useAtom(updateInformationAtom)
   const [open, setOpen] = useAtom(updateDialogOpenAtom)
+  const [, setUpdateCheckComplete] = useAtom(updateCheckCompleteAtom)
   const [isUpdating, setIsUpdating] = useState(false)
 
   useEffect(() => {
@@ -38,11 +40,13 @@ export const AppUpdateDialog = () => {
         }
       } catch (error) {
         console.error('Failed to get latest release:', error)
+      } finally {
+        setUpdateCheckComplete(true)
       }
     }
 
-    checkForUpdates()
-  }, [currentVersion, setUpdateAvailable, setUpdateInformation, setOpen])
+    void checkForUpdates()
+  }, [currentVersion, setUpdateAvailable, setUpdateInformation, setOpen, setUpdateCheckComplete])
 
   const handleUpdate = async () => {
     if (!updateInformation || isUpdating) return

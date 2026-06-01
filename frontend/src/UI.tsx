@@ -4,12 +4,14 @@ import aacLogo from '@/assets/images/aac-logo-wide.webp'
 import { activeComponentAtom } from '@/atoms/sidebarAtoms'
 import { AppUpdateDialog } from '@/components/AppUpdateDialog'
 import { Sidebar } from '@/components/sidebar'
+import { SupportProjectDialog } from '@/components/SupportProjectDialog'
 
 export default function UI() {
   const ActiveComponent = useAtomValue(activeComponentAtom)
   return (
     <>
       <AppUpdateDialog />
+      <SupportProjectDialog />
       <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr]">
         <div className="bg-muted/40 border-r">
           <div className="flex h-full max-h-screen flex-col gap-2">

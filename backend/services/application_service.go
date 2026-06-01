@@ -4,6 +4,7 @@ import (
 	"ClassicAddonManager/backend/api"
 	"ClassicAddonManager/backend/auth"
 	"ClassicAddonManager/backend/config"
+	"ClassicAddonManager/backend/appstate"
 	"ClassicAddonManager/backend/file"
 	"ClassicAddonManager/backend/logger"
 	"ClassicAddonManager/backend/shared"
@@ -148,4 +149,16 @@ func (s *ApplicationService) OpenCacheDir() error {
 
 func (s *ApplicationService) OpenDataDir() error {
 	return file.OpenDirectory(config.GetDataDir())
+}
+
+func (s *ApplicationService) ShouldShowKofiModal() bool {
+	return appstate.ShouldShowKofiModal()
+}
+
+func (s *ApplicationService) RecordKofiModalShown() error {
+	return appstate.RecordKofiModalShown()
+}
+
+func (s *ApplicationService) EnsureAppStateInitialized() error {
+	return appstate.EnsureInitialized()
 }
