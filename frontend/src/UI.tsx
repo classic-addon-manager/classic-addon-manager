@@ -1,10 +1,10 @@
 import { useAtomValue } from 'jotai'
 
-import aacLogo from '@/assets/images/aac-logo-wide.webp'
 import { activeComponentAtom } from '@/atoms/sidebarAtoms'
 import { AppUpdateDialog } from '@/components/AppUpdateDialog'
 import { Sidebar } from '@/components/sidebar'
 import { SupportProjectDialog } from '@/components/SupportProjectDialog'
+import { TitleBar } from '@/components/TitleBar'
 
 export default function UI() {
   const ActiveComponent = useAtomValue(activeComponentAtom)
@@ -12,22 +12,18 @@ export default function UI() {
     <>
       <AppUpdateDialog />
       <SupportProjectDialog />
-      <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr]">
-        <div className="bg-muted/40 border-r">
-          <div className="flex h-full max-h-screen flex-col gap-2">
-            <div className="flex h-14 items-center border-b px-4">
-              <div className="flex items-center gap-2 font-semibold">
-                <img src={aacLogo} alt="AAC Logo" className="h-12 w-auto" />
-              </div>
+      <div className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-background">
+        <TitleBar />
+        <div className="grid min-h-0 flex-1 w-full md:grid-cols-[220px_1fr]">
+          <div className="border-r bg-muted/40">
+            <div className="flex h-full min-h-0 flex-col py-2">
+              <Sidebar />
             </div>
-
-            <Sidebar />
           </div>
-        </div>
 
-        {/* Active component area */}
-        <div className="flex flex-col">
-          <ActiveComponent />
+          <div className="flex min-h-0 flex-col overflow-hidden">
+            <ActiveComponent />
+          </div>
         </div>
       </div>
     </>

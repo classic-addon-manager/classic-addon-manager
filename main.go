@@ -83,7 +83,7 @@ func main() {
 		startup()
 	})
 
-	a.Window.NewWithOptions(application.WebviewWindowOptions{
+	mainWindow := a.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:            "Classic Addon Manager",
 		Name:             "main",
 		Width:            985,
@@ -91,7 +91,12 @@ func main() {
 		MinHeight:        640,
 		MinWidth:         985,
 		DisableResize:    false,
+		Frameless:        true,
 		BackgroundColour: application.NewRGBA(27, 38, 54, 1),
+	})
+	mainWindow.EnableSizeConstraints()
+	mainWindow.OnWindowEvent(events.Common.WindowDidResize, func(_ *application.WindowEvent) {
+		mainWindow.EnableSizeConstraints()
 	})
 
 	err = a.Run()

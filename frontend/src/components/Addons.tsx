@@ -112,7 +112,7 @@ export const Addons = () => {
   }, [])
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex h-full min-h-0 flex-col">
       <Header />
       {selectedManifest && (
         <RemoteAddonDialog
@@ -133,7 +133,7 @@ export const Addons = () => {
         />
       )}
 
-      <div className="flex-1 overflow-auto">
+      <div className="min-h-0 flex-1 overflow-auto">
         <div className="container mx-auto px-4">
           <AddonList />
         </div>

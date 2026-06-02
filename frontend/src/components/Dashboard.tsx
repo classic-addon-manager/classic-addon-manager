@@ -108,7 +108,7 @@ export const Dashboard = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-background">
+      <div className="flex h-full min-h-0 items-center justify-center bg-background">
         <div className="relative">
           <div className="absolute -inset-8 rounded-full bg-primary/10 blur-xl animate-pulse" />
           <div className="absolute -inset-4 rounded-full bg-primary/20 animate-ping opacity-75" />
@@ -121,7 +121,7 @@ export const Dashboard = () => {
 
   if (installedAddons.length === 0) {
     return (
-      <div className="flex flex-col h-screen bg-background">
+      <div className="flex h-full min-h-0 flex-col bg-background">
         <Toolbar
           isCheckingForUpdates={isCheckingForUpdates}
           updatesAvailableCount={updatesAvailableCount}
@@ -130,7 +130,7 @@ export const Dashboard = () => {
           onCheckUpdates={() => performBulkUpdateCheck()}
           onInstallZip={handleInstallZip}
         />
-        <main className="flex-1 overflow-auto">
+        <main className="min-h-0 flex-1 overflow-auto">
           <NoAddonsInstalled onInstallZip={handleInstallZip} />
         </main>
       </div>
@@ -138,7 +138,7 @@ export const Dashboard = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className="flex h-full min-h-0 flex-col bg-background">
       <Toolbar
         isCheckingForUpdates={isCheckingForUpdates}
         updatesAvailableCount={updatesAvailableCount}
@@ -156,7 +156,7 @@ export const Dashboard = () => {
 
       {versionSelectAddon && <LocalAddonVersionSelectDialog addon={versionSelectAddon} />}
 
-      <main className="flex-1 overflow-hidden flex">
+      <main className="flex min-h-0 flex-1 overflow-hidden">
         <div className="w-70 shrink-0 border-r flex flex-col h-full">
           <ScrollArea className="flex-1 min-h-0">
             <div className="p-2">
