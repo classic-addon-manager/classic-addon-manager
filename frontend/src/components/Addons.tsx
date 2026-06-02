@@ -20,9 +20,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select'
 import { toast } from '@/components/ui/toast'
+import { useTitleBarSlot } from '@/hooks/useTitleBarSlot'
 import { safeCall } from '@/lib/utils'
 
-const Header = () => {
+const AddonsToolbar = () => {
   const loadAddons = useSetAtom(loadAddonsAtom)
   const isReady = useAtomValue(isAddonsReadyAtom)
   const setSearchQuery = useSetAtom(searchQueryAtom)
@@ -62,22 +63,23 @@ const Header = () => {
     })
   }
 
-  return (
-    <header className="bg-background/95 backdrop-blur-sm supports-[backdrop-filter]:bg-background/60 border-b">
-      <div className="container mx-auto flex h-16 items-center gap-4 px-4">
-        <div className="relative flex-1">
-          <SearchIcon className="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform" />
-          <Input
-            disabled={!isReady}
-            type="search"
-            placeholder="Search addons..."
-            className="bg-background w-full pl-10 shadow-none transition-colors focus-visible:bg-background/80"
-            onChange={event => debouncedSetSearch(event.target.value)}
-          />
-        </div>
-        <div className="flex items-center gap-3 shrink-0">
-          <Select onValueChange={setSelectedTag} disabled={!isReady}>
-            <SelectTrigger className="w-[140px] bg-background/80">{selectedTag}</SelectTrigger>
+  const toolbarContent = (
+    <div className="flex w-full min-w-0 items-center gap-3">
+      <div className="no-drag relative min-w-0 flex-1">
+        <SearchIcon className="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform" />
+        <Input
+          disabled={!isReady}
+          type="search"
+          placeholder="Search addons..."
+          className="w-full pl-10 pr-4 shadow-none transition-colors focus-visible:ring-1"
+          onChange={event => debouncedSetSearch(event.target.value)}
+        />
+      </div>
+
+      <div className="flex shrink-0 items-center gap-2">
+        <div className="no-drag flex items-center gap-2">
+          <Select onValueChange={setSelectedTag} disabled={!isReady} value={selectedTag}>
+            <SelectTrigger className="h-8 w-[140px]">{selectedTag}</SelectTrigger>
             <SelectContent>
               {tags.map(tag => (
                 <SelectItem key={tag} value={tag}>
@@ -89,8 +91,9 @@ const Header = () => {
 
           <Button
             variant="outline"
+            size="sm"
             disabled={!isReady || isRefreshing}
-            className="min-w-[120px] w-[120px] flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-md"
+            className="flex h-8 min-w-[120px] w-[120px] items-center justify-center gap-2 transition-all duration-200 hover:shadow-md"
             onClick={onRefresh}
           >
             <RefreshCw className={clsx('h-4 w-4', isRefreshing && 'animate-spin')} />
@@ -98,8 +101,12 @@ const Header = () => {
           </Button>
         </div>
       </div>
-    </header>
+    </div>
   )
+
+  useTitleBarSlot(toolbarContent)
+
+  return null
 }
 
 export const Addons = () => {
@@ -113,7 +120,7 @@ export const Addons = () => {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <Header />
+      <AddonsToolbar />
       {selectedManifest && (
         <RemoteAddonDialog
           manifest={selectedManifest}

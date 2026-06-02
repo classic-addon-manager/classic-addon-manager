@@ -1,10 +1,9 @@
 import { Window } from '@wailsio/runtime'
 import { useAtomValue } from 'jotai'
-import { type MouseEvent, type ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
+import { type MouseEvent, type ReactNode, useCallback, useEffect, useState } from 'react'
 
 import aacLogo from '@/assets/images/aac-logo-wide.webp'
-import { activePageAtom } from '@/atoms/sidebarAtoms'
-import { PAGE_DEFINITIONS } from '@/components/sidebar/pageDefinitions'
+import { titleBarSlotAtom } from '@/atoms/titleBarAtoms'
 import { cn } from '@/lib/utils'
 
 const WINDOW_CONTROL_BUTTON =
@@ -15,13 +14,8 @@ const WindowControlIcon = ({ children }: { children: ReactNode }) => (
 )
 
 export function TitleBar() {
-  const activePage = useAtomValue(activePageAtom)
+  const slotContent = useAtomValue(titleBarSlotAtom)
   const [isMaximised, setIsMaximised] = useState(false)
-
-  const activeDefinition = useMemo(
-    () => PAGE_DEFINITIONS.find(page => page.id === activePage) ?? PAGE_DEFINITIONS[0],
-    [activePage]
-  )
 
   const syncMaximisedState = useCallback(async () => {
     try {
@@ -73,8 +67,6 @@ export function TitleBar() {
     [handleToggleMaximise]
   )
 
-  const ActivePageIcon = activeDefinition.icon
-
   return (
     <header
       className="drag-region grid h-14 shrink-0 grid-cols-[220px_1fr_auto] items-center border-b bg-background/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/70"
@@ -86,12 +78,7 @@ export function TitleBar() {
         </div>
       </div>
 
-      <div className="flex items-center justify-center px-4">
-        <div className="flex items-center gap-2 rounded-full  px-3 py-1.5 shadow-sm">
-          <ActivePageIcon className="h-4 w-4 text-primary" />
-          <span className="text-sm font-medium">{activeDefinition.name}</span>
-        </div>
-      </div>
+      <div className="grid min-w-0 flex-1 items-center px-4">{slotContent}</div>
 
       <div className="no-drag flex items-center gap-1 justify-self-end">
         <button
