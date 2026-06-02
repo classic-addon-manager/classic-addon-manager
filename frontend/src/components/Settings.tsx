@@ -53,7 +53,7 @@ export const Settings = () => {
   const toggleAutoDetection = () => setAutoPathDetection(!autoPathDetection)
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex h-full min-h-0 flex-col">
       <header className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
         <div className="container flex h-16 items-center gap-4 px-4">
           <div className="flex items-center gap-3">
@@ -70,7 +70,7 @@ export const Settings = () => {
         </div>
       </header>
 
-      <main className="flex-1 overflow-auto">
+      <main className="min-h-0 flex-1 overflow-auto">
         <div className="container mx-auto px-4 py-6 max-w-4xl">
           <Card className="shadow-sm">
             <CardHeader className="pb-3">

@@ -319,9 +319,9 @@ export const Troubleshooting = () => {
   ]
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex h-full min-h-0 flex-col">
       <Header />
-      <main className="flex-1 overflow-auto">
+      <main className="min-h-0 flex-1 overflow-auto">
         <div className="container mx-auto px-4 py-6">
           <div className="mx-auto max-w-3xl">
             <Accordion type="single" className="space-y-4">

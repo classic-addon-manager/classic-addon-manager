@@ -23,6 +23,11 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
+const (
+	windowMinWidth  = 985
+	windowMinHeight = 640
+)
+
 func main() {
 	addonUpdateMode := flag.Bool("check-updates", false, "Run in headless mode to check for addon updates")
 	flag.Parse()
@@ -83,16 +88,24 @@ func main() {
 		startup()
 	})
 
-	a.Window.NewWithOptions(application.WebviewWindowOptions{
+	mainWindow := a.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:            "Classic Addon Manager",
 		Name:             "main",
-		Width:            985,
-		Height:           640,
-		MinHeight:        640,
-		MinWidth:         985,
+		Width:            windowMinWidth,
+		Height:           windowMinHeight,
+		MinWidth:         windowMinWidth,
+		MinHeight:        windowMinHeight,
 		DisableResize:    false,
+		Frameless:        true,
 		BackgroundColour: application.NewRGBA(27, 38, 54, 1),
 	})
+	reapplyMinSize := func(_ *application.WindowEvent) {
+		mainWindow.SetMinSize(windowMinWidth, windowMinHeight)
+	}
+	mainWindow.SetMinSize(windowMinWidth, windowMinHeight)
+	mainWindow.OnWindowEvent(events.Common.WindowDidResize, reapplyMinSize)
+	mainWindow.OnWindowEvent(events.Common.WindowUnMaximise, reapplyMinSize)
+	mainWindow.OnWindowEvent(events.Common.WindowRestore, reapplyMinSize)
 
 	err = a.Run()
 

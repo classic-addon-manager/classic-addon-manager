@@ -134,12 +134,21 @@
 }
 
 @layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+  }
+
   * {
     @apply border-border outline-ring/50;
   }
 
   body {
     @apply bg-background text-foreground;
+    margin: 0;
   }
 }
 
@@ -147,6 +156,14 @@
   user-select: none;
   user-drag: none;
   -webkit-user-drag: none
+}
+
+.drag-region {
+  --wails-draggable: drag;
+}
+
+.no-drag {
+  --wails-draggable: no-drag;
 }
 
 ::-webkit-scrollbar {
