@@ -14,10 +14,10 @@
     !define INFO_PRODUCTNAME "Classic Addon Manager"
 !endif
 !ifndef INFO_PRODUCTVERSION
-    !define INFO_PRODUCTVERSION "2.3.0"
+    !define INFO_PRODUCTVERSION "3.1.0"
 !endif
 !ifndef INFO_COPYRIGHT
-    !define INFO_COPYRIGHT "(c) 2025, Sami"
+    !define INFO_COPYRIGHT "(c) 2026, Sami"
 !endif
 !ifndef PRODUCT_EXECUTABLE
     !define PRODUCT_EXECUTABLE "${INFO_PROJECTNAME}.exe"

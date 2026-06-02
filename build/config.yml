@@ -9,9 +9,9 @@ info:
   productName: "Classic Addon Manager"
   productIdentifier: "dev.gaijin.classicaddonmanager"
   description: "An addon manager for ArcheAge Classic"
-  copyright: "(c) 2025, Sami"
+  copyright: "(c) 2026, Sami"
   comments: "Classic Addon Manager"
-  version: "3.0.9"
+  version: "3.1.0"
 
 # Dev mode configuration
 dev_mode:
