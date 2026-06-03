@@ -42,11 +42,7 @@ export const AddonList = () => {
           </p>
         </motion.div>
       ) : (
-        <motion.main
-          key="addon-list"
-          className="flex-1 overflow-auto"
-          {...listAnimations.container}
-        >
+        <motion.main key="addon-list" className="flex-1" {...listAnimations.container}>
           <motion.div className="flex flex-1 flex-col gap-4 py-4" layout>
             <AnimatePresence initial={false}>
               {filteredAddons.map(addon => (

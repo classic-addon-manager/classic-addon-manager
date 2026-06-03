@@ -97,7 +97,8 @@ func main() {
 		MinHeight:        windowMinHeight,
 		DisableResize:    false,
 		Frameless:        true,
-		BackgroundColour: application.NewRGBA(27, 38, 54, 1),
+		BackgroundColour: application.NewRGBA(10, 10, 10, 1),
+		BackgroundType:   application.BackgroundTypeSolid,
 	})
 	reapplyMinSize := func(_ *application.WindowEvent) {
 		mainWindow.SetMinSize(windowMinWidth, windowMinHeight)

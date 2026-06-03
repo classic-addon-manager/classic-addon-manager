@@ -166,6 +166,68 @@
   --wails-draggable: no-drag;
 }
 
+.window-resize-edge {
+  position: absolute;
+  pointer-events: auto;
+  --wails-draggable: no-drag;
+}
+
+.window-resize-left {
+  --wails-resize: left;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 6px;
+}
+
+.window-resize-right {
+  --wails-resize: right;
+  top: 0;
+  right: 0;
+  bottom: 8px;
+  width: 4px;
+}
+
+.window-resize-bottom {
+  --wails-resize: bottom;
+  left: 6px;
+  right: 6px;
+  bottom: 0;
+  height: 6px;
+}
+
+.window-resize-top-left {
+  --wails-resize: top-left;
+  top: 0;
+  left: 0;
+  width: 8px;
+  height: 8px;
+}
+
+.window-resize-top-right {
+  --wails-resize: top-right;
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 8px;
+}
+
+.window-resize-bottom-left {
+  --wails-resize: bottom-left;
+  bottom: 0;
+  left: 0;
+  width: 8px;
+  height: 8px;
+}
+
+.window-resize-bottom-right {
+  --wails-resize: bottom-right;
+  bottom: 0;
+  right: 0;
+  width: 10px;
+  height: 10px;
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   margin-left: 5px;

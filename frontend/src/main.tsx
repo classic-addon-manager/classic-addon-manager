@@ -1,3 +1,4 @@
+import '@wailsio/runtime'
 import '@/global.css'
 
 import { StrictMode } from 'react'

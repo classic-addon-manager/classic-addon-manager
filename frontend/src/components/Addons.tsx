@@ -9,6 +9,7 @@ import {
   selectedManifestAtom,
 } from '@/components/addons/atoms'
 import { RemoteAddonDialog } from '@/components/addons/RemoteAddonDialog'
+import { ScrollArea } from '@/components/ui/scroll-area'
 
 export const Addons = () => {
   const loadAddons = useSetAtom(loadAddonsAtom)
@@ -41,11 +42,11 @@ export const Addons = () => {
         />
       )}
 
-      <div className="min-h-0 flex-1 overflow-auto">
+      <ScrollArea className="min-h-0 flex-1">
         <div className="container mx-auto px-4">
           <AddonList />
         </div>
-      </div>
+      </ScrollArea>
     </div>
   )
 }
