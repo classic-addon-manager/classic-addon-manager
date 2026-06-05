@@ -5,12 +5,20 @@ import { Button } from '@/components/ui/button'
 
 interface MessageInputProps {
   isWaitingForResponse: boolean
+  isRevealingResponse: boolean
   remainingLimit: number
   onSubmit: (e: React.FormEvent) => void
 }
 
 export const MessageInput = forwardRef<HTMLInputElement, MessageInputProps>(
-  ({ isWaitingForResponse, remainingLimit, onSubmit }, ref) => {
+  ({ isWaitingForResponse, isRevealingResponse, remainingLimit, onSubmit }, ref) => {
+    const isInputDisabled = isWaitingForResponse || isRevealingResponse
+    const statusMessage = isWaitingForResponse
+      ? 'Daru is thinking...'
+      : isRevealingResponse
+        ? 'Daru is responding...'
+        : 'Darus are known for their wisdom, but sometimes even they make mistakes.'
+
     return (
       <>
         {remainingLimit > 0 && (
@@ -28,11 +36,9 @@ export const MessageInput = forwardRef<HTMLInputElement, MessageInputProps>(
                 ref={ref}
                 type="text"
                 placeholder={
-                  isWaitingForResponse
-                    ? 'Daru is thinking...'
-                    : "Ask your question, the Darus won't judge..."
+                  isInputDisabled ? statusMessage : "Ask your question, the Darus won't judge..."
                 }
-                disabled={isWaitingForResponse}
+                disabled={isInputDisabled}
                 autoFocus
                 className="w-full rounded-full border bg-muted/30 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 pr-16 disabled:opacity-50"
               />
@@ -42,9 +48,9 @@ export const MessageInput = forwardRef<HTMLInputElement, MessageInputProps>(
                 size="icon"
                 className="absolute right-1.5 top-1/2 -translate-y-1/2 transform rounded-full p-1.5"
                 variant="ghost"
-                disabled={isWaitingForResponse}
+                disabled={isInputDisabled}
               >
-                {isWaitingForResponse ? (
+                {isInputDisabled ? (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
                 ) : (
                   <svg
@@ -67,11 +73,7 @@ export const MessageInput = forwardRef<HTMLInputElement, MessageInputProps>(
             </div>
           </form>
           <div className="flex items-center justify-center mt-2 min-h-[24px]">
-            <p className="text-center text-xs text-muted-foreground/80">
-              {isWaitingForResponse
-                ? 'Daru is thinking...'
-                : 'Darus are known for their wisdom, but sometimes even they make mistakes.'}
-            </p>
+            <p className="text-center text-xs text-muted-foreground/80">{statusMessage}</p>
           </div>
         </div>
       </>

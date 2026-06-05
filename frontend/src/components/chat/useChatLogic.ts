@@ -248,30 +248,52 @@ export const useWailsLinkHandler = () => {
 
 export const useAutoScroll = (
   chatHistory: ChatHistoryItem[],
-  chatContainerRef: React.RefObject<HTMLDivElement | null>
+  chatContainerRef: React.RefObject<HTMLDivElement | null>,
+  messagesRef: React.RefObject<HTMLDivElement | null>
 ) => {
   useEffect(() => {
-    if (chatHistory.length > 0 && chatContainerRef.current) {
-      setTimeout(() => {
-        chatContainerRef.current?.scrollTo({
-          top: chatContainerRef.current.scrollHeight,
-          behavior: 'smooth',
-        })
-      }, 50)
-    }
+    const container = chatContainerRef.current
+    if (chatHistory.length === 0 || !container) return
+
+    const timer = setTimeout(() => {
+      container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' })
+    }, 50)
+
+    return () => clearTimeout(timer)
   }, [chatHistory, chatContainerRef])
+
+  useEffect(() => {
+    const container = chatContainerRef.current
+    const messages = messagesRef.current
+    if (chatHistory.length === 0 || !container || !messages) return
+
+    const scrollIfNearBottom = (behavior: ScrollBehavior) => {
+      const distanceFromBottom =
+        container.scrollHeight - container.scrollTop - container.clientHeight
+      if (distanceFromBottom < 150) {
+        container.scrollTo({ top: container.scrollHeight, behavior })
+      }
+    }
+
+    const observer = new ResizeObserver(() => {
+      scrollIfNearBottom('auto')
+    })
+
+    observer.observe(messages)
+    return () => observer.disconnect()
+  }, [chatHistory.length, chatContainerRef, messagesRef])
 }
 
 export const useInputFocus = (
-  isWaitingForResponse: boolean,
+  isInputDisabled: boolean,
   open: boolean,
   inputRef: React.RefObject<HTMLInputElement | null>
 ) => {
   useEffect(() => {
-    if (!isWaitingForResponse && inputRef.current && open) {
+    if (!isInputDisabled && inputRef.current && open) {
       setTimeout(() => inputRef.current?.focus(), 0)
     }
-  }, [isWaitingForResponse, open, inputRef])
+  }, [isInputDisabled, open, inputRef])
 }
 
 export const useAnimationCleanup = (

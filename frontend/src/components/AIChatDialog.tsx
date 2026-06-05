@@ -15,6 +15,8 @@ import {
   useMarkdownSetup,
   useWailsLinkHandler,
 } from '@/components/chat'
+import type { ChatMessageType } from '@/components/chat/types'
+import { useStreamingTextReveal } from '@/components/chat/useStreamingTextReveal'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 
 interface AIChatDialogProps {
@@ -67,6 +69,7 @@ const ToolCallEntry = ({ action, isAnimating }: ToolCallEntryProps) => (
 export const AIChatDialog = ({ open, onOpenChange }: AIChatDialogProps) => {
   // Refs
   const chatContainerRef = useRef<HTMLDivElement>(null)
+  const messagesRef = useRef<HTMLDivElement>(null)
   const messageInputRef = useRef<HTMLInputElement>(null)
 
   // Custom hooks
@@ -85,8 +88,20 @@ export const AIChatDialog = ({ open, onOpenChange }: AIChatDialogProps) => {
   // Setup hooks
   useMarkdownSetup()
   useWailsLinkHandler()
-  useAutoScroll(chatHistory, chatContainerRef)
-  useInputFocus(isWaitingForResponse, open, messageInputRef)
+  const lastAssistantMessage = chatHistory.findLast(
+    (item): item is ChatMessageType => item.type === 'message' && item.role === 'assistant'
+  )
+
+  const { displayedText, isRevealing } = useStreamingTextReveal(
+    lastAssistantMessage?.content ?? '',
+    isWaitingForResponse
+  )
+
+  const isInputDisabled = isWaitingForResponse || isRevealing
+  const revealingMessageId = isRevealing ? lastAssistantMessage?.id : undefined
+
+  useAutoScroll(chatHistory, chatContainerRef, messagesRef)
+  useInputFocus(isInputDisabled, open, messageInputRef)
   useAnimationCleanup(messageAnimationStates, setMessageAnimationStates)
 
   // Cleanup on close/unmount
@@ -99,6 +114,8 @@ export const AIChatDialog = ({ open, onOpenChange }: AIChatDialogProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (isInputDisabled) return
+
     const inputValue = messageInputRef.current?.value?.trim() || ''
     if (inputValue) {
       sendMessage(inputValue)
@@ -129,7 +146,7 @@ export const AIChatDialog = ({ open, onOpenChange }: AIChatDialogProps) => {
               {chatHistory.length === 0 ? (
                 <EmptyState />
               ) : (
-                <div className="space-y-6">
+                <div ref={messagesRef} className="space-y-6">
                   {chatHistory.map(historyItem => {
                     if (historyItem.type === 'tool_call') {
                       return (
@@ -156,11 +173,15 @@ export const AIChatDialog = ({ open, onOpenChange }: AIChatDialogProps) => {
                       historyItem.role === 'assistant' &&
                       historyItem.content.trim()
                     ) {
+                      const isRevealingContent = historyItem.id === revealingMessageId
+
                       return (
                         <ChatMessage
                           key={historyItem.id}
                           message={historyItem}
                           isAnimating={messageAnimationStates.has(historyItem.id)}
+                          isRevealingContent={isRevealingContent}
+                          revealedText={isRevealingContent ? displayedText : undefined}
                           onCopyMessage={copyToClipboard}
                           parseMarkdown={parseMarkdown}
                         />
@@ -179,6 +200,7 @@ export const AIChatDialog = ({ open, onOpenChange }: AIChatDialogProps) => {
           <MessageInput
             ref={messageInputRef}
             isWaitingForResponse={isWaitingForResponse}
+            isRevealingResponse={isRevealing}
             remainingLimit={remainingLimit}
             onSubmit={handleSubmit}
           />

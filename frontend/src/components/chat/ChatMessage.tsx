@@ -2,11 +2,14 @@ import supportDaruAlt from '@/assets/images/support_daru_alt_sm.webp'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useUserStore } from '@/stores/userStore'
 
+import { StreamingMarkdown } from './StreamingMarkdown'
 import type { ChatMessageType } from './types'
 
 interface ChatMessageProps {
   message: ChatMessageType
   isAnimating: boolean
+  isRevealingContent?: boolean
+  revealedText?: string
   onCopyMessage: (content: string) => void
   parseMarkdown: (content: string) => string
 }
@@ -14,6 +17,8 @@ interface ChatMessageProps {
 export const ChatMessage = ({
   message,
   isAnimating,
+  isRevealingContent = false,
+  revealedText,
   onCopyMessage,
   parseMarkdown,
 }: ChatMessageProps) => {
@@ -44,10 +49,13 @@ export const ChatMessage = ({
         >
           {message.role === 'assistant' ? (
             <>
-              <div
-                dangerouslySetInnerHTML={{
-                  __html: parseMarkdown(message.content),
-                }}
+              <StreamingMarkdown
+                content={
+                  isRevealingContent && revealedText !== undefined ? revealedText : message.content
+                }
+                messageId={message.id}
+                animateLatestWord={isRevealingContent}
+                parseMarkdown={parseMarkdown}
               />
               <button
                 className="copy-button absolute top-1 right-1 p-1 rounded-md text-muted-foreground/60 hover:text-muted-foreground hover:bg-secondary/50 transition-all duration-150 opacity-0 group-hover:opacity-100"
