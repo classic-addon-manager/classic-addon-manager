@@ -1,5 +1,5 @@
 import { useSetAtom } from 'jotai'
-import { BlocksIcon, CheckIcon, DownloadIcon, HeartIcon } from 'lucide-react'
+import { BlocksIcon, CheckIcon, DownloadIcon, HeartIcon, TriangleAlertIcon } from 'lucide-react'
 import { useState } from 'react'
 
 import { isManifestDialogOpenAtom, selectedManifestAtom } from '@/components/addons/atoms.ts'
@@ -7,6 +7,7 @@ import { daysAgo } from '@/lib/utils.ts'
 import type { AddonManifest } from '@/lib/wails'
 
 import { Button } from '../ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 
 interface RemoteAddonProps {
   manifest: AddonManifest
@@ -117,8 +118,24 @@ export const RemoteAddon = ({ manifest, installed }: RemoteAddonProps) => {
         </div>
         <div className="flex flex-col  overflow-hidden">
           {/* First Row: Alias */}
-          <div className="text-foreground font-medium truncate group-hover:text-primary transition-colors">
-            {manifest.alias}
+          <div className="flex items-center gap-1.5 overflow-hidden">
+            <span className="text-foreground font-medium truncate group-hover:text-primary transition-colors">
+              {manifest.alias}
+            </span>
+            {manifest.warning && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span
+                    onClick={e => e.stopPropagation()}
+                    className="shrink-0 text-amber-500"
+                    aria-label="Warning"
+                  >
+                    <TriangleAlertIcon className="h-4 w-4" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">{manifest.warning}</TooltipContent>
+              </Tooltip>
+            )}
           </div>
           {/* Second Row: Stats (Downloads/Likes) */}
           <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
