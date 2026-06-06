@@ -4,9 +4,12 @@ import { daysAgo } from '@/lib/utils'
 import type { AddonManifest } from '@/lib/wails'
 import { LocalAddonService, RemoteAddonService } from '@/lib/wails'
 
-import type { AddonListItem } from './types'
+import type { AddonListItem, AddonViewMode } from './types'
+
+export type { AddonViewMode } from './types'
 
 export const isAddonsReadyAtom = atom(false)
+export const addonViewModeAtom = atom<AddonViewMode>('list')
 export const searchQueryAtom = atom('')
 export const selectedTagAtom = atom('All')
 export const isRefreshingAtom = atom(false)

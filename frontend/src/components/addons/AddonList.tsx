@@ -6,20 +6,33 @@ import { listAnimations } from '@/animations/listAnimations'
 import { AddonSkeleton } from '@/components/addons/AddonSkeleton'
 import { RemoteAddon } from '@/components/addons/RemoteAddon'
 
-import { filteredAddonsAtom, isAddonsReadyAtom, searchQueryAtom } from './atoms'
+import { addonViewModeAtom, filteredAddonsAtom, isAddonsReadyAtom, searchQueryAtom } from './atoms'
+
+const listContainerClass = 'flex flex-1 flex-col gap-4 py-4'
+const gridContainerClass =
+  'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 py-4'
 
 export const AddonList = () => {
   const isReady = useAtomValue(isAddonsReadyAtom)
   const filteredAddons = useAtomValue(filteredAddonsAtom)
   const searchQuery = useAtomValue(searchQueryAtom)
+  const viewMode = useAtomValue(addonViewModeAtom)
+
+  const containerClass = viewMode === 'grid' ? gridContainerClass : listContainerClass
 
   if (!isReady) {
     return (
-      <div className="flex flex-1 flex-col gap-4 py-4 relative">
+      <div
+        className={
+          viewMode === 'grid'
+            ? `${gridContainerClass} relative flex-1`
+            : `${listContainerClass} relative flex-1`
+        }
+      >
         {Array(7)
           .fill(null)
           .map((_, i) => (
-            <AddonSkeleton key={i} />
+            <AddonSkeleton key={i} variant={viewMode} />
           ))}
       </div>
     )
@@ -42,12 +55,20 @@ export const AddonList = () => {
           </p>
         </motion.div>
       ) : (
-        <motion.main key="addon-list" className="flex-1" {...listAnimations.container}>
-          <motion.div className="flex flex-1 flex-col gap-4 py-4" layout>
+        <motion.main
+          key={`addon-list-${viewMode}`}
+          className="flex-1"
+          {...listAnimations.container}
+        >
+          <motion.div className={containerClass} layout>
             <AnimatePresence initial={false}>
               {filteredAddons.map(addon => (
                 <motion.div key={addon.manifest.name} layout {...listAnimations.item}>
-                  <RemoteAddon manifest={addon.manifest} installed={addon.isInstalled} />
+                  <RemoteAddon
+                    manifest={addon.manifest}
+                    installed={addon.isInstalled}
+                    variant={viewMode}
+                  />
                 </motion.div>
               ))}
             </AnimatePresence>
