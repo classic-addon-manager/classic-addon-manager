@@ -10,7 +10,6 @@ import {
 import { useDebouncedCallback } from 'use-debounce'
 
 import {
-  addonViewModeAtom,
   isAddonsReadyAtom,
   isRefreshingAtom,
   loadAddonsAtom,
@@ -26,6 +25,7 @@ import { toast } from '@/components/ui/toast'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useTitleBarSlot } from '@/hooks/useTitleBarSlot'
 import { safeCall } from '@/lib/utils'
+import { usePreferencesStore } from '@/stores/preferencesStore'
 
 export const AddonsToolbar = () => {
   const loadAddons = useSetAtom(loadAddonsAtom)
@@ -34,7 +34,8 @@ export const AddonsToolbar = () => {
   const [selectedTag, setSelectedTag] = useAtom(selectedTagAtom)
   const tags = useAtomValue(tagsAtom)
   const [isRefreshing, setIsRefreshing] = useAtom(isRefreshingAtom)
-  const [viewMode, setViewMode] = useAtom(addonViewModeAtom)
+  const viewMode = usePreferencesStore(s => s.addonViewMode)
+  const setAddonViewMode = usePreferencesStore(s => s.setAddonViewMode)
 
   const debouncedSetSearch = useDebouncedCallback((value: string) => {
     setSearchQuery(value)
@@ -99,7 +100,7 @@ export const AddonsToolbar = () => {
             variant="outline"
             size="sm"
             value={viewMode}
-            onValueChange={value => value && setViewMode(value as AddonViewMode)}
+            onValueChange={value => value && setAddonViewMode(value as AddonViewMode)}
             disabled={!isReady}
           >
             <ToggleGroupItem value="list" aria-label="List view">

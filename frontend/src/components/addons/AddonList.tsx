@@ -5,8 +5,9 @@ import { PackageSearch } from 'lucide-react'
 import { listAnimations } from '@/animations/listAnimations'
 import { AddonSkeleton } from '@/components/addons/AddonSkeleton'
 import { RemoteAddon } from '@/components/addons/RemoteAddon'
+import { usePreferencesStore } from '@/stores/preferencesStore'
 
-import { addonViewModeAtom, filteredAddonsAtom, isAddonsReadyAtom, searchQueryAtom } from './atoms'
+import { filteredAddonsAtom, isAddonsReadyAtom, searchQueryAtom } from './atoms'
 
 const listContainerClass = 'flex flex-1 flex-col gap-4 py-4'
 const gridContainerClass =
@@ -16,7 +17,7 @@ export const AddonList = () => {
   const isReady = useAtomValue(isAddonsReadyAtom)
   const filteredAddons = useAtomValue(filteredAddonsAtom)
   const searchQuery = useAtomValue(searchQueryAtom)
-  const viewMode = useAtomValue(addonViewModeAtom)
+  const viewMode = usePreferencesStore(s => s.addonViewMode)
 
   const containerClass = viewMode === 'grid' ? gridContainerClass : listContainerClass
 
