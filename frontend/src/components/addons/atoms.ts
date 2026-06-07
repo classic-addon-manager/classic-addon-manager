@@ -6,6 +6,8 @@ import { LocalAddonService, RemoteAddonService } from '@/lib/wails'
 
 import type { AddonListItem } from './types'
 
+export type { AddonViewMode } from './types'
+
 export const isAddonsReadyAtom = atom(false)
 export const searchQueryAtom = atom('')
 export const selectedTagAtom = atom('All')

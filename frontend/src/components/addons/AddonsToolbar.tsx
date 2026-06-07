@@ -1,6 +1,12 @@
-import clsx from 'clsx'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
-import { AlertTriangleIcon, RefreshCw, SearchIcon } from 'lucide-react'
+import {
+  AlertTriangleIcon,
+  LayoutGrid,
+  List,
+  LoaderCircle,
+  RefreshCw,
+  SearchIcon,
+} from 'lucide-react'
 import { useDebouncedCallback } from 'use-debounce'
 
 import {
@@ -11,12 +17,15 @@ import {
   selectedTagAtom,
   tagsAtom,
 } from '@/components/addons/atoms'
+import type { AddonViewMode } from '@/components/addons/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select'
 import { toast } from '@/components/ui/toast'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useTitleBarSlot } from '@/hooks/useTitleBarSlot'
 import { safeCall } from '@/lib/utils'
+import { usePreferencesStore } from '@/stores/preferencesStore'
 
 export const AddonsToolbar = () => {
   const loadAddons = useSetAtom(loadAddonsAtom)
@@ -25,6 +34,8 @@ export const AddonsToolbar = () => {
   const [selectedTag, setSelectedTag] = useAtom(selectedTagAtom)
   const tags = useAtomValue(tagsAtom)
   const [isRefreshing, setIsRefreshing] = useAtom(isRefreshingAtom)
+  const viewMode = usePreferencesStore(s => s.addonViewMode)
+  const setAddonViewMode = usePreferencesStore(s => s.setAddonViewMode)
 
   const debouncedSetSearch = useDebouncedCallback((value: string) => {
     setSearchQuery(value)
@@ -84,15 +95,40 @@ export const AddonsToolbar = () => {
             </SelectContent>
           </Select>
 
+          <ToggleGroup
+            type="single"
+            variant="outline"
+            size="sm"
+            value={viewMode}
+            onValueChange={value => value && setAddonViewMode(value as AddonViewMode)}
+            disabled={!isReady}
+          >
+            <ToggleGroupItem value="list" aria-label="List view">
+              <List className="h-4 w-4" />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="grid" aria-label="Grid view">
+              <LayoutGrid className="h-4 w-4" />
+            </ToggleGroupItem>
+          </ToggleGroup>
+
           <Button
             variant="outline"
             size="sm"
             disabled={!isReady || isRefreshing}
-            className="flex h-8 min-w-[120px] w-[120px] items-center justify-center gap-2 transition-all duration-200 hover:shadow-md"
+            className="h-8 transition-all duration-200 hover:shadow-md"
             onClick={onRefresh}
           >
-            <RefreshCw className={clsx('h-4 w-4', isRefreshing && 'animate-spin')} />
-            {isRefreshing ? 'Refreshing' : 'Refresh'}
+            {isRefreshing ? (
+              <>
+                <LoaderCircle className="mr-1.5 size-3.5 animate-spin" />
+                Refresh
+              </>
+            ) : (
+              <>
+                <RefreshCw className="mr-1.5 size-3.5" />
+                Refresh
+              </>
+            )}
           </Button>
         </div>
       </div>
