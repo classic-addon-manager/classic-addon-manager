@@ -119,7 +119,10 @@ func startup() {
 	auth.LoadFromDisk()
 
 	if !file.FileExists(filepath.Join(config.GetDataDir(), "managed_addons.json")) {
-		jsonData, err := json.Marshal([]addon.Addon{})
+		jsonData, err := json.Marshal(addon.ManagedAddonsFile{
+			Version: addon.ManagedAddonsFileVersion,
+			Addons:  []addon.Addon{},
+		})
 		if err != nil {
 			logger.Error("Error creating managed_addons.json:", err)
 			return

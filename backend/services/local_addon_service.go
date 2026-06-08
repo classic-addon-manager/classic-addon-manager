@@ -28,6 +28,13 @@ func (s *LocalAddonService) GetAllInstalledAddonNames() []string {
 	return addon.GetInstalledAddonNames()
 }
 
+// SortAddonsTxt rewrites addons.txt so dependencies load before the addons that
+// depend on them. Returns an error (e.g. on a circular dependency) so the UI can
+// surface it to the user.
+func (s *LocalAddonService) SortAddonsTxt() error {
+	return addon.SortAddonsTxt()
+}
+
 func (s *LocalAddonService) UninstallAddon(name string) bool {
 	if !addon.IsInstalled(name) {
 		return false
@@ -50,6 +57,10 @@ func (s *LocalAddonService) UninstallAddon(name string) bool {
 		logger.Error("Error removing addon from addons.txt:", err)
 		return false
 	}
+
+	// Reorder remaining addons so dependencies still load before dependents. A
+	// cycle error is logged inside SortAddonsTxt; the removal itself succeeded.
+	_ = addon.SortAddonsTxt()
 
 	if wasRemoved {
 		api.UnsubscribeFromAddon(name)
