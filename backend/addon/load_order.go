@@ -4,7 +4,6 @@ import (
 	"ClassicAddonManager/backend/config"
 	"ClassicAddonManager/backend/file"
 	"ClassicAddonManager/backend/logger"
-	"ClassicAddonManager/backend/shared"
 
 	"fmt"
 	"path/filepath"
@@ -20,11 +19,12 @@ const (
 )
 
 // resolveLoadOrder returns names ordered so that every addon appears after all
-// the addons it (transitively) depends on. Only dependency edges whose target
-// is also present in names are followed, so the result is a reordering of the
-// provided names and never adds or removes entries.
+// the addons it (transitively) depends on. dependenciesByName maps an addon
+// name to the names it depends on. Only dependency edges whose target is also
+// present in names are followed, so the result is a reordering of the provided
+// names and never adds or removes entries.
 // A circular dependency yields an error and no ordering.
-func resolveLoadOrder(names []string, manifestByName map[string]shared.AddonManifest) ([]string, error) {
+func resolveLoadOrder(names []string, dependenciesByName map[string][]string) ([]string, error) {
 	present := make(map[string]struct{}, len(names))
 	for _, name := range names {
 		present[name] = struct{}{}
@@ -45,14 +45,12 @@ func resolveLoadOrder(names []string, manifestByName map[string]shared.AddonMani
 
 		color[name] = nodeGray
 
-		if manifest, ok := manifestByName[name]; ok {
-			for _, dep := range manifest.Dependencies {
-				if _, installed := present[dep]; !installed {
-					continue
-				}
-				if err := visit(dep, append(path, name)); err != nil {
-					return err
-				}
+		for _, dep := range dependenciesByName[name] {
+			if _, installed := present[dep]; !installed {
+				continue
+			}
+			if err := visit(dep, append(path, name)); err != nil {
+				return err
 			}
 		}
 
@@ -71,51 +69,65 @@ func resolveLoadOrder(names []string, manifestByName map[string]shared.AddonMani
 }
 
 // SortAddonsTxt rewrites addons.txt so that dependencies are loaded before the
-// addons that depend on them, fully resolving transitive dependencies. It only
-// reorders addons that are already listed; it does not add missing
-// dependencies. On a circular dependency the file is left untouched, the error
-// is logged, and it is returned to the caller. Call this after any mutation of
-// addons.txt (adding or removing entries).
+// addons that depend on them, fully resolving transitive dependencies.
+// Dependency information is taken from the locally managed addons.
+// It only reorders addons that are already listed,
+// it does not add missing dependencies. On a circular dependency the file
+// is left untouched, the error is logged, and it is returned to the caller.
 func SortAddonsTxt() error {
 	installedAddonNamesMu.Lock()
 	defer installedAddonNamesMu.Unlock()
 
-	if len(installedAddonNames) == 0 {
+	addonsTxtPath := filepath.Join(config.GetAddonDir(), "addons.txt")
+
+	// Always read the current file fresh from disk so we sort exactly what is
+	// on disk, not a potentially stale in-memory cache.
+	lines, err := file.ReadLines(addonsTxtPath)
+	if err != nil {
+		logger.Error("SortAddonsTxt: failed to read addons.txt:", err)
+		return err
+	}
+
+	names := make([]string, 0, len(lines))
+	for _, line := range lines {
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		names = append(names, line)
+	}
+
+	if len(names) == 0 {
+		installedAddonNames = names
 		return nil
 	}
 
-	manifests := GetAddonManifest()
-	if len(manifests) == 0 {
-		// Without manifests we cannot determine dependency order. Leave the
-		// existing order untouched rather than breaking offline usage.
-		logger.Warn("SortAddonsTxt: no addon manifests available, skipping load-order sort")
-		return nil
+	// Dependency information comes from the locally managed addons
+	// (managed_addons.json), populated in the LocalAddons map.
+	dependenciesByName := make(map[string][]string, len(LocalAddons))
+	for name, managed := range LocalAddons {
+		dependenciesByName[name] = managed.Dependencies
 	}
 
-	manifestByName := make(map[string]shared.AddonManifest, len(manifests))
-	for _, manifest := range manifests {
-		manifestByName[manifest.Name] = manifest
-	}
-
-	ordered, err := resolveLoadOrder(installedAddonNames, manifestByName)
+	ordered, err := resolveLoadOrder(names, dependenciesByName)
 	if err != nil {
 		logger.Error("SortAddonsTxt: failed to resolve load order:", err)
 		return err
 	}
 
-	if slices.Equal(ordered, installedAddonNames) {
+	if slices.Equal(ordered, names) {
+		installedAddonNames = ordered
 		return nil
 	}
 
-	if writeErr := file.WriteLines(filepath.Join(config.GetAddonDir(), "addons.txt"), ordered); writeErr != nil {
+	if writeErr := file.WriteLines(addonsTxtPath, ordered); writeErr != nil {
 		logger.Error("SortAddonsTxt: failed to write addons.txt:", writeErr)
 		// Rollback the in-memory cache from disk if the write failed.
-		lines, readErr := file.ReadLines(filepath.Join(config.GetAddonDir(), "addons.txt"))
+		rollback, readErr := file.ReadLines(addonsTxtPath)
 		if readErr != nil {
 			logger.Error("SortAddonsTxt: failed to re-read addons.txt after failed write:", readErr)
 			return writeErr
 		}
-		installedAddonNames = lines
+		installedAddonNames = rollback
 		return writeErr
 	}
 
