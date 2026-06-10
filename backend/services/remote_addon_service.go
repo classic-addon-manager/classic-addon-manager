@@ -217,5 +217,11 @@ func (s *RemoteAddonService) InstallAddonWithDependencies(ad shared.AddonManifes
 
 	result.MainAddon.Success = true
 	result.Success = true
+
+	if sortErr := addon.SortAddonsTxt(); sortErr != nil {
+		result.DependencyWarnings = append(result.DependencyWarnings, sortErr.Error())
+		result.MainAddon.Error = sortErr.Error()
+	}
+
 	return result, nil
 }
