@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-var Version = "3.1.0"
+var Version = "3.1.1"
 
 type AuthSessionState struct {
 	Token string `json:"token"`
