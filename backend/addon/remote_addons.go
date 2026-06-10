@@ -42,7 +42,7 @@ func InstallAddon(manifest shared.AddonManifest, version string) (bool, error) {
 	return true, nil
 }
 
-// UpdateAddon updates an existing addon by replacing all files except the persistent .data folder.
+// UpdateAddon updates an existing addon by replacing all files, preserving an existing .data folder or creating it from the release if missing.
 func UpdateAddon(manifest shared.AddonManifest, version string) (bool, error) {
 	ensureAddonsTxtExists()
 
@@ -190,7 +190,7 @@ func performUpdateFileOperations(manifest shared.AddonManifest) error {
 		}
 	}
 
-	// Copy new release contents into destination, skipping .data
+	// Copy new release contents into destination, preserving an existing .data folder
 	srcRoot := filepath.Join(cacheExtractDir, rootDir)
 	srcEntries, err := os.ReadDir(srcRoot)
 	if err != nil {
@@ -199,7 +199,9 @@ func performUpdateFileOperations(manifest shared.AddonManifest) error {
 	for _, se := range srcEntries {
 		name := se.Name()
 		if name == ".data" {
-			continue
+			if _, err := os.Stat(filepath.Join(destAddonDir, ".data")); err == nil {
+				continue
+			}
 		}
 		srcPath := filepath.Join(srcRoot, name)
 		destPath := filepath.Join(destAddonDir, name)
