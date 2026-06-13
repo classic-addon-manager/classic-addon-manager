@@ -1,5 +1,5 @@
 import { useAtom } from 'jotai'
-import { AlertTriangleIcon, ArrowUpCircle, CheckIcon } from 'lucide-react'
+import { AlertTriangleIcon, ArrowUpCircle, CheckIcon, CloudOffIcon } from 'lucide-react'
 import usePromise from 'react-promise-suspense'
 
 import { Button } from '@/components/ui/button'
@@ -75,14 +75,27 @@ export const AddonRepositoryMatch = ({ name }: { name: string }) => {
   }
 
   return (
-    <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">
-        It's in our repository, we can keep it up to date for you.
-      </p>
-      <Button className="w-full sm:w-auto" onClick={handleMatchAddon}>
-        <ArrowUpCircle className="w-4 h-4 mr-2" />
-        Yes, keep it updated
-      </Button>
+    <div className="border rounded-lg p-4 bg-card flex-1 flex flex-col">
+      <div className="flex flex-col items-center justify-center text-center py-8 flex-1">
+        <div className="flex items-center justify-center w-12 h-12 rounded-full bg-orange-500/10 mb-4">
+          <CloudOffIcon className="w-6 h-6 text-orange-500" />
+        </div>
+        <p className="text-sm font-medium text-foreground mb-1">Manage This Addon?</p>
+        <p className="text-sm text-muted-foreground mb-5 max-w-xs">
+          You installed this one yourself.
+          <br />
+          We can take over updates if you'd like.
+        </p>
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            It's in our repository, we can keep it up to date for you.
+          </p>
+          <Button className="w-full sm:w-auto" onClick={handleMatchAddon}>
+            <ArrowUpCircle className="w-4 h-4 mr-2" />
+            Yes, keep it updated
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }

@@ -4,7 +4,6 @@ import {
   BlocksIcon,
   BugIcon,
   CheckIcon,
-  CloudOffIcon,
   Download,
   FolderOpen,
   GitBranchIcon,
@@ -175,35 +174,6 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
         description: `Failed to open directory for addon "${addon.alias}".`,
       })
     }
-  }
-
-  const UnmanagedNotice = () => {
-    if (addon.isManaged) return null
-    return (
-      <div className="border rounded-lg p-4 bg-card flex-1 flex flex-col">
-        <div className="flex flex-col items-center justify-center text-center py-8 flex-1">
-          <div className="flex items-center justify-center w-12 h-12 rounded-full bg-orange-500/10 mb-4">
-            <CloudOffIcon className="w-6 h-6 text-orange-500" />
-          </div>
-          <p className="text-sm font-medium text-foreground mb-1">Manage This Addon?</p>
-          <p className="text-sm text-muted-foreground mb-5 max-w-xs">
-            You installed this one yourself.
-            <br />
-            We can take over updates if you'd like.
-          </p>
-          <Suspense
-            fallback={
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <div className="w-3 h-3 rounded-full border-2 border-t-transparent border-current animate-spin" />
-                <span>Checking repository...</span>
-              </div>
-            }
-          >
-            <AddonRepositoryMatch name={addon.name} />
-          </Suspense>
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -395,7 +365,15 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
         </ScrollArea>
       ) : (
         <div className="flex-1 min-h-0 px-6 py-4 flex flex-col">
-          <UnmanagedNotice />
+          <Suspense
+            fallback={
+              <div className="flex flex-col items-center justify-center flex-1 text-center text-muted-foreground">
+                <LoaderCircle className="size-8 animate-spin opacity-50" strokeWidth={1.5} />
+              </div>
+            }
+          >
+            <AddonRepositoryMatch name={addon.name} />
+          </Suspense>
         </div>
       )}
     </div>
