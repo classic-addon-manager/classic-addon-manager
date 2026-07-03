@@ -204,7 +204,7 @@ export const LocalAddonDialog = ({ addon, onOpenChange, open }: LocalAddonDialog
       return <div></div>
     }
 
-    if (!isAuthenticated) {
+    if (!isAuthenticated()) {
       return (
         <Tooltip>
           <TooltipTrigger asChild>
