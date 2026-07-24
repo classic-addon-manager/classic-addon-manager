@@ -6,6 +6,7 @@ import { updateAvailableAtom, updateDialogOpenAtom, versionAtom } from '@/atoms/
 import { activePageAtom } from '@/atoms/sidebarAtoms'
 import { PAGE_DEFINITIONS } from '@/components/sidebar/pageDefinitions.ts'
 import { UserBar } from '@/components/sidebar/UserBar'
+import { cn } from '@/lib/utils'
 import { useAddonStore } from '@/stores/addonStore'
 
 import { SidebarItem } from './SidebarItem'
@@ -55,17 +56,35 @@ export const Sidebar = () => {
       <div className="w-full">
         <UserBar />
       </div>
-      <div className="mx-auto mb-2 text-muted-foreground opacity-80">
-        <span
-          className="hover:text-blue-400 cursor-pointer transition-all"
+
+      <div className="mx-3 mb-3 mt-0.5">
+        <button
+          type="button"
           onClick={() =>
             Browser.OpenURL(
               `https://github.com/classic-addon-manager/classic-addon-manager/releases/tag/v${version}`
             )
           }
+          aria-label={`Version ${version}, open release notes`}
+          className={cn(
+            'group flex w-full items-center justify-center gap-2 rounded-lg px-2 py-1.5',
+            'text-[11px] leading-none text-muted-foreground/60',
+            'outline-none transition-colors duration-200',
+            'hover:bg-secondary/40 hover:text-muted-foreground',
+            'focus-visible:ring-1 focus-visible:ring-ring'
+          )}
         >
-          <span>v{version} by Sami</span>
-        </span>
+          <span className="font-mono tabular-nums tracking-tight text-muted-foreground/80 transition-colors group-hover:text-foreground/80">
+            v{version}
+          </span>
+          <span
+            aria-hidden
+            className="h-2.5 w-px shrink-0 bg-border/70 transition-colors group-hover:bg-border"
+          />
+          <span className="tracking-wide">
+            made with <span aria-hidden>❤️</span> by Sami
+          </span>
+        </button>
       </div>
     </>
   )
