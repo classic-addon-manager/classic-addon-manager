@@ -1,11 +1,11 @@
-import { AlertCircleIcon, FolderOpen, HardDrive, Settings2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { AlertCircleIcon, FolderOpen, Settings2 } from 'lucide-react'
+import { type ReactNode, useEffect, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { toast } from '@/components/ui/toast'
+import { getErrorMessage } from '@/lib/utils'
 import { ApplicationService } from '@/lib/wails'
 import { useSettingsStore } from '@/stores/settingsStore'
 
@@ -14,6 +14,24 @@ import { QuickActions } from './settings/QuickActions'
 const DIALOG_TITLE = 'Select ArcheAge Classic Documents directory'
 const SUCCESS_TITLE = 'Success'
 const ERROR_TITLE = 'Error during directory selection.'
+
+const Section = ({
+  title,
+  description,
+  children,
+}: {
+  title: string
+  description?: string
+  children: ReactNode
+}) => (
+  <section className="space-y-3">
+    <div className="px-1">
+      <h2 className="text-sm font-medium tracking-tight">{title}</h2>
+      {description && <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>}
+    </div>
+    <div className="overflow-hidden rounded-xl border border-border/60 bg-card/40">{children}</div>
+  </section>
+)
 
 export const Settings = () => {
   const {
@@ -33,6 +51,7 @@ export const Settings = () => {
   }, [isInitialized, loadConfig])
 
   const openSelect = async () => {
+    setErrDocsPath('')
     try {
       const selectedPath = await ApplicationService.SelectAndValidateDocsPath(DIALOG_TITLE)
 
@@ -42,22 +61,19 @@ export const Settings = () => {
           title: SUCCESS_TITLE,
           description: `Path set to: ${selectedPath}`,
         })
-        setErrDocsPath('')
       }
     } catch (err) {
       console.error('Directory picker error:', err)
-      setErrDocsPath(err instanceof Error ? err.message : 'An unknown error occurred')
+      setErrDocsPath(getErrorMessage(err, 'Failed to select a documents directory'))
     }
   }
 
-  const toggleAutoDetection = () => setAutoPathDetection(!autoPathDetection)
-
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+      <header className="border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
         <div className="container flex h-16 items-center gap-4 px-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-lg">
+            <div className="rounded-lg bg-primary/10 p-2">
               <Settings2 className="h-6 w-6 text-primary" />
             </div>
             <div>
@@ -71,96 +87,89 @@ export const Settings = () => {
       </header>
 
       <main className="min-h-0 flex-1 overflow-auto">
-        <div className="container mx-auto px-4 py-6 max-w-4xl">
-          <Card className="shadow-sm">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-2">
-                <HardDrive className="h-5 w-5 text-primary" />
-                <CardTitle className="text-xl">AAC Documents Directory</CardTitle>
+        <div className="container mx-auto max-w-2xl space-y-8 px-4 py-8">
+          <Section
+            title="Documents directory"
+            description="Where the addon manager looks for your ArcheAge Classic documents"
+          >
+            <div className="flex items-center justify-between gap-6 px-4 py-3.5">
+              <div className="min-w-0 space-y-1">
+                <div className="text-sm font-medium leading-none">Override automatic detection</div>
+                <p className="text-xs text-muted-foreground">
+                  Specify the documents directory yourself
+                </p>
               </div>
-              <CardDescription>
-                Configure how the addon manager detects your ArcheAge Classic documents directory
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Override Toggle */}
-              <div className="flex items-start justify-between p-4 bg-muted/30 rounded-lg border">
-                <div className="space-y-1">
-                  <div className="font-medium">Override Automatic Detection</div>
-                  <div className="text-sm text-muted-foreground">
-                    Manually specify your AAC documents directory instead of using automatic
-                    detection
-                  </div>
-                </div>
-                <Switch checked={!autoPathDetection} onCheckedChange={toggleAutoDetection} />
-              </div>
+              <Switch
+                checked={!autoPathDetection}
+                onCheckedChange={checked => {
+                  setAutoPathDetection(!checked)
+                  setErrDocsPath('')
+                }}
+              />
+            </div>
 
-              {/* Directory Path Configuration */}
-              {!autoPathDetection ? (
-                <div className="space-y-4 p-4 bg-background border rounded-lg">
-                  <div className="space-y-2">
-                    <label htmlFor="install-path" className="text-sm font-medium">
-                      ArcheAge Classic Documents Directory
-                    </label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="install-path"
-                        type="text"
-                        placeholder="C:\AAClassic\Documents\..."
-                        value={aacPath}
-                        disabled
-                        className="flex-1"
-                      />
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={openSelect}
-                        title="Browse for directory"
-                      >
-                        <FolderOpen className="h-4 w-4" />
-                      </Button>
+            {!autoPathDetection ? (
+              <div className="space-y-3 border-t border-border/60 bg-muted/15 px-4 py-4">
+                <div className="flex gap-2">
+                  <Input
+                    id="install-path"
+                    type="text"
+                    placeholder="C:\AAClassic\Documents\..."
+                    value={aacPath}
+                    disabled
+                    className="flex-1 font-mono text-xs"
+                    aria-label="ArcheAge Classic Documents Directory"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={openSelect}
+                    title="Browse for directory"
+                    className="shrink-0"
+                  >
+                    <FolderOpen className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                {errDocsPath && (
+                  <div className="flex gap-2 rounded-lg border border-destructive/20 bg-destructive/10 p-3">
+                    <AlertCircleIcon className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+                    <div className="space-y-0.5">
+                      <div className="text-sm font-medium text-destructive">{ERROR_TITLE}</div>
+                      <p className="text-xs text-destructive/80">{errDocsPath}</p>
                     </div>
                   </div>
+                )}
 
-                  {errDocsPath && (
-                    <div className="flex gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-                      <AlertCircleIcon className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
-                      <div className="space-y-1">
-                        <div className="text-sm font-medium text-destructive">{ERROR_TITLE}</div>
-                        <p className="text-sm text-destructive/80">{errDocsPath}</p>
-                      </div>
-                    </div>
-                  )}
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  Directory should contain an <span className="text-foreground/80">Addon</span>{' '}
+                  folder and <span className="text-foreground/80">system.cfg</span>.
+                </p>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2.5 border-t border-border/60 px-4 py-3">
+                <span className="relative flex h-2 w-2 shrink-0">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400/40 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                </span>
+                <p className="text-xs text-muted-foreground">
+                  Detecting documents directory automatically
+                  {aacPath ? (
+                    <>
+                      {' · '}
+                      <span className="font-mono text-foreground/70">{aacPath}</span>
+                    </>
+                  ) : null}
+                </p>
+              </div>
+            )}
+          </Section>
 
-                  <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded border-l-4 border-l-primary/50">
-                    <strong>Note:</strong> The documents directory should contain the "Addon"
-                    directory and "system.cfg" file. This path will be used to locate addon
-                    directories and game resources.
-                  </div>
-                </div>
-              ) : (
-                <div className="p-4 bg-muted/20 rounded-lg border border-dashed">
-                  <div className="text-center text-muted-foreground">
-                    <HardDrive className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">Automatic directory detection is enabled</p>
-                    <p className="text-xs mt-1">
-                      The application will automatically find your ArcheAge Classic documents
-                      directory
-                    </p>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <Section title="Locations" description="Open folders used by Classic Addon Manager">
+            <QuickActions />
+          </Section>
         </div>
       </main>
-
-      <footer className="border-t bg-muted/30">
-        <div className="px-4 py-4 flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">Quick Actions</div>
-          <QuickActions />
-        </div>
-      </footer>
     </div>
   )
 }
