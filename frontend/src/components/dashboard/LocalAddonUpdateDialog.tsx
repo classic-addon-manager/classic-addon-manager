@@ -83,8 +83,8 @@ export const LocalAddonUpdateDialog = ({ addon, release }: Props) => {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-amber-500/15 ring-1 ring-amber-500/25">
-              <ArrowUpCircle className="w-5 h-5 text-amber-500" />
+            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/15 ring-1 ring-primary/25">
+              <ArrowUpCircle className="w-5 h-5 text-primary" />
             </div>
             <div>
               <DialogTitle>Update available</DialogTitle>
@@ -98,7 +98,7 @@ export const LocalAddonUpdateDialog = ({ addon, release }: Props) => {
             {addon.version}
           </span>
           <ArrowRight className="w-4 h-4 text-muted-foreground" />
-          <span className="rounded-md bg-amber-500/10 px-2.5 py-1 text-sm font-mono text-amber-600 dark:text-amber-400 ring-1 ring-inset ring-amber-500/20">
+          <span className="rounded-md bg-primary/10 px-2.5 py-1 text-sm font-mono text-primary ring-1 ring-inset ring-primary/20">
             {release.tag_name}
           </span>
         </div>

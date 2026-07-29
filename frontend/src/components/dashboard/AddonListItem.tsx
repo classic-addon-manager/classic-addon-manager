@@ -103,7 +103,7 @@ const AddonListItemIndicator = ({
   }
 
   if (addon.isManaged && hasUpdate) {
-    return <Download size={16} className="text-amber-600" />
+    return <Download size={16} className="text-primary" />
   }
 
   if (addon.isManaged) {

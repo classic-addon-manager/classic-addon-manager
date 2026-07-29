@@ -44,7 +44,9 @@ export const ChatMessage = ({
       >
         <div
           className={`relative inline-block rounded-lg px-3 py-1.5 text-sm chat-message group ${
-            message.role === 'assistant' ? 'assistant-message bg-muted/50' : 'bg-primary text-black'
+            message.role === 'assistant'
+              ? 'assistant-message bg-muted/50'
+              : 'bg-primary text-primary-foreground'
           }`}
         >
           {message.role === 'assistant' ? (

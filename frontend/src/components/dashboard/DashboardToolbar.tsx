@@ -140,7 +140,7 @@ export const DashboardToolbar = () => {
         {updatesAvailableCount > 0 && (
           <Badge
             variant="outline"
-            className="flex items-center gap-1 px-2 py-1 text-xs text-amber-600 border-amber-600/20 bg-amber-500/10"
+            className="flex items-center gap-1 px-2 py-1 text-xs text-primary border-primary/20 bg-primary/10"
           >
             <RefreshCw className="size-3" />
             {updatesAvailableCount} update{updatesAvailableCount !== 1 ? 's' : ''}

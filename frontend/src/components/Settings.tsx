@@ -9,6 +9,7 @@ import { getErrorMessage } from '@/lib/utils'
 import { ApplicationService } from '@/lib/wails'
 import { useSettingsStore } from '@/stores/settingsStore'
 
+import { AccentColorPicker } from './settings/AccentColorPicker'
 import { QuickActions } from './settings/QuickActions'
 
 const DIALOG_TITLE = 'Select ArcheAge Classic Documents directory'
@@ -163,6 +164,13 @@ export const Settings = () => {
                 </p>
               </div>
             )}
+          </Section>
+
+          <Section
+            title="Accent color"
+            description="Choose the highlight color used across the app"
+          >
+            <AccentColorPicker />
           </Section>
 
           <Section title="Locations" description="Open folders used by Classic Addon Manager">
