@@ -1,6 +1,6 @@
 import { CalendarDaysIcon, PackageIcon } from 'lucide-react'
 
-import { RemoteAddonReadme } from '@/components/shared/RemoteAddonReadme.tsx'
+import { Readme } from '@/components/shared/Readme'
 import { formatToLocalTime } from '@/lib/utils.ts'
 import type { Release } from '@/lib/wails'
 
@@ -19,7 +19,7 @@ export const ChangelogTab = ({ release, changelog }: ChangelogTabProps) => {
         </div>
         <div className="border rounded-lg p-4 bg-card">
           <div className="prose max-w-none text-sm text-foreground dark:text-foreground/90">
-            <RemoteAddonReadme readme={changelog} />
+            <Readme readme={changelog} />
           </div>
         </div>
       </>

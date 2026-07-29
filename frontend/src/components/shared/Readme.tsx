@@ -8,7 +8,7 @@ interface Props {
   readme: string
 }
 
-export const RemoteAddonReadme = ({ readme }: Props) => {
+export const Readme = ({ readme }: Props) => {
   const [selectedImage, setSelectedImage] = useState<HTMLImageElement | null>(null)
 
   const components = {

@@ -20,7 +20,7 @@ import { Suspense, useCallback, useEffect, useState } from 'react'
 
 import { AddonRatingButtons } from '@/components/dashboard/AddonRatingButtons'
 import { AddonRepositoryMatch } from '@/components/dashboard/AddonRepositoryMatch'
-import { RemoteAddonReadme } from '@/components/shared/RemoteAddonReadme'
+import { Readme } from '@/components/shared/Readme'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -360,7 +360,7 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
               <p className="text-sm font-medium">Loading description...</p>
             </div>
           ) : (
-            <RemoteAddonReadme readme={readme} />
+            <Readme readme={readme} />
           )}
         </ScrollArea>
       ) : (

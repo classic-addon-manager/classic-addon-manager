@@ -18,7 +18,7 @@ import { Suspense, useCallback, useEffect, useState } from 'react'
 
 import { AddonRepositoryMatch } from '@/components/dashboard/AddonRepositoryMatch'
 import { isAddonDialogOpenAtom, selectedAddonAtom } from '@/components/dashboard/atoms'
-import { RemoteAddonReadme } from '@/components/shared/RemoteAddonReadme'
+import { Readme } from '@/components/shared/Readme'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -323,7 +323,7 @@ export const LocalAddonDialog = ({ addon, onOpenChange, open }: LocalAddonDialog
               <p className="font-medium">Loading description...</p>
             </div>
           ) : (
-            addon.isManaged && <RemoteAddonReadme readme={readme} />
+            addon.isManaged && <Readme readme={readme} />
           )}
 
           {/* Show notice if addon is not managed and is available in repository */}

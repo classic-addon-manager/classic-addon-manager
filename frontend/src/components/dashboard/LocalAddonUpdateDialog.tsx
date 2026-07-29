@@ -1,16 +1,15 @@
 import {
   AlertTriangleIcon,
+  ArrowRight,
   ArrowUpCircle,
   CalendarDays,
+  Download,
   LoaderCircle,
-  Package,
-  Tag,
-  User,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import Markdown from 'react-markdown'
+import { useState } from 'react'
 
-import { Badge } from '@/components/ui/badge'
+import { Readme } from '@/components/shared/Readme'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -19,14 +18,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { toast } from '@/components/ui/toast'
 import { repoGetManifest } from '@/lib/repo.ts'
 import { formatToLocalTime, safeCall } from '@/lib/utils'
 import type { Addon, Release } from '@/lib/wails'
 import { useAddonStore } from '@/stores/addonStore'
 import { useUpdateDialogStore } from '@/stores/updateDialogStore'
-
-import { Button } from '../ui/button'
-import { toast } from '../ui/toast'
 
 interface Props {
   addon: Addon
@@ -34,20 +31,16 @@ interface Props {
 }
 
 export const LocalAddonUpdateDialog = ({ addon, release }: Props) => {
-  const [changelog, setChangelog] = useState<string>('')
-  const [isUpdating, setIsUpdating] = useState<boolean>(false)
+  const [isUpdating, setIsUpdating] = useState(false)
   const { open, setOpen } = useUpdateDialogStore()
   const { update } = useAddonStore()
 
-  useEffect(() => {
-    if (open && release?.body) {
-      setChangelog(release.body)
-    } else {
-      setChangelog('No change log was provided')
-    }
-  }, [open, release.body])
+  const changelog = release?.body?.trim() ?? ''
+  const hasChangelog = changelog.length > 0
 
   const handleUpdateClick = async () => {
+    if (isUpdating) return
+
     setIsUpdating(true)
 
     const updateOperation = async () => {
@@ -85,78 +78,65 @@ export const LocalAddonUpdateDialog = ({ addon, release }: Props) => {
     setIsUpdating(false)
   }
 
-  const ReleaseInformation = () => {
-    if (!release) {
-      return <Badge variant="outline">No Release</Badge>
-    }
-    return (
-      <span className="inline-flex items-center gap-x-1.5">
-        <Badge variant="secondary" className="inline-flex items-center gap-1">
-          <Tag className="w-3 h-3" />
-          {release.tag_name}
-        </Badge>
-      </span>
-    )
-  }
-
   return (
     <Dialog onOpenChange={setOpen} open={open}>
-      <DialogContent className="max-w-0 min-w-[650px] md:max-w-[70svw] min-h-[500px] max-h-[90svh] lg:max-w-[850px] flex flex-col p-0">
-        <DialogHeader className="p-6 pb-4 shrink-0 border-b">
-          <DialogTitle className="text-2xl font-semibold mb-1">{addon.alias}</DialogTitle>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm mb-3 text-muted-foreground">
-            <span className="inline-flex items-center gap-1">
-              <User className="w-3.5 h-3.5" />
-              <span className="font-normal text-foreground/90">{addon.author}</span>
-            </span>
-            {ReleaseInformation()}
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-amber-500/15 ring-1 ring-amber-500/25">
+              <ArrowUpCircle className="w-5 h-5 text-amber-500" />
+            </div>
+            <div>
+              <DialogTitle>Update available</DialogTitle>
+              <DialogDescription>{addon.alias} has a new version.</DialogDescription>
+            </div>
           </div>
-          {addon.description && (
-            <DialogDescription className="text-sm text-muted-foreground">
-              {addon.description}
-            </DialogDescription>
-          )}
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto p-6">
-          {release ? (
-            <>
-              <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground mb-4">
-                <CalendarDays className="w-3.5 h-3.5" />
-                <span>Released on {formatToLocalTime(release.published_at)}</span>
-              </div>
-              <div className="border rounded-lg p-4 bg-card">
-                <div className="prose max-w-none text-sm text-foreground dark:text-foreground/90">
-                  <Markdown>{changelog}</Markdown>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground pt-10">
-              <Package className="w-12 h-12 mb-4 opacity-50" />
-              <p className="font-medium">No changelog available</p>
-              <p className="text-xs mt-1">The author hasn't provided release notes.</p>
+        <div className="flex items-center justify-center gap-2 rounded-lg border border-border/60 bg-muted/40 px-4 py-3">
+          <span className="rounded-md bg-muted px-2.5 py-1 text-sm font-mono text-muted-foreground">
+            {addon.version}
+          </span>
+          <ArrowRight className="w-4 h-4 text-muted-foreground" />
+          <span className="rounded-md bg-amber-500/10 px-2.5 py-1 text-sm font-mono text-amber-600 dark:text-amber-400 ring-1 ring-inset ring-amber-500/20">
+            {release.tag_name}
+          </span>
+        </div>
+
+        <div className="space-y-2">
+          {release?.published_at && (
+            <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+              <CalendarDays className="w-3.5 h-3.5" />
+              <span>Released {formatToLocalTime(release.published_at)}</span>
             </div>
+          )}
+
+          {hasChangelog ? (
+            <div className="max-h-48 overflow-y-auto rounded-lg border border-border/60 bg-card p-3 text-sm">
+              <Readme readme={changelog} />
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No release notes provided.</p>
           )}
         </div>
 
-        <DialogFooter className="p-4 border-t">
-          {isUpdating ? (
-            <Button type="button" variant="default" disabled className="w-full sm:w-auto">
-              <LoaderCircle className="w-4 h-4 mr-2 animate-spin" />
-              Updating...
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              variant="default"
-              onClick={handleUpdateClick}
-              className="w-full sm:w-auto"
-            >
-              <ArrowUpCircle className="w-5 h-4" />
-              Update to {release.tag_name}
-            </Button>
-          )}
+        <DialogFooter className="gap-2">
+          <Button variant="ghost" onClick={() => setOpen(false)} disabled={isUpdating}>
+            Later
+          </Button>
+          <Button onClick={handleUpdateClick} disabled={isUpdating}>
+            {isUpdating ? (
+              <>
+                <LoaderCircle className="w-4 h-4 mr-2 animate-spin" />
+                Updating…
+              </>
+            ) : (
+              <>
+                <Download className="w-4 h-4" />
+                Update Now
+              </>
+            )}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

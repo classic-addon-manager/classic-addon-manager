@@ -1,4 +1,4 @@
-import { RemoteAddonReadme } from '@/components/shared/RemoteAddonReadme.tsx'
+import { Readme } from '@/components/shared/Readme'
 
 interface DescriptionTabProps {
   readme: string
@@ -7,7 +7,7 @@ interface DescriptionTabProps {
 export const DescriptionTab = ({ readme }: DescriptionTabProps) => {
   return (
     <div className="max-w-none">
-      <RemoteAddonReadme readme={readme} />
+      <Readme readme={readme} />
     </div>
   )
 }
