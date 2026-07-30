@@ -59,11 +59,15 @@ const SpecificAddonIssueContent = () => (
       <p className="text-muted-foreground">If a specific addon is not working as expected:</p>
       <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
         <li>Go to the Dashboard</li>
-        <li>Right-click the problematic addon</li>
-        <li>Select "Report issue"</li>
+        <li>Select the problematic addon from the list</li>
+        <li>Open the menu in the details pane</li>
+        <li>Select "Report Issue"</li>
       </ol>
       <div className="bg-muted/30 p-4 rounded-lg mt-4">
-        <p className="text-sm italic">Note: A GitHub account is required to report issues.</p>
+        <p className="text-sm italic">
+          Note: Report Issue is available for managed addons only. A GitHub account is required to
+          report issues.
+        </p>
       </div>
     </div>
   </div>
