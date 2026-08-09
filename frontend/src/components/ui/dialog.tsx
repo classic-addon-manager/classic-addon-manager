@@ -54,6 +54,16 @@ function DialogContent({
           className
         )}
         {...props}
+        onPointerDownOutside={e => {
+          if (e.target instanceof Element && e.target.closest('[data-sonner-toaster]')) {
+            e.preventDefault()
+          }
+        }}
+        onInteractOutside={e => {
+          if (e.target instanceof Element && e.target.closest('[data-sonner-toaster]')) {
+            e.preventDefault()
+          }
+        }}
       >
         {children}
         {showCloseButton && (
