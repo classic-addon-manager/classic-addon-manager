@@ -214,10 +214,6 @@ export const useMarkdownSetup = () => {
           node.setAttribute('href', 'javascript:void(0)')
           node.setAttribute('data-url', url)
           node.classList.add('wails-link')
-          node.setAttribute(
-            'onclick',
-            `event.preventDefault(); window.runtime.Browser.OpenURL('${url.replace(/'/g, "\\'")}');`
-          )
         }
       }
     })

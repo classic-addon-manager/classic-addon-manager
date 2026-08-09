@@ -9,7 +9,7 @@ export const generateMessageId = () => {
 
 export const parseMarkdown = (content: string) => {
   return DOMPurify.sanitize(marked.parse(content, { async: false }) as string, {
-    ADD_ATTR: ['data-url', 'onclick'],
+    ADD_ATTR: ['data-url'],
   })
 }
 
