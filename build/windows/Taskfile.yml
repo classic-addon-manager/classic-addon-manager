@@ -8,7 +8,6 @@ tasks:
     summary: Builds the application for Windows
     deps:
       - task: common:go:mod:tidy
-      - task: common:update:build-assets
       - task: common:build:frontend
         vars:
           PRODUCTION: '{{.PRODUCTION}}'

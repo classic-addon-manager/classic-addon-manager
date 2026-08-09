@@ -79,7 +79,8 @@ export const useAddonStore = create<AddonState>((set, get) => ({
 
       const updatesAvailableCount = managedAddons.reduce((count, addon) => {
         const latestRelease = latestReleasesMap.get(addon.name)
-        return latestRelease?.published_at > addon.updatedAt ? count + 1 : count
+        if (!latestRelease) return count
+        return latestRelease.published_at > addon.updatedAt ? count + 1 : count
       }, 0)
 
       set({ latestReleasesMap, updatesAvailableCount })

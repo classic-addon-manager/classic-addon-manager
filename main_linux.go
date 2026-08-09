@@ -16,9 +16,9 @@ import (
 
 const socketPath = "/tmp/classic-addon-manager.sock"
 
-// checkWebView2Installation is not needed on Linux - webkit2gtk is handled by the system
+// checkWebView2Installation is not needed on Linux - WebKitGTK is handled by the system
 func checkWebView2Installation() {
-	// No-op on Linux - webkit2gtk dependency is handled by package manager
+	// No-op on Linux - WebKitGTK 6.0 dependency is handled by package manager
 }
 
 func checkForRunningInstance() bool {

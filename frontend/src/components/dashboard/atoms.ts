@@ -14,7 +14,8 @@ const addonStoreAtom = atomWithStore(useAddonStore)
 const hasUpdate = (addon: Addon, latestReleasesMap: Map<string, Release>) => {
   if (!addon.isManaged) return false
   const release = latestReleasesMap.get(addon.name)
-  return release?.published_at > addon.updatedAt
+  if (!release) return false
+  return release.published_at > addon.updatedAt
 }
 
 export const filteredAddonsAtom = atom(get => {

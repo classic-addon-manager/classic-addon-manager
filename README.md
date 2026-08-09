@@ -63,10 +63,10 @@ Install PNPM by following [pnpm.io/installation](https://pnpm.io/installation).
 Then install the Wails CLI:
 
 ```
-go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.5
 ```
 
-> We use Wails v3 alpha. Make sure you install the correct version. See [Wails v3 Installation](https://v3alpha.wails.io/getting-started/installation) for details.
+> We use Wails v3 beta (`v3.0.0-beta.5`). Make sure you install the matching CLI version. See [Wails v3 Installation](https://v3.wails.io/getting-started/installation) for details.
 
 ### Live Development
 

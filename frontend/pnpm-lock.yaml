@@ -54,8 +54,8 @@ importers:
         specifier: ^5.0.2
         version: 5.0.2
       '@wailsio/runtime':
-        specifier: ^3.0.0-alpha.79
-        version: 3.0.0-alpha.79
+        specifier: 3.0.0-beta.5
+        version: 3.0.0-beta.5
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -1295,8 +1295,8 @@ packages:
   '@radix-ui/rect@1.1.1':
     resolution: {integrity: sha512-HPwpGIzkl28mWyZqG52jiqDJ12waP11Pa1lGoiyUkIEuMLBP0oeK/C89esbXrxsky5we7dfd8U58nm0SgAWpVw==}
 
-  '@react-grab/cli@0.1.44':
-    resolution: {integrity: sha512-gMDYY2rw6OWajCcDlXSIgs2LC432YJXSb3Lm5yM187uhRgBYddoEVULi36h+IolX3r7jSb3ew7vn9FfI8NSo0A==}
+  '@react-grab/cli@0.1.50':
+    resolution: {integrity: sha512-Px/Hwhhyk2PubCA4ZaRFsfvwxhbxXsetJyvqC6aFFi8WhJhA+oVC33aTzuAeWmM3fhb4/8ce8YsHXI1d6ChcKg==}
     hasBin: true
 
   '@rolldown/pluginutils@1.0.0-beta.27':
@@ -1676,8 +1676,8 @@ packages:
     peerDependencies:
       vite: ^4.2.0 || ^5.0.0 || ^6.0.0 || ^7.0.0
 
-  '@wailsio/runtime@3.0.0-alpha.79':
-    resolution: {integrity: sha512-NITzxKmJsMEruc39L166lbPJVECxzcbdqpHVqOOF7Cu/7Zqk/e3B/gNpkUjhNyo5rVb3V1wpS8oEgLUmpu1cwA==}
+  '@wailsio/runtime@3.0.0-beta.5':
+    resolution: {integrity: sha512-WPJcKfD/iN5EbzLAE0B2AjwRVVSSnhpGQSjgFORtIA3h1bkiw/k7rTd06emNsI1ZFGFgMiUEEmXgEcVfeWoRVQ==}
 
   acorn-jsx@5.3.2:
     resolution: {integrity: sha512-rq9s+JNhf0IChjtDXxllJ7g41oZk5SlXtp0LHwyA5cejwn7vKmKp4pPri6YEePv2PU65sAsegbXtIinmDFDXgQ==}
@@ -1689,8 +1689,8 @@ packages:
     engines: {node: '>=0.4.0'}
     hasBin: true
 
-  agent-install@0.0.5:
-    resolution: {integrity: sha512-nHlms9BkP8ZiY79HrwCGiA2DcNaXrAaJrCM/BEqQ7MEsSKyCk+2A76xPGylIfASZSZE0SaU3T0bNSg4rBPIJAQ==}
+  agent-install@0.0.6:
+    resolution: {integrity: sha512-7NRMZ/ZDz2vHevQTgJsocBFpakB1/Wx5ip19YSJuj4VOXpraWztTerViNtdSyARKZT9e2yVwUUB5JXXCE7mNrA==}
     hasBin: true
 
   ajv@6.15.0:
@@ -1734,8 +1734,8 @@ packages:
     peerDependencies:
       react: '>=17.0.1'
 
-  bippy@0.5.41:
-    resolution: {integrity: sha512-jCP2pXXLhXqPrAN+iSEFZmLI4uUM4fjSqajh0K+TmM062VehfDT3ZJNkrTGyN701Z5XMejs9qAudSqkMGhSMKg==}
+  bippy@0.6.1:
+    resolution: {integrity: sha512-ky4m94Y/KfsddjGkKTsV4uFjZqkJjpOjQ2t5gKPdX6XH1MNxMNX5FrVefsxV4lpjemEmEdwe0e0YbzAMNs3oUQ==}
     peerDependencies:
       react: '>=17.0.1'
 
@@ -2518,8 +2518,8 @@ packages:
     peerDependencies:
       react: ^19.2.6
 
-  react-grab@0.1.44:
-    resolution: {integrity: sha512-bDEwBdI90ljq2lhUtPqmWis/HwYB/CvfT0m5i+P9F83Pt0Ot8o9XL8v00s9jcWzdQUlsFDzmq2FO2CHUe8JY8A==}
+  react-grab@0.1.50:
+    resolution: {integrity: sha512-zRkHKq/8a1msCpEOp8BDROeQZT50m0OH2XPrP6jk5op+JAHrlsm3pj7eAQMOsct87EZDeGNnu4r+sGsJJzyw1Q==}
     hasBin: true
     peerDependencies:
       react: '>=17.0.0'
@@ -4033,9 +4033,9 @@ snapshots:
 
   '@radix-ui/rect@1.1.1': {}
 
-  '@react-grab/cli@0.1.44':
+  '@react-grab/cli@0.1.50':
     dependencies:
-      agent-install: 0.0.5
+      agent-install: 0.0.6
       commander: 14.0.3
       ignore: 7.0.5
       ora: 9.4.0
@@ -4373,7 +4373,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@wailsio/runtime@3.0.0-alpha.79': {}
+  '@wailsio/runtime@3.0.0-beta.5': {}
 
   acorn-jsx@5.3.2(acorn@8.16.0):
     dependencies:
@@ -4381,7 +4381,7 @@ snapshots:
 
   acorn@8.16.0: {}
 
-  agent-install@0.0.5:
+  agent-install@0.0.6:
     dependencies:
       '@iarna/toml': 2.2.5
       commander: 14.0.3
@@ -4425,7 +4425,7 @@ snapshots:
     dependencies:
       react: 19.2.6
 
-  bippy@0.5.41(react@19.2.6):
+  bippy@0.6.1(react@19.2.6):
     dependencies:
       react: 19.2.6
 
@@ -5325,10 +5325,10 @@ snapshots:
       react: 19.2.6
       scheduler: 0.27.0
 
-  react-grab@0.1.44(react@19.2.6):
+  react-grab@0.1.50(react@19.2.6):
     dependencies:
-      '@react-grab/cli': 0.1.44
-      bippy: 0.5.41(react@19.2.6)
+      '@react-grab/cli': 0.1.50
+      bippy: 0.6.1(react@19.2.6)
     optionalDependencies:
       react: 19.2.6
 
@@ -5388,7 +5388,7 @@ snapshots:
       prompts: 2.4.2
       react: 19.2.6
       react-dom: 19.2.6(react@19.2.6)
-      react-grab: 0.1.44(react@19.2.6)
+      react-grab: 0.1.50(react@19.2.6)
     optionalDependencies:
       esbuild: 0.27.7
       unplugin: 2.1.0

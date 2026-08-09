@@ -100,10 +100,11 @@ func main() {
 		BackgroundColour: application.NewRGBA(10, 10, 10, 1),
 		BackgroundType:   application.BackgroundTypeSolid,
 	})
+	// Re-apply after restore/unmaximise: some platforms drop MinWidth/MinHeight.
+	// Do not call SetMinSize before a.Run() — beta.5 panics when app.impl is nil.
 	reapplyMinSize := func(_ *application.WindowEvent) {
 		mainWindow.SetMinSize(windowMinWidth, windowMinHeight)
 	}
-	mainWindow.SetMinSize(windowMinWidth, windowMinHeight)
 	mainWindow.OnWindowEvent(events.Common.WindowDidResize, reapplyMinSize)
 	mainWindow.OnWindowEvent(events.Common.WindowUnMaximise, reapplyMinSize)
 	mainWindow.OnWindowEvent(events.Common.WindowRestore, reapplyMinSize)

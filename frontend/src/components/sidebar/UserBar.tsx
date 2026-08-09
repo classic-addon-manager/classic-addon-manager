@@ -6,7 +6,6 @@ import {
   LogOutIcon,
   MessageCircleQuestionIcon,
 } from 'lucide-react'
-import type { WailsEvent } from 'node_modules/@wailsio/runtime/types/events'
 import { useEffect, useState } from 'react'
 
 import { AIChatDialog } from '@/components/AIChatDialog'
@@ -42,7 +41,7 @@ export const UserBar = () => {
   const { user, isAuthenticated, saveToken, signOut } = useUserStore()
 
   useEffect(() => {
-    const handleAuthToken = async (event: WailsEvent) => {
+    const handleAuthToken = async (event: Events.WailsEvent) => {
       const tokenValue = Array.isArray(event.data) ? (event.data as unknown[])[0] : event.data
 
       if (typeof tokenValue === 'string' && tokenValue.length > 0) {
