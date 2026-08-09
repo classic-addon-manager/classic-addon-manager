@@ -10,6 +10,30 @@ import { useUserStore } from '@/stores/userStore'
 import { copyToClipboard, generateMessageId, parseMarkdown } from './chatUtils'
 import type { ChatHistoryItem } from './types'
 
+type TimeoutRef = { current: ReturnType<typeof setTimeout> | null }
+
+const clearTimeoutRef = (ref: TimeoutRef) => {
+  if (ref.current) {
+    clearTimeout(ref.current)
+    ref.current = null
+  }
+}
+
+/**
+ * The server never reports tool completion, so a call is considered done as soon
+ * as any later event arrives. Returns the same array when nothing changed so
+ * React can skip the re-render.
+ */
+const markToolCallsDone = (items: ChatHistoryItem[]): ChatHistoryItem[] => {
+  let changed = false
+  const next = items.map(item => {
+    if (item.type !== 'tool_call' || item.status === 'done') return item
+    changed = true
+    return { ...item, status: 'done' as const }
+  })
+  return changed ? next : items
+}
+
 export const useChatLogic = () => {
   const { token } = useUserStore()
   const version = useAtomValue(versionAtom)
@@ -24,16 +48,31 @@ export const useChatLogic = () => {
   // Refs
   const activeEventSourceRef = useRef<EventSource | null>(null)
   const currentAssistantContentRef = useRef<string>('')
+  const slowResponseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const cleanupConnection = useCallback(() => {
     if (activeEventSourceRef.current) {
       activeEventSourceRef.current.close()
       activeEventSourceRef.current = null
     }
+    clearTimeoutRef(slowResponseTimeoutRef)
+    setChatHistory(markToolCallsDone)
     setIsWaitingForResponse(false)
   }, [])
 
+  const resetConversation = useCallback(() => {
+    cleanupConnection()
+    currentAssistantContentRef.current = ''
+    setChatHistory([])
+    setConversationId(null)
+    setMessageAnimationStates(new Set())
+  }, [cleanupConnection])
+
   // --- Helpers ---
+
+  const finishToolCalls = () => {
+    setChatHistory(markToolCallsDone)
+  }
 
   const updateAssistantMessage = (assistantMessageId: string, content: string) => {
     setChatHistory(prev =>
@@ -49,7 +88,7 @@ export const useChatLogic = () => {
   }
 
   const startSlowResponseTimeout = (assistantMessageId: string) => {
-    return setTimeout(() => {
+    slowResponseTimeoutRef.current = setTimeout(() => {
       setChatHistory(prev =>
         prev.map(msg =>
           msg.id === assistantMessageId && msg.type === 'message' && !msg.content
@@ -71,6 +110,7 @@ export const useChatLogic = () => {
     assistantMessageId: string
   ) => {
     currentAssistantContentRef.current += data.data || ''
+    finishToolCalls()
     updateAssistantMessage(assistantMessageId, currentAssistantContentRef.current)
     syncMetadata(data)
   }
@@ -81,36 +121,47 @@ export const useChatLogic = () => {
   ) => {
     const toolCallId = generateMessageId()
     const action = typeof data.data === 'string' ? data.data : 'unknown_tool'
-    const toolCallEntry = { id: toolCallId, type: 'tool_call' as const, action }
+    const toolCallEntry = {
+      id: toolCallId,
+      type: 'tool_call' as const,
+      action,
+      status: 'running' as const,
+    }
     setChatHistory(prev => {
-      const found = prev.some(item => item.id === assistantMessageId)
-      if (!found) return [...prev, toolCallEntry]
-      return prev.flatMap(item => (item.id === assistantMessageId ? [toolCallEntry, item] : [item]))
+      const settled = markToolCallsDone(prev)
+      const found = settled.some(item => item.id === assistantMessageId)
+      if (!found) return [...settled, toolCallEntry]
+      return settled.flatMap(item =>
+        item.id === assistantMessageId ? [toolCallEntry, item] : [item]
+      )
     })
     setMessageAnimationStates(prev => new Set([...prev, toolCallId]))
     syncMetadata(data)
   }
 
   const handleComplete = (data: { conversation_id?: string; remaining_limit?: number }) => {
+    finishToolCalls()
     syncMetadata(data)
     cleanupConnection()
   }
 
   const handleStreamError = (data: { message?: string }, assistantMessageId: string) => {
     currentAssistantContentRef.current = `Sorry, I encountered an error: ${data.message || 'Server error'}`
+    finishToolCalls()
     updateAssistantMessage(assistantMessageId, currentAssistantContentRef.current)
     cleanupConnection()
   }
 
   const handleRawChunk = (rawData: string, assistantMessageId: string) => {
     currentAssistantContentRef.current += rawData
+    finishToolCalls()
     updateAssistantMessage(assistantMessageId, currentAssistantContentRef.current)
   }
 
   // --- Stream Response ---
 
   const streamResponse = (message: string, assistantMessageId: string) => {
-    const timeoutId = startSlowResponseTimeout(assistantMessageId)
+    startSlowResponseTimeout(assistantMessageId)
 
     try {
       const params = new URLSearchParams({
@@ -124,7 +175,7 @@ export const useChatLogic = () => {
       activeEventSourceRef.current = eventSource
 
       eventSource.onmessage = event => {
-        clearTimeout(timeoutId)
+        clearTimeoutRef(slowResponseTimeoutRef)
         try {
           const data = JSON.parse(event.data)
           switch (data.type) {
@@ -148,17 +199,19 @@ export const useChatLogic = () => {
       }
 
       eventSource.onerror = () => {
-        clearTimeout(timeoutId)
+        clearTimeoutRef(slowResponseTimeoutRef)
         if (!currentAssistantContentRef.current) {
           currentAssistantContentRef.current =
             'Sorry, I encountered an error processing your request.'
         }
+        finishToolCalls()
         updateAssistantMessage(assistantMessageId, currentAssistantContentRef.current)
         cleanupConnection()
       }
     } catch {
-      clearTimeout(timeoutId)
+      clearTimeoutRef(slowResponseTimeoutRef)
       currentAssistantContentRef.current = 'Sorry, I encountered an error processing your request.'
+      finishToolCalls()
       updateAssistantMessage(assistantMessageId, currentAssistantContentRef.current)
       cleanupConnection()
     }
@@ -199,6 +252,7 @@ export const useChatLogic = () => {
     parseMarkdown,
     copyToClipboard,
     cleanupConnection,
+    resetConversation,
     setMessageAnimationStates,
   }
 }

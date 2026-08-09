@@ -1,12 +1,22 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
-const CHAR_REVEAL_MS = 10
+const REVEAL_TICK_MS = 16
+/** How far behind the real content the reveal is allowed to trail. */
+const CATCHUP_WINDOW_MS = 1000
+
+const charsPerTick = (backlog: number) => {
+  const ticksAvailable = CATCHUP_WINDOW_MS / REVEAL_TICK_MS
+  return Math.max(1, Math.ceil(backlog / ticksAvailable))
+}
 
 export const useStreamingTextReveal = (text: string, isStreaming: boolean) => {
   const [cursor, setCursor] = useState(0)
   const [prevText, setPrevText] = useState(text)
   const cursorRef = useRef(0)
   const wasStreamingRef = useRef(isStreaming)
+  const textRef = useRef(text)
+
+  textRef.current = text
 
   if (isStreaming) {
     wasStreamingRef.current = true
@@ -19,6 +29,11 @@ export const useStreamingTextReveal = (text: string, isStreaming: boolean) => {
       setCursor(0)
     }
   }
+
+  const completeReveal = useCallback(() => {
+    cursorRef.current = textRef.current.length
+    setCursor(cursorRef.current)
+  }, [])
 
   useEffect(() => {
     const targetCursor = text.length
@@ -33,20 +48,23 @@ export const useStreamingTextReveal = (text: string, isStreaming: boolean) => {
       return
     }
 
-    const revealNextChar = () => {
-      cursorRef.current += 1
+    /* The rate is fixed for this batch, the next chunk re-runs the effect and
+     * re-sizes it against the new backlog. */
+    const step = charsPerTick(targetCursor - cursorRef.current)
+
+    const revealNextBatch = () => {
+      cursorRef.current = Math.min(targetCursor, cursorRef.current + step)
       setCursor(cursorRef.current)
+      return cursorRef.current >= targetCursor
     }
 
-    revealNextChar()
-    if (cursorRef.current >= targetCursor) return
+    if (revealNextBatch()) return
 
     const intervalId = setInterval(() => {
-      revealNextChar()
-      if (cursorRef.current >= targetCursor) {
+      if (revealNextBatch()) {
         clearInterval(intervalId)
       }
-    }, CHAR_REVEAL_MS)
+    }, REVEAL_TICK_MS)
 
     return () => clearInterval(intervalId)
   }, [text])
@@ -54,11 +72,11 @@ export const useStreamingTextReveal = (text: string, isStreaming: boolean) => {
   const targetCursor = text.length
 
   if (!wasStreamingRef.current) {
-    return { displayedText: text, isRevealing: false }
+    return { displayedText: text, isRevealing: false, completeReveal }
   }
 
   const displayedText = text.slice(0, cursor)
   const isRevealing = isStreaming || cursor < targetCursor
 
-  return { displayedText, isRevealing }
+  return { displayedText, isRevealing, completeReveal }
 }

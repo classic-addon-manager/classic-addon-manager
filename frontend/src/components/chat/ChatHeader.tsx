@@ -1,38 +1,53 @@
+import { MessageSquarePlusIcon, XIcon } from 'lucide-react'
+
 import { Button } from '@/components/ui/button'
 import { DialogDescription, DialogTitle } from '@/components/ui/dialog'
 
 interface ChatHeaderProps {
   onClose: () => void
+  onNewConversation: () => void
+  canStartNewConversation: boolean
 }
 
-export const ChatHeader = ({ onClose }: ChatHeaderProps) => {
+export const ChatHeader = ({
+  onClose,
+  onNewConversation,
+  canStartNewConversation,
+}: ChatHeaderProps) => {
   return (
-    <div className="border-b border-border/40 px-4 sm:px-6 py-4">
+    <div className="border-b border-border/40 px-4 py-4 sm:px-6">
       <div className="flex items-center justify-between">
         <div>
-          <DialogTitle className="text-lg font-medium leading-none">
+          <DialogTitle className="text-lg leading-none font-medium">
             Daru Informational Network
           </DialogTitle>
           <DialogDescription className="mt-2 text-sm text-muted-foreground">
             The Darus have information, if you have coin.
           </DialogDescription>
         </div>
-        <Button variant="ghost" size="icon" onClick={onClose} className="h-6 w-6">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onNewConversation}
+            disabled={!canStartNewConversation}
+            aria-label="New conversation"
+            title="New conversation"
+            className="size-7 text-muted-foreground hover:text-foreground"
           >
-            <path d="m18 6-12 12" />
-            <path d="m6 6 12 12" />
-          </svg>
-        </Button>
+            <MessageSquarePlusIcon className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            aria-label="Close chat"
+            title="Close chat"
+            className="size-7"
+          >
+            <XIcon className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </div>
   )

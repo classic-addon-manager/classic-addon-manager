@@ -13,17 +13,19 @@ export const parseMarkdown = (content: string) => {
   })
 }
 
-export const copyToClipboard = async (text: string) => {
+export const copyToClipboard = async (text: string): Promise<boolean> => {
   try {
     await navigator.clipboard.writeText(text)
     toast({
       title: 'Success',
       description: 'Copied to clipboard',
     })
+    return true
   } catch {
     toast({
       title: 'Error',
       description: 'Failed to copy text',
     })
+    return false
   }
 }

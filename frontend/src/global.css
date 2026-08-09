@@ -261,119 +261,107 @@
 }
 
 /* AI Chat Dialog Styles */
-.chat-message,
-.chat-message * {
+.chat-prose,
+.chat-prose * {
   user-select: text !important;
 }
 
-.chat-message.assistant-message {
-  max-width: 100%;
+.chat-prose {
   overflow-wrap: break-word;
 }
 
 /* Markdown styling for assistant messages */
-.chat-message.assistant-message h1,
-.chat-message.assistant-message h2,
-.chat-message.assistant-message h3,
-.chat-message.assistant-message h4,
-.chat-message.assistant-message h5,
-.chat-message.assistant-message h6 {
+.chat-prose h1,
+.chat-prose h2,
+.chat-prose h3,
+.chat-prose h4,
+.chat-prose h5,
+.chat-prose h6 {
   @apply font-semibold mt-4 mb-2 text-foreground;
 }
 
-.chat-message.assistant-message h1 {
+.chat-prose h1 {
   @apply text-xl;
 }
 
-.chat-message.assistant-message h2 {
+.chat-prose h2 {
   @apply text-lg;
 }
 
-.chat-message.assistant-message h3 {
+.chat-prose h3 {
   @apply text-base;
 }
 
-.chat-message.assistant-message p {
+.chat-prose p {
   @apply mb-3 last:mb-0 leading-relaxed text-foreground;
 }
 
-.chat-message.assistant-message ul,
-.chat-message.assistant-message ol {
+.chat-prose ul,
+.chat-prose ol {
   @apply mb-3 pl-4 space-y-1;
 }
 
-.chat-message.assistant-message li {
+.chat-prose li {
   @apply text-foreground;
 }
 
-.chat-message.assistant-message ul li {
+.chat-prose ul li {
   @apply list-disc;
 }
 
-.chat-message.assistant-message ol li {
+.chat-prose ol li {
   @apply list-decimal;
 }
 
-.chat-message.assistant-message blockquote {
+.chat-prose blockquote {
   @apply border-l-4 border-primary/30 pl-4 py-2 my-3 bg-muted/30 rounded-r text-muted-foreground italic;
 }
 
-.chat-message.assistant-message a,
-.chat-message.assistant-message .wails-link {
+.chat-prose a,
+.chat-prose .wails-link {
   @apply text-blue-400 hover:text-blue-500 hover:underline transition-all cursor-pointer;
 }
 
-.chat-message.assistant-message code {
+.chat-prose code {
   @apply bg-gray-700 py-0.5 px-1 rounded-sm font-mono text-sm;
 }
 
-.chat-message.assistant-message code::before,
-.chat-message.assistant-message code::after {
+.chat-prose code::before,
+.chat-prose code::after {
   content: none !important;
 }
 
-.chat-message.assistant-message pre {
+.chat-prose pre {
   @apply bg-neutral-900 p-4 my-4 overflow-x-auto rounded-md font-mono text-muted-foreground border;
 }
 
-.chat-message.assistant-message pre code {
+.chat-prose pre code {
   @apply bg-transparent p-0 text-sm;
 }
 
-.chat-message.assistant-message strong {
+.chat-prose strong {
   @apply font-semibold text-foreground;
 }
 
-.chat-message.assistant-message em {
+.chat-prose em {
   @apply italic text-muted-foreground;
 }
 
-.chat-message.assistant-message hr {
+.chat-prose hr {
   @apply border-t border-border my-4;
 }
 
-.chat-message.assistant-message table {
+.chat-prose table {
   @apply w-full border-collapse border border-border my-3;
 }
 
-.chat-message.assistant-message th,
-.chat-message.assistant-message td {
+.chat-prose th,
+.chat-prose td {
   @apply border border-border px-3 py-2 text-left;
 }
 
-.chat-message.assistant-message th {
+.chat-prose th {
   @apply bg-muted font-semibold;
-}
-
-.copy-button {
-  @apply absolute top-1 right-1 p-1 rounded-md text-muted-foreground/60 hover:text-muted-foreground hover:bg-secondary/50 transition-all duration-150;
-  opacity: 0;
-  visibility: hidden;
-}
-
-.chat-message:hover .copy-button {
-  opacity: 1;
-  visibility: visible;
 }
 
 @keyframes streamCharFade {
@@ -387,7 +375,7 @@
   }
 }
 
-.chat-message .stream-fade-char {
+.chat-prose .stream-fade-char {
   display: inline-block;
   animation: streamCharFade 0.2s ease-out forwards;
 }
