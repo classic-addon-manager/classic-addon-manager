@@ -1,24 +1,16 @@
-import clsx from 'clsx'
-import { DownloadIcon, ThumbsDownIcon, ThumbsUpIcon, Trash2Icon } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef } from 'react'
 
-import { Button } from '@/components/ui/button.tsx'
-import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.tsx'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip.tsx'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
 import type { AddonManifest } from '@/lib/wails'
-import { useUserStore } from '@/stores/userStore.ts'
 
-import { ChangelogTab } from './RemoteAddonDialog/ChangelogTab.tsx'
-import { DependenciesTab } from './RemoteAddonDialog/DependenciesTab.tsx'
-import { DescriptionTab } from './RemoteAddonDialog/DescriptionTab.tsx'
+import { ActionBar } from './RemoteAddonDialog/ActionBar.tsx'
+import { ChangelogSection } from './RemoteAddonDialog/ChangelogSection.tsx'
+import { DescriptionSection } from './RemoteAddonDialog/DescriptionSection.tsx'
 import { Header } from './RemoteAddonDialog/Header.tsx'
-import { SupportTab } from './RemoteAddonDialog/SupportTab.tsx'
+import { RequiresSection } from './RemoteAddonDialog/RequiresSection.tsx'
+import { ScrollToTop } from './RemoteAddonDialog/ScrollToTop.tsx'
+import { StatBar } from './RemoteAddonDialog/StatBar.tsx'
+import { SupportSection } from './RemoteAddonDialog/SupportSection.tsx'
 import { useAddonActions } from './RemoteAddonDialog/useAddonActions.ts'
 import { Warning } from './RemoteAddonDialog/Warning.tsx'
 
@@ -39,7 +31,7 @@ export const RemoteAddonDialog = ({
   onAddonInstalled,
   onAddonUninstalled,
 }: RemoteAddonDialogProps) => {
-  const [currentTab, setCurrentTab] = useState<string>('description')
+  const scrollRef = useRef<HTMLDivElement>(null)
   const {
     release,
     readme,
@@ -48,6 +40,8 @@ export const RemoteAddonDialog = ({
     dependencies,
     isInstalled,
     isProcessing,
+    isLoadingRelease,
+    isLoadingReadme,
     checkInstalledStatus,
     handleInstall,
     handleUninstall,
@@ -65,19 +59,12 @@ export const RemoteAddonDialog = ({
     onAddonUninstalled,
   })
 
-  const { isAuthenticated } = useUserStore()
-
   useEffect(() => {
     if (!open) return
     checkInstalledStatus().catch(e => {
       console.error('Failed to check installed status:', e)
     })
   }, [open, checkInstalledStatus])
-
-  useEffect(() => {
-    // Reset to description tab when manifest changes
-    setCurrentTab('description')
-  }, [manifest])
 
   useEffect(() => {
     if (!open) {
@@ -98,189 +85,59 @@ export const RemoteAddonDialog = ({
     })
   }, [open, getMyRating, getReadme, getRelease, getDependencies])
 
-  const tabs = () => {
-    const baseTabs = [
-      { value: 'description', label: 'Description' },
-      { value: 'changelog', label: 'Changelog' },
-    ]
-    if (manifest.dependencies && manifest.dependencies.length > 0) {
-      baseTabs.push({ value: 'dependencies', label: `Dependencies (${dependencies.length})` })
-    }
-    if (manifest.kofi) {
-      baseTabs.push({ value: 'kofi', label: 'Support Author' })
-    }
-    return baseTabs
-  }
-
-  const RatingButtons = () => {
-    if (!isAuthenticated()) {
-      return (
-        <TooltipProvider>
-          <Tooltip delayDuration={100}>
-            <TooltipTrigger className="cursor-not-allowed opacity-50">
-              <span className="flex items-center gap-1 p-2">
-                <ThumbsUpIcon className="w-5 h-5 text-muted-foreground" />
-                <ThumbsDownIcon className="w-5 h-5 text-muted-foreground" />
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Log in to rate addons</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      )
-    }
-
-    return (
-      <>
-        <TooltipProvider>
-          <Tooltip delayDuration={100}>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={clsx(
-                  'h-8 w-9 transition-all duration-200 hover:scale-105 hover:bg-blue-100 dark:hover:bg-blue-900/30',
-                  rating === 1 && 'bg-blue-100 dark:bg-blue-900/30 border border-blue-500'
-                )}
-                onClick={() => rateAddon(1)}
-                aria-label="Like addon"
-              >
-                <ThumbsUpIcon
-                  className={clsx(
-                    'w-5 h-5',
-                    rating === 1
-                      ? 'text-blue-500'
-                      : 'text-muted-foreground group-hover:text-blue-500'
-                  )}
-                />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{rating === 1 ? 'Unlike' : 'Like'}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-        <TooltipProvider>
-          <Tooltip delayDuration={100}>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={clsx(
-                  'h-8 w-9 transition-all duration-200 hover:scale-105 hover:bg-red-100 dark:hover:bg-red-900/30',
-                  rating === -1 && 'bg-red-100 dark:bg-red-900/30 border border-red-500'
-                )}
-                onClick={() => rateAddon(-1)}
-                aria-label="Dislike addon"
-              >
-                <ThumbsDownIcon
-                  className={clsx(
-                    'w-5 h-5',
-                    rating === -1
-                      ? 'text-red-500'
-                      : 'text-muted-foreground group-hover:text-red-500'
-                  )}
-                />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{rating === -1 ? 'Remove Dislike' : 'Dislike'}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </>
-    )
-  }
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-0 min-w-[650px] md:max-w-[70svw] min-h-[500px] max-h-[90svh] lg:max-w-[850px] flex flex-col p-0">
-        <Header manifest={manifest} release={release} />
-        <Warning text={manifest.warning} />
+      <DialogContent
+        className="flex max-h-[90svh] min-h-[500px] w-full max-w-0 min-w-[650px] flex-col gap-0 overflow-hidden p-0 md:max-w-[70svw] lg:max-w-[850px]"
+        onOpenAutoFocus={event => {
+          // Focusing the first control would pop its tooltip open on every dialog open.
+          event.preventDefault()
+          if (event.currentTarget instanceof HTMLElement) {
+            event.currentTarget.focus({ preventScroll: true })
+          }
+        }}
+      >
+        <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
+          <div className="flex min-h-full flex-col">
+            <div className="flex-1">
+              <Header manifest={manifest} release={release} />
+              <Warning text={manifest.warning} />
+              <StatBar
+                manifest={manifest}
+                release={release}
+                isLoadingRelease={isLoadingRelease}
+              />
 
-        <div className="flex-1 flex flex-col min-h-0 overflow-y-hidden px-6 pb-0">
-          <Tabs
-            className="w-full flex flex-col min-h-0"
-            value={currentTab}
-            onValueChange={setCurrentTab}
-          >
-            <TabsList className="inline-flex items-center bg-transparent justify-start gap-x-4 w-full mb-4">
-              {tabs().map(tab => (
-                <TabsTrigger
-                  key={tab.value}
-                  value={tab.value}
-                  className="inline-flex items-center justify-center whitespace-nowrap px-3 py-2 text-sm font-medium transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary text-muted-foreground hover:text-primary"
-                >
-                  <span className="hover:text-foreground transition-colors">{tab.label}</span>
-                </TabsTrigger>
-              ))}
-            </TabsList>
-
-            <div className="flex-1 min-h-0 overflow-y-auto pb-2 pr-2 -mr-2">
-              <TabsContent
-                value="description"
-                className="max-w-none"
-                style={{ transform: 'translate(0)' }}
-              >
-                <DescriptionTab readme={readme} />
-              </TabsContent>
-
-              <TabsContent value="changelog" className="text-sm">
-                <ChangelogTab release={release} changelog={changelog} />
-              </TabsContent>
-
+              <DescriptionSection readme={readme} isLoading={isLoadingReadme} />
+              <ChangelogSection
+                release={release}
+                changelog={changelog}
+                isLoading={isLoadingRelease}
+              />
               {dependencies.length > 0 && (
-                <TabsContent value="dependencies">
-                  <DependenciesTab
-                    dependencies={dependencies}
-                    onDependencyClick={handleDependencyClick}
-                  />
-                </TabsContent>
+                <RequiresSection
+                  dependencies={dependencies}
+                  onDependencyClick={handleDependencyClick}
+                />
               )}
-              {manifest.kofi && (
-                <TabsContent value="kofi">
-                  <SupportTab manifest={manifest} />
-                </TabsContent>
-              )}
+              {manifest.kofi && <SupportSection manifest={manifest} />}
             </div>
-          </Tabs>
+
+            <ActionBar
+              manifest={manifest}
+              release={release}
+              rating={rating}
+              isInstalled={isInstalled}
+              isProcessing={isProcessing}
+              isLoadingRelease={isLoadingRelease}
+              onRate={rateAddon}
+              onInstall={handleInstall}
+              onUninstall={handleUninstall}
+            />
+          </div>
         </div>
 
-        <DialogFooter className="p-4 border-t shrink-0">
-          <div className="flex justify-between items-center w-full gap-4">
-            <div className="flex gap-1 items-center">
-              <RatingButtons />
-            </div>
-            <Button
-              variant={isInstalled ? 'destructive' : 'default'}
-              onClick={isInstalled ? handleUninstall : handleInstall}
-              disabled={(!isInstalled && !release) || isProcessing}
-              className="min-w-[100px]"
-              aria-label={
-                isInstalled
-                  ? `Uninstall ${manifest.alias}`
-                  : !release
-                    ? 'Addon not available for installation'
-                    : `Install ${manifest.alias}`
-              }
-            >
-              {isInstalled ? (
-                <>
-                  <Trash2Icon className="w-4 h-4 mr-2" />
-                  Uninstall
-                </>
-              ) : !release ? (
-                <>Not Available</>
-              ) : (
-                <>
-                  <DownloadIcon className="w-4 h-4 mr-2" />
-                  Install
-                </>
-              )}
-            </Button>
-          </div>
-        </DialogFooter>
+        <ScrollToTop scrollRef={scrollRef} />
       </DialogContent>
     </Dialog>
   )

@@ -1,141 +1,130 @@
 import { Browser } from '@wailsio/runtime'
-import { BugIcon, CalendarDaysIcon, GithubIcon, TagIcon, UserIcon } from 'lucide-react'
+import { BugIcon, GithubIcon } from 'lucide-react'
 import { useState } from 'react'
 
-import { Badge } from '@/components/ui/badge.tsx'
+import { Icon } from '@/components/addons/RemoteAddon/Icon.tsx'
 import { Button } from '@/components/ui/button.tsx'
-import { DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { formatToLocalTime } from '@/lib/utils.ts'
-import type { AddonManifest } from '@/lib/wails'
-import type { Release } from '@/lib/wails'
+import { DialogTitle } from '@/components/ui/dialog'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip.tsx'
+import { cn } from '@/lib/utils.ts'
+import type { AddonManifest, Release } from '@/lib/wails'
 
 interface HeaderProps {
   manifest: AddonManifest
   release: Release | null
 }
 
-const BannerImage = ({
-  bannerUrl,
-  hasBanner,
-  setHasBanner,
-  alias,
-}: {
-  bannerUrl: string | null
-  hasBanner: boolean
-  setHasBanner: (hasBanner: boolean) => void
-  alias: string
-}) => {
-  if (bannerUrl && hasBanner) {
-    return (
-      <img
-        className="absolute top-0 left-0 w-full h-full object-cover"
-        src={bannerUrl}
-        alt={`${alias} Banner`}
-        onError={() => setHasBanner(false)}
-      />
-    )
-  }
-  return null
-}
-
-const ReleaseInformation = ({ release }: { release: Release | null }) => {
-  if (!release) {
-    return <Badge variant="outline">No Release</Badge>
-  }
-
-  return (
-    <span className="inline-flex items-center gap-x-1.5">
-      <Badge variant="secondary" className="inline-flex items-center gap-1">
-        <TagIcon className="w-3 h-3" />
-        {release.tag_name}
-      </Badge>
-      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-        <CalendarDaysIcon className="w-3 h-3" />
-        {formatToLocalTime(release.published_at)}
-      </span>
-    </span>
-  )
-}
-
 export const Header = ({ manifest, release }: HeaderProps) => {
-  const [hasBanner, setHasBanner] = useState(true)
-  const bannerUrl =
-    'repo' in manifest && 'branch' in manifest
-      ? `https://raw.githubusercontent.com/${manifest.repo}/${manifest.branch}/banner.png`
-      : null
+  const bannerUrl = `https://raw.githubusercontent.com/${manifest.repo}/${manifest.branch}/banner.png`
+  const iconUrl = `https://raw.githubusercontent.com/${manifest.repo}/${manifest.branch}/icon.png`
 
-  if (!hasBanner) {
-    return (
-      <DialogHeader className="p-6 pb-4 shrink-0 border-b">
-        <DialogTitle className="text-2xl font-semibold mb-1">{manifest.alias}</DialogTitle>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm mb-3 text-muted-foreground">
-          <span className="inline-flex items-center gap-1">
-            <UserIcon className="w-3.5 h-3.5" />
-            <span className="font-normal text-foreground/90">{manifest.author}</span>
-          </span>
-          <ReleaseInformation release={release} />
-        </div>
-        <div className="flex flex-wrap gap-2 text-sm">
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-1"
-            onClick={() => Browser.OpenURL(`https://github.com/${manifest.repo}`)}
-          >
-            <GithubIcon className="w-4 h-4" />
-            View Code
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-1"
-            onClick={() => Browser.OpenURL(`https://github.com/${manifest.repo}/issues/new`)}
-          >
-            <BugIcon className="w-4 h-4" />
-            Report Issue
-          </Button>
-        </div>
-      </DialogHeader>
-    )
-  }
+  // Tracked by URL rather than as booleans so viewing a dependency resets both without an effect.
+  const [loadedBannerUrl, setLoadedBannerUrl] = useState<string | null>(null)
+  const [failedIconUrl, setFailedIconUrl] = useState<string | null>(null)
+  const hasBanner = loadedBannerUrl === bannerUrl
+  const hasIcon = failedIconUrl !== iconUrl
 
   return (
-    <div className="relative w-full h-48 overflow-hidden shrink-0 rounded-t-lg border-b dark:border-white/10">
-      <BannerImage
-        bannerUrl={bannerUrl}
-        hasBanner={hasBanner}
-        setHasBanner={setHasBanner}
-        alias={manifest.alias}
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/50 to-black/5"></div>
-      <div className="absolute bottom-0 left-0 right-0 p-6 pb-4 pt-16 text-white bg-gradient-to-t from-black/60 to-transparent">
-        <DialogTitle className="text-2xl font-semibold mb-1">{manifest.alias}</DialogTitle>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm mb-3 text-white/80">
-          <span className="inline-flex items-center gap-1">
-            <UserIcon className="w-3.5 h-3.5" />
-            <span className="font-normal text-white/90">{manifest.author}</span>
-          </span>
-          <ReleaseInformation release={release} />
+    <div className="shrink-0">
+      {/* Collapsed until the image resolves, so addons without a banner never expand and snap back. */}
+      <div
+        className={cn(
+          'relative w-full overflow-hidden transition-[height] duration-300 ease-out',
+          hasBanner ? 'h-40' : 'h-0'
+        )}
+      >
+        <img
+          className="absolute inset-0 h-full w-full object-cover"
+          src={bannerUrl}
+          alt={`${manifest.alias} banner`}
+          onLoad={() => setLoadedBannerUrl(bannerUrl)}
+          onError={() => setLoadedBannerUrl(null)}
+        />
+        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background via-background/70 to-transparent" />
+      </div>
+
+      <div
+        className={cn(
+          'relative z-10 ml-6 w-fit rounded-xl transition-[margin] duration-300 ease-out',
+          hasBanner ? '-mt-8 ring-2 ring-background' : 'mt-6'
+        )}
+      >
+        <div className="overflow-hidden rounded-xl ring-1 ring-primary/20">
+          <Icon
+            manifest={manifest}
+            iconUrl={iconUrl}
+            hasIcon={hasIcon}
+            onIconError={() => setFailedIconUrl(iconUrl)}
+            prominent
+          />
         </div>
-        <div className="flex flex-wrap gap-x-2 gap-y-2 text-sm">
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-1 border-white/50 text-white hover:bg-white/10"
-            onClick={() => Browser.OpenURL(`https://github.com/${manifest.repo}`)}
-          >
-            <GithubIcon className="w-4 h-4" />
-            View Code
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-1 border-white/50 text-white hover:bg-white/10"
-            onClick={() => Browser.OpenURL(`https://github.com/${manifest.repo}/issues/new`)}
-          >
-            <BugIcon className="w-4 h-4" />
-            Report Issue
-          </Button>
+      </div>
+
+      <div className="flex items-start justify-between gap-4 px-6 pt-3 pb-4">
+        <div className="min-w-0">
+          <DialogTitle className="truncate text-2xl font-semibold">{manifest.alias}</DialogTitle>
+          <p className="mt-1 truncate text-sm text-muted-foreground">by {manifest.author}</p>
+          {manifest.tags.length > 0 && (
+            <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+              {manifest.tags.map(tag => (
+                <span
+                  key={tag}
+                  className="rounded-full bg-muted/60 px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground ring-1 ring-inset ring-border/60"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex shrink-0 items-center gap-1.5">
+          {release && (
+            <span className="rounded-md bg-primary/10 px-2.5 py-1 font-mono text-xs text-primary ring-1 ring-inset ring-primary/20">
+              {release.tag_name}
+            </span>
+          )}
+          <TooltipProvider>
+            <Tooltip delayDuration={100}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground hover:text-primary"
+                  onClick={() => Browser.OpenURL(`https://github.com/${manifest.repo}`)}
+                  aria-label="View code on GitHub"
+                >
+                  <GithubIcon className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>View code</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <TooltipProvider>
+            <Tooltip delayDuration={100}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground hover:text-primary"
+                  onClick={() => Browser.OpenURL(`https://github.com/${manifest.repo}/issues/new`)}
+                  aria-label="Report an issue"
+                >
+                  <BugIcon className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Report issue</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </div>
     </div>

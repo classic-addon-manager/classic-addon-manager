@@ -13,7 +13,7 @@ export const Readme = ({ readme }: Props) => {
 
   const components = {
     a: ({ node, ...props }: ComponentProps<'a'> & { node?: unknown }) => (
-      <a className="text-blue-400 hover:text-blue-500 hover:underline transition-all" {...props} />
+      <a className="text-primary hover:text-primary/80 hover:underline transition-all" {...props} />
     ),
     h1: ({ node, ...props }: ComponentProps<'h1'> & { node?: unknown }) => (
       <h1 className="my-2 border-b border-gray-600 pb-2 text-3xl font-semibold" {...props} />

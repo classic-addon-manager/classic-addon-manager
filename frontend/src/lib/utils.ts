@@ -121,6 +121,22 @@ export function formatToLocalTime(
 }
 
 /**
+ * Formats a go date string to a human-readable date, without the time of day.
+ */
+export function formatToLocalDate(
+  dateString: string,
+  monthFormat: 'short' | 'long' = 'long'
+): string {
+  const date = new Date(dateString)
+  const options: Intl.DateTimeFormatOptions = {
+    day: '2-digit',
+    month: monthFormat,
+    year: 'numeric',
+  }
+  return date.toLocaleDateString(undefined, options)
+}
+
+/**
  * Takes a go date and determines how long ago it was in days.
  */
 export function daysAgo(dateString: string): number {

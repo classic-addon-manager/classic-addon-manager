@@ -25,13 +25,15 @@ export const useAddonActions = ({
   onAddonUninstalled,
 }: UseAddonActionsProps) => {
   const [release, setRelease] = useState<Release | null>(null)
-  const [readme, setReadme] = useState<string>('Loading description...')
-  const [changelog, setChangelog] = useState<string>('Loading changelog...')
+  const [readme, setReadme] = useState<string>('')
+  const [changelog, setChangelog] = useState<string>('')
   const [rating, setRating] = useState(0)
   const [dependencies, setDependencies] = useState<DependencyInfo[]>([])
   const { isAuthenticated } = useUserStore()
   const [isInstalled, setIsInstalled] = useState<boolean>(false)
   const [isProcessing, setIsProcessing] = useState<boolean>(false)
+  const [isLoadingRelease, setIsLoadingRelease] = useState<boolean>(true)
+  const [isLoadingReadme, setIsLoadingReadme] = useState<boolean>(true)
 
   const checkInstalledStatus = useCallback(async () => {
     const [installed] = await safeCall(LocalAddonService.IsInstalled(manifest.name))
@@ -171,45 +173,55 @@ export const useAddonActions = ({
   }
 
   const getRelease = useCallback(async () => {
-    const [r, err] = await safeCall<Release | null>(
-      RemoteAddonService.GetLatestRelease(manifest.name)
-    )
-    if (err) {
-      toast({
-        title: 'Error',
-        description: `Failed to fetch release information for ${manifest.name}`,
-        icon: AlertTriangleIcon,
-      })
-      console.error('Fetch release error: ', err)
-      setChangelog('Error loading change log')
-      return
-    }
-    setRelease(r)
-    if (r?.body) {
-      setChangelog(r.body)
-    } else {
-      setChangelog('No change log was provided')
+    setIsLoadingRelease(true)
+    try {
+      const [r, err] = await safeCall<Release | null>(
+        RemoteAddonService.GetLatestRelease(manifest.name)
+      )
+      if (err) {
+        toast({
+          title: 'Error',
+          description: `Failed to fetch release information for ${manifest.name}`,
+          icon: AlertTriangleIcon,
+        })
+        console.error('Fetch release error: ', err)
+        setChangelog('Error loading change log')
+        return
+      }
+      setRelease(r)
+      if (r?.body) {
+        setChangelog(r.body)
+      } else {
+        setChangelog('No change log was provided')
+      }
+    } finally {
+      setIsLoadingRelease(false)
     }
   }, [manifest.name])
 
   const getReadme = useCallback(async () => {
-    const [r, err] = await safeCall<Response>(
-      fetch(
-        `https://raw.githubusercontent.com/${manifest.repo}/refs/heads/${manifest.branch}/README.md`
+    setIsLoadingReadme(true)
+    try {
+      const [r, err] = await safeCall<Response>(
+        fetch(
+          `https://raw.githubusercontent.com/${manifest.repo}/refs/heads/${manifest.branch}/README.md`
+        )
       )
-    )
-    if (err) {
-      console.error('Error fetching README: ', err)
-      setReadme(manifest.description || 'Error loading description.')
-      return
-    }
-    if (!r || !r.ok) {
-      setReadme(manifest.description || 'No description provided.')
-      return
-    }
+      if (err) {
+        console.error('Error fetching README: ', err)
+        setReadme(manifest.description || 'Error loading description.')
+        return
+      }
+      if (!r || !r.ok) {
+        setReadme(manifest.description || 'No description provided.')
+        return
+      }
 
-    const text = await r.text()
-    setReadme(text)
+      const text = await r.text()
+      setReadme(text)
+    } finally {
+      setIsLoadingReadme(false)
+    }
   }, [manifest.repo, manifest.branch, manifest.description])
 
   const handleGetMyRating = useCallback(async () => {
@@ -276,6 +288,8 @@ export const useAddonActions = ({
     dependencies,
     isInstalled,
     isProcessing,
+    isLoadingRelease,
+    isLoadingReadme,
     checkInstalledStatus,
     handleInstall,
     handleUninstall,
