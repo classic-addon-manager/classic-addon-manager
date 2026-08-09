@@ -10,6 +10,11 @@ type AuthSessionState struct {
 	Token string `json:"token"`
 }
 
+type UIPreferences struct {
+	AccentColor   string `json:"accentColor"`
+	AddonViewMode string `json:"addonViewMode"`
+}
+
 type AddonManifest struct {
 	Name         string    `json:"name"`
 	Alias        string    `json:"alias"`

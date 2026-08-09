@@ -13,6 +13,11 @@ import (
 	"github.com/sqweek/dialog"
 )
 
+const (
+	KeyUIAccentColor   = "ui.accentcolor"
+	KeyUIAddonViewMode = "ui.addonviewmode"
+)
+
 func LoadConfig() error {
 	err := getOrCreateConfig()
 	if err != nil {

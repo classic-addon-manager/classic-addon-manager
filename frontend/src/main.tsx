@@ -5,10 +5,6 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import App from '@/App'
-import { applyAccentColor } from '@/lib/accentColors'
-import { usePreferencesStore } from '@/stores/preferencesStore'
-
-applyAccentColor(usePreferencesStore.getState().accentColor)
 
 // Load react-scan only in development mode
 if (import.meta.env.DEV) {

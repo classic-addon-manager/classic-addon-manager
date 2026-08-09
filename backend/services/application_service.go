@@ -139,6 +139,21 @@ func (s *ApplicationService) SettingsSetAutoDetectPath(enabled bool) {
 	config.SetBool("general.autodetectpath", enabled)
 }
 
+func (s *ApplicationService) GetUIPreferences() shared.UIPreferences {
+	return shared.UIPreferences{
+		AccentColor:   config.GetString(config.KeyUIAccentColor, ""),
+		AddonViewMode: config.GetString(config.KeyUIAddonViewMode, ""),
+	}
+}
+
+func (s *ApplicationService) SetAccentColor(id string) {
+	config.SetString(config.KeyUIAccentColor, id)
+}
+
+func (s *ApplicationService) SetAddonViewMode(mode string) {
+	config.SetString(config.KeyUIAddonViewMode, mode)
+}
+
 func (s *ApplicationService) GetConfig() map[string]any {
 	return config.GetAll()
 }
