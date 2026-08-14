@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { toast } from '@/components/ui/toast'
 import { repoGetManifest } from '@/lib/repo.ts'
 import { formatToLocalTime, safeCall } from '@/lib/utils'
@@ -80,8 +81,8 @@ export const LocalAddonUpdateDialog = ({ addon, release }: Props) => {
 
   return (
     <Dialog onOpenChange={setOpen} open={open}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[85vh] flex-col overflow-hidden sm:max-w-md">
+        <DialogHeader className="shrink-0">
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/15 ring-1 ring-primary/25">
               <ArrowUpCircle className="w-5 h-5 text-primary" />
@@ -93,7 +94,7 @@ export const LocalAddonUpdateDialog = ({ addon, release }: Props) => {
           </div>
         </DialogHeader>
 
-        <div className="flex items-center justify-center gap-2 rounded-lg border border-border/60 bg-muted/40 px-4 py-3">
+        <div className="flex shrink-0 items-center justify-center gap-2 rounded-lg border border-border/60 bg-muted/40 px-4 py-3">
           <span className="rounded-md bg-muted px-2.5 py-1 text-sm font-mono text-muted-foreground">
             {addon.version}
           </span>
@@ -103,24 +104,26 @@ export const LocalAddonUpdateDialog = ({ addon, release }: Props) => {
           </span>
         </div>
 
-        <div className="space-y-2">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
           {release?.published_at && (
-            <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+            <div className="inline-flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
               <CalendarDays className="w-3.5 h-3.5" />
               <span>Released {formatToLocalTime(release.published_at)}</span>
             </div>
           )}
 
           {hasChangelog ? (
-            <div className="max-h-48 overflow-y-auto rounded-lg border border-border/60 bg-card p-3 text-sm">
-              <Readme readme={changelog} />
-            </div>
+            <ScrollArea className="h-64 min-h-0 min-w-0 max-h-full rounded-lg border border-border/60 bg-card">
+              <div className="max-w-full p-3 text-sm break-words">
+                <Readme readme={changelog} />
+              </div>
+            </ScrollArea>
           ) : (
             <p className="text-sm text-muted-foreground">No release notes provided.</p>
           )}
         </div>
 
-        <DialogFooter className="gap-2">
+        <DialogFooter className="shrink-0 gap-2">
           <Button variant="ghost" onClick={() => setOpen(false)} disabled={isUpdating}>
             Later
           </Button>

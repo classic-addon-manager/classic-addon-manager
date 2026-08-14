@@ -69,10 +69,13 @@ export const Readme = ({ readme }: Props) => {
       <p className="my-2" {...props} />
     ),
     ul: ({ node, ...props }: ComponentProps<'ul'> & { node?: unknown }) => (
-      <ul className="my-5 list-disc list-inside" {...props} />
+      <ul className="my-5 list-disc list-outside space-y-1 pl-5" {...props} />
     ),
     ol: ({ node, ...props }: ComponentProps<'ol'> & { node?: unknown }) => (
-      <ol className="my-5 list-decimal list-inside" {...props} />
+      <ol className="my-5 list-decimal list-outside space-y-1 pl-5" {...props} />
+    ),
+    li: ({ node, ...props }: ComponentProps<'li'> & { node?: unknown }) => (
+      <li className="break-words" {...props} />
     ),
   }
 
