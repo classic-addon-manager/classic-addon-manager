@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { toast } from '@/components/ui/toast.tsx'
+import { notifyDependencyResult } from '@/lib/notifyDependencyResult'
 import { cn } from '@/lib/utils'
 import type { Addon, Release } from '@/lib/wails'
 import { RemoteAddonService } from '@/lib/wails'
@@ -253,17 +254,18 @@ export const LocalAddonVersionSelectDialog = ({ addon }: Props) => {
       if (!manifest) {
         throw new Error('Failed to fetch addon manifest')
       }
-      const didInstall = await update(manifest, selectedVersion)
-      if (didInstall) {
-        toast({
-          title: 'Success',
-          description: `Installed ${addon.alias} version ${selectedVersion}`,
-        })
-        setOpen(false)
-        setAddon(null)
-      } else {
-        throw new Error('Installation failed')
+      const result = await update(manifest, selectedVersion)
+
+      if (!notifyDependencyResult(result, `Failed to install ${addon.alias}`)) {
+        return
       }
+
+      toast({
+        title: 'Success',
+        description: `Installed ${addon.alias} version ${selectedVersion}`,
+      })
+      setOpen(false)
+      setAddon(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to install')
     } finally {

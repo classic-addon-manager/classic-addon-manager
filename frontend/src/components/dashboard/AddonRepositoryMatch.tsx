@@ -4,6 +4,7 @@ import usePromise from 'react-promise-suspense'
 
 import { Button } from '@/components/ui/button'
 import { toast } from '@/components/ui/toast'
+import { notifyDependencyResult } from '@/lib/notifyDependencyResult'
 import { repoGetManifest } from '@/lib/repo'
 import { safeCall } from '@/lib/utils.ts'
 import type { AddonManifest } from '@/lib/wails'
@@ -22,7 +23,7 @@ const fetchData = async (name: string) => {
 
 export const AddonRepositoryMatch = ({ name }: { name: string }) => {
   const data = usePromise(fetchData, [name])
-  const { install, performBulkUpdateCheck } = useAddonStore()
+  const { installWithDependencies } = useAddonStore()
   const [, setDialogOpen] = useAtom(isAddonDialogOpenAtom)
   const [, setSelectedAddon] = useAtom(selectedAddonAtom)
 
@@ -42,9 +43,23 @@ export const AddonRepositoryMatch = ({ name }: { name: string }) => {
       return
     }
 
-    const [, installErr] = await safeCall<boolean>(install(manifest, 'latest'))
-    if (installErr) {
-      const errorString = String(installErr)
+    try {
+      const result = await installWithDependencies(manifest, 'latest')
+
+      if (!notifyDependencyResult(result, `Failed to match addon "${manifest.name}"`)) {
+        return
+      }
+
+      toast({
+        icon: CheckIcon,
+        title: 'Addon Matched',
+        description: `"${manifest.alias}" is now managed by Classic Addon Manager.`,
+      })
+
+      setDialogOpen(false)
+      setSelectedAddon(null)
+    } catch (err: unknown) {
+      const errorString = err instanceof Error ? err.message : String(err)
       if (errorString.includes('no release found')) {
         toast({
           icon: AlertTriangleIcon,
@@ -52,26 +67,14 @@ export const AddonRepositoryMatch = ({ name }: { name: string }) => {
           description: `No releases found for addon "${manifest.name}".`,
         })
       } else {
-        console.error('Failed to install addon during match:', installErr)
+        console.error('Failed to install addon during match:', err)
         toast({
           icon: AlertTriangleIcon,
           title: 'Error',
           description: `Failed to match addon "${manifest.name}": ${errorString.substring(0, 100)}`,
         })
       }
-      return
     }
-
-    await performBulkUpdateCheck()
-
-    toast({
-      icon: CheckIcon,
-      title: 'Addon Matched',
-      description: `"${manifest.alias}" is now managed by Classic Addon Manager.`,
-    })
-
-    setDialogOpen(false)
-    setSelectedAddon(null)
   }
 
   return (

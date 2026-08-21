@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { toast } from '@/components/ui/toast'
+import { notifyDependencyResult } from '@/lib/notifyDependencyResult'
 import { repoGetManifest } from '@/lib/repo.ts'
 import { formatToLocalTime, safeCall } from '@/lib/utils'
 import type { Addon, Release } from '@/lib/wails'
@@ -49,7 +50,7 @@ export const LocalAddonUpdateDialog = ({ addon, release }: Props) => {
       return await update(manifest, release.tag_name)
     }
 
-    const [didInstall, err] = await safeCall<boolean>(updateOperation())
+    const [result, err] = await safeCall(updateOperation())
 
     if (err) {
       if (err.message.includes('not found')) {
@@ -68,14 +69,19 @@ export const LocalAddonUpdateDialog = ({ addon, release }: Props) => {
       return
     }
 
-    if (didInstall) {
-      toast({
-        title: 'Addon updated',
-        description: `${addon.alias} was updated to ${release.tag_name}`,
-        icon: ArrowUpCircle,
-      })
-      setOpen(false)
+    const updateResult = result!
+
+    if (!notifyDependencyResult(updateResult, `Failed to update ${addon.alias}`)) {
+      setIsUpdating(false)
+      return
     }
+
+    toast({
+      title: 'Addon updated',
+      description: `${addon.alias} was updated to ${release.tag_name}`,
+      icon: ArrowUpCircle,
+    })
+    setOpen(false)
     setIsUpdating(false)
   }
 

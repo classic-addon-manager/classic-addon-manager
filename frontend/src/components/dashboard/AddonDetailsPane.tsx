@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { toast } from '@/components/ui/toast'
+import { notifyDependencyResult } from '@/lib/notifyDependencyResult'
 import { repoGetManifest } from '@/lib/repo'
 import { formatToLocalTime, safeCall } from '@/lib/utils'
 import type { Addon, AddonManifest } from '@/lib/wails'
@@ -60,7 +61,8 @@ const DetailsLoading = () => (
 )
 
 const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPaneProps) => {
-  const { install, uninstall, unmanage, latestReleasesMap, isCheckingForUpdates } = useAddonStore()
+  const { installWithDependencies, uninstall, unmanage, latestReleasesMap, isCheckingForUpdates } =
+    useAddonStore()
   const { open: updateDialogOpen, setOpen: setUpdateDialogOpen } = useUpdateDialogStore()
   const [readme, setReadme] = useState<string>('loading')
 
@@ -121,14 +123,34 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
       return
     }
 
-    const didInstall: boolean = await install(manifest, 'latest')
-    if (!didInstall) return
+    try {
+      const result = await installWithDependencies(manifest, 'latest')
 
-    toast({
-      title: 'Addon reinstalled',
-      description: `${addon.alias} was reinstalled`,
-      icon: CheckIcon,
-    })
+      if (!notifyDependencyResult(result, `Failed to reinstall ${addon.alias}`)) {
+        return
+      }
+
+      toast({
+        title: 'Addon reinstalled',
+        description: `${addon.alias} was reinstalled`,
+        icon: CheckIcon,
+      })
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      if (message.includes('no release found')) {
+        toast({
+          title: 'Error',
+          description: 'No release found for this addon',
+          icon: AlertTriangleIcon,
+        })
+      } else {
+        toast({
+          title: 'Error',
+          description: `Failed to reinstall addon: ${message.substring(0, 100)}`,
+        })
+      }
+      console.error('Reinstall error:', err)
+    }
   }
 
   const handleUninstall = async () => {

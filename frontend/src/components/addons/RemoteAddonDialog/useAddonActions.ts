@@ -3,8 +3,9 @@ import { useCallback, useState } from 'react'
 
 import { toast } from '@/components/ui/toast.tsx'
 import { getMyRating, rateAddon } from '@/lib/addon.ts'
+import { notifyDependencyResult } from '@/lib/notifyDependencyResult'
 import { safeCall } from '@/lib/utils.ts'
-import type { AddonInstallStatus, AddonManifest, DependencyInfo, Release } from '@/lib/wails'
+import type { AddonManifest, DependencyInfo, Release } from '@/lib/wails'
 import { LocalAddonService, RemoteAddonService } from '@/lib/wails'
 import { useAddonStore } from '@/stores/addonStore.ts'
 import { useUserStore } from '@/stores/userStore.ts'
@@ -62,10 +63,6 @@ export const useAddonActions = ({
 
     setIsProcessing(true)
     let didInstall = false
-    const refreshAddonStore = async () => {
-      await useAddonStore.getState().updateInstalledAddons()
-      await useAddonStore.getState().performBulkUpdateCheck()
-    }
 
     try {
       const [installResult, installErr] = await safeCall(
@@ -75,48 +72,13 @@ export const useAddonActions = ({
         throw installErr ?? new Error('Install failed')
       }
 
-      if (installResult.dependencyWarnings.length > 0) {
-        toast({
-          title: 'Dependency resolution warning',
-          description: installResult.dependencyWarnings[0],
-          icon: AlertTriangleIcon,
-        })
-      }
-
-      const installedDependencies = installResult.dependencies.filter(
-        (dep: AddonInstallStatus) => dep.success && !dep.skipped
-      )
-      installedDependencies.forEach((dep: AddonInstallStatus) => {
-        toast({
-          title: 'Dependency installed',
-          description: `${dep.alias} installed successfully`,
-        })
-      })
-
-      if (!installResult.success) {
-        await refreshAddonStore()
-        const failedDeps = installResult.dependencies.filter(
-          (dep: AddonInstallStatus) => !dep.success
-        )
-        if (failedDeps.length > 0) {
-          toast({
-            title: 'Dependency installation failed',
-            description: `Failed: ${failedDeps.map(dep => dep.alias || dep.name).join(', ')}`,
-            icon: AlertTriangleIcon,
-          })
-        } else {
-          const msg = installResult.mainAddon.error || `Failed to install ${manifest.alias}`
-          toast({
-            title: 'Error',
-            description: msg,
-            icon: AlertTriangleIcon,
-          })
-        }
+      if (!notifyDependencyResult(installResult, `Failed to install ${manifest.alias}`)) {
+        await useAddonStore.getState().refreshAfterAddonChange()
         return
       }
 
       didInstall = true
-      await refreshAddonStore()
+      await useAddonStore.getState().refreshAfterAddonChange()
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err)
 

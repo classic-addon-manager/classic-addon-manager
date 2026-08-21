@@ -13,34 +13,37 @@ type RemoteAddonService struct{}
 
 const maxDependencyDepth = 10
 
+// installAddon is the inner installer used by InstallAddon. Tests replace it
+// so (false, nil) can be stubbed without HTTP or the user addon dir.
+var installAddon = addon.InstallAddon
+
 func (s *RemoteAddonService) GetAddonManifest() []shared.AddonManifest {
 	return addon.GetAddonManifest()
 }
 
 func (s *RemoteAddonService) InstallAddon(ad shared.AddonManifest, version string) (bool, error) {
-	_, err := addon.InstallAddon(ad, version)
+	ok, err := installAddon(ad, version)
 	if err != nil {
 		logger.Error("Error installing addon:", err)
 		return false, err
 	}
 
-	err = addon.AddToAddonsTxt(ad.Name)
-	if err != nil {
-		logger.Error(ad.Name+" - Error adding addon to addons.txt: ", err)
-		return false, err
-	}
-
-	return true, nil
+	return ok, nil
 }
 
-func (s *RemoteAddonService) UpdateAddon(ad shared.AddonManifest, version string) (bool, error) {
-	_, err := addon.UpdateAddon(ad, version)
+func (s *RemoteAddonService) UpdateAddon(ad shared.AddonManifest, version string) (shared.InstallWithDependenciesResult, error) {
+	resolution, err := s.ResolveDependencies(ad)
 	if err != nil {
-		logger.Error("Error updating addon:", err)
-		return false, err
+		return shared.InstallWithDependenciesResult{}, err
 	}
 
-	return true, nil
+	return applyDependenciesThenParent(
+		ad,
+		resolution,
+		s.InstallAddon,
+		func() (bool, error) { return addon.UpdateAddon(ad, version) },
+		addon.SortAddonsTxt,
+	), nil
 }
 
 func (s *RemoteAddonService) GetLatestRelease(name string) (api.Release, error) {
@@ -155,14 +158,32 @@ func (s *RemoteAddonService) ResolveDependencies(ad shared.AddonManifest) (share
 }
 
 func (s *RemoteAddonService) InstallAddonWithDependencies(ad shared.AddonManifest, version string) (shared.InstallWithDependenciesResult, error) {
-	resolutionResult, err := s.ResolveDependencies(ad)
+	resolution, err := s.ResolveDependencies(ad)
 	if err != nil {
 		return shared.InstallWithDependenciesResult{}, err
 	}
 
+	return applyDependenciesThenParent(
+		ad,
+		resolution,
+		s.InstallAddon,
+		func() (bool, error) { return s.InstallAddon(ad, version) },
+		addon.SortAddonsTxt,
+	), nil
+}
+
+// installDep, parent, and sort failures are recorded on the returned result.
+// Only ResolveDependencies in the callers returns a Go error.
+func applyDependenciesThenParent(
+	ad shared.AddonManifest,
+	resolution shared.DependencyResolutionResult,
+	installDep func(shared.AddonManifest, string) (bool, error),
+	parent func() (bool, error),
+	sortAddons func() error,
+) shared.InstallWithDependenciesResult {
 	result := shared.InstallWithDependenciesResult{
 		Success:            false,
-		DependencyWarnings: resolutionResult.Errors,
+		DependencyWarnings: resolution.Errors,
 		Dependencies:       []shared.AddonInstallStatus{},
 		MainAddon: shared.AddonInstallStatus{
 			Name:  ad.Name,
@@ -170,7 +191,7 @@ func (s *RemoteAddonService) InstallAddonWithDependencies(ad shared.AddonManifes
 		},
 	}
 
-	for _, dep := range resolutionResult.Dependencies {
+	for _, dep := range resolution.Dependencies {
 		status := shared.AddonInstallStatus{
 			Name:  dep.Manifest.Name,
 			Alias: dep.Manifest.Alias,
@@ -187,7 +208,7 @@ func (s *RemoteAddonService) InstallAddonWithDependencies(ad shared.AddonManifes
 			continue
 		}
 
-		ok, installErr := s.InstallAddon(dep.Manifest, "latest")
+		ok, installErr := installDep(dep.Manifest, "latest")
 		if installErr != nil || !ok {
 			status.Success = false
 			if installErr != nil {
@@ -197,31 +218,31 @@ func (s *RemoteAddonService) InstallAddonWithDependencies(ad shared.AddonManifes
 			}
 			result.Dependencies = append(result.Dependencies, status)
 			result.MainAddon.Error = "dependency installation failed"
-			return result, nil
+			return result
 		}
 
 		status.Success = true
 		result.Dependencies = append(result.Dependencies, status)
 	}
 
-	ok, installErr := s.InstallAddon(ad, version)
-	if installErr != nil || !ok {
+	ok, parentErr := parent()
+	if parentErr != nil || !ok {
 		result.MainAddon.Success = false
-		if installErr != nil {
-			result.MainAddon.Error = installErr.Error()
+		if parentErr != nil {
+			result.MainAddon.Error = parentErr.Error()
 		} else {
 			result.MainAddon.Error = "installation failed"
 		}
-		return result, nil
+		return result
 	}
 
 	result.MainAddon.Success = true
 	result.Success = true
 
-	if sortErr := addon.SortAddonsTxt(); sortErr != nil {
+	if sortErr := sortAddons(); sortErr != nil {
 		result.DependencyWarnings = append(result.DependencyWarnings, sortErr.Error())
 		result.MainAddon.Error = sortErr.Error()
 	}
 
-	return result, nil
+	return result
 }
