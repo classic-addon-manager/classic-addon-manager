@@ -6,14 +6,12 @@ require (
 	github.com/Microsoft/go-winio v0.6.2
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/spf13/viper v1.21.0
-	github.com/sqweek/dialog v0.0.0-20240226140203-065105509627
 	github.com/wailsapp/wails/v3 v3.0.0-beta.5
 	go.uber.org/zap v1.28.0
 	golang.org/x/sys v0.45.0
 )
 
 require (
-	github.com/TheTitanrain/w32 v0.0.0-20200114052255-2654d97dbd3d // indirect
 	github.com/adrg/xdg v0.5.3 // indirect
 	github.com/coder/websocket v1.8.14 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect

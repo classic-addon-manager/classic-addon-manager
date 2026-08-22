@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 
+import { toast } from '@/components/ui/toast'
+import { safeCall } from '@/lib/utils'
 import { ApplicationService } from '@/lib/wails'
 
 interface Settings {
@@ -31,7 +33,14 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   // Actions
   setAutoPathDetection: (enabled: boolean) => {
     set({ autoPathDetection: enabled })
-    ApplicationService.SettingsSetAutoDetectPath(enabled)
+    void safeCall(ApplicationService.SettingsSetAutoDetectPath(enabled)).then(([, err]) => {
+      if (err) {
+        toast({
+          title: 'Failed to save settings',
+          description: err.message,
+        })
+      }
+    })
   },
 
   setAACPath: (path: string) => {

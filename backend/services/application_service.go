@@ -2,9 +2,9 @@ package services
 
 import (
 	"ClassicAddonManager/backend/api"
+	"ClassicAddonManager/backend/appstate"
 	"ClassicAddonManager/backend/auth"
 	"ClassicAddonManager/backend/config"
-	"ClassicAddonManager/backend/appstate"
 	"ClassicAddonManager/backend/file"
 	"ClassicAddonManager/backend/logger"
 	"ClassicAddonManager/backend/shared"
@@ -130,13 +130,15 @@ func (s *ApplicationService) SelectAndValidateDocsPath(title string) (string, er
 		return "", fmt.Errorf("invalid AAC documents path, try a different path")
 	}
 
-	config.SetString("general.aacpath", path)
+	if err := config.SetString("general.aacpath", path); err != nil {
+		return "", err
+	}
 
 	return path, nil
 }
 
-func (s *ApplicationService) SettingsSetAutoDetectPath(enabled bool) {
-	config.SetBool("general.autodetectpath", enabled)
+func (s *ApplicationService) SettingsSetAutoDetectPath(enabled bool) error {
+	return config.SetBool("general.autodetectpath", enabled)
 }
 
 func (s *ApplicationService) GetUIPreferences() shared.UIPreferences {
@@ -146,12 +148,12 @@ func (s *ApplicationService) GetUIPreferences() shared.UIPreferences {
 	}
 }
 
-func (s *ApplicationService) SetAccentColor(id string) {
-	config.SetString(config.KeyUIAccentColor, id)
+func (s *ApplicationService) SetAccentColor(id string) error {
+	return config.SetString(config.KeyUIAccentColor, id)
 }
 
-func (s *ApplicationService) SetAddonViewMode(mode string) {
-	config.SetString(config.KeyUIAddonViewMode, mode)
+func (s *ApplicationService) SetAddonViewMode(mode string) error {
+	return config.SetString(config.KeyUIAddonViewMode, mode)
 }
 
 func (s *ApplicationService) GetConfig() map[string]any {

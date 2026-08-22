@@ -17,7 +17,9 @@ import (
 )
 
 func InstallAddon(manifest shared.AddonManifest, version string) (bool, error) {
-	ensureAddonsTxtExists()
+	if err := ensureAddonsTxtExists(); err != nil {
+		return false, err
+	}
 
 	logger.Info("Installing addon:" + manifest.Name + " from " + manifest.Repo + " version: " + version)
 
@@ -44,7 +46,9 @@ func InstallAddon(manifest shared.AddonManifest, version string) (bool, error) {
 
 // UpdateAddon updates an existing addon by replacing all files, preserving an existing .data folder or creating it from the release if missing.
 func UpdateAddon(manifest shared.AddonManifest, version string) (bool, error) {
-	ensureAddonsTxtExists()
+	if err := ensureAddonsTxtExists(); err != nil {
+		return false, err
+	}
 
 	logger.Info("Updating addon:" + manifest.Name + " from " + manifest.Repo + " version: " + version)
 
@@ -98,11 +102,15 @@ func GetAddonManifest() []shared.AddonManifest {
 	return manifests
 }
 
-func ensureAddonsTxtExists() {
+func ensureAddonsTxtExists() error {
 	if !file.FileExists(filepath.Join(config.GetAddonDir(), "addons.txt")) {
 		logger.Info("addons.txt not found in AAC path, creating it.")
-		CreateAddonsTxt()
+		if err := CreateAddonsTxt(); err != nil {
+			logger.Error("Could not create addons.txt in AAC path:", err)
+			return err
+		}
 	}
+	return nil
 }
 
 func buildDownloadURL(manifest shared.AddonManifest, version string) string {

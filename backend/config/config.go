@@ -10,13 +10,14 @@ import (
 	"strconv"
 
 	"github.com/spf13/viper"
-	"github.com/sqweek/dialog"
 )
 
 const (
 	KeyUIAccentColor   = "ui.accentcolor"
 	KeyUIAddonViewMode = "ui.addonviewmode"
 )
+
+var ErrAACNotDetected = errors.New("ArcheAge Classic installation was not detected")
 
 func LoadConfig() error {
 	err := getOrCreateConfig()
@@ -31,12 +32,17 @@ func LoadConfig() error {
 
 	path, err := detectAACPath()
 	if err != nil {
-		dialog.Message("Could not detect ArcheAge Classic installation: %s", err.Error()).Title("Classic Addon Manager Error").Error()
-		return err
+		// Do not leave a previously detected path active when automatic detection
+		// fails. This is intentionally not persisted so a temporary startup miss
+		// does not overwrite the user's config file.
+		viper.Set("general.aacpath", "")
+		return fmt.Errorf("%w: %v", ErrAACNotDetected, err)
 	}
 
 	aacPath := filepath.Join(path, "Documents")
-	SetString("general.aacpath", aacPath)
+	if err := SetString("general.aacpath", aacPath); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -182,7 +188,7 @@ func GetCacheDir() string {
 func GetDataDir() string {
 	configDir, err := os.UserConfigDir()
 	if err != nil {
-		dialog.Message("could not get user config directory: %s", err.Error()).Title("Classic Addon Manager Error").Error()
+		logger.Error("Could not get user config directory", err)
 		return ""
 	}
 
@@ -193,7 +199,7 @@ func GetDataDir() string {
 		if os.IsNotExist(err) {
 			err := os.Mkdir(managerDir, 0700)
 			if err != nil {
-				dialog.Message("could not create config directory: %s", err.Error()).Title("Classic Addon Manager Error").Error()
+				logger.Error("Could not create config directory", err)
 				return ""
 			}
 			logger.Info(fmt.Sprintf("Created config directory: %s", managerDir))
@@ -206,7 +212,7 @@ func GetDataDir() string {
 func GetAACDir() string {
 	path := viper.GetString("general.aacpath")
 	if path == "" {
-		dialog.Message("Path to AAC is empty, go to settings to override automatic detection and choose your path instead.").Title("Classic Addon Manager Error").Error()
+		logger.Error("Path to AAC is empty", errors.New("override automatic detection and choose a path in settings"))
 	}
 	return path
 }
@@ -222,15 +228,15 @@ func GetBool(option string, defaultValue bool) bool {
 	return viper.GetBool(option)
 }
 
-func SetBool(option string, value bool) {
+func SetBool(option string, value bool) error {
 	viper.Set(option, value)
 	err := SaveConfig()
 	if err != nil {
-		dialog.Message("Could not save config: %s", err.Error()).Title("Classic Addon Manager Error").Error()
 		logger.Error("Could not save config: ", err)
-		return
+		return err
 	}
 	logger.Info("Config update: " + option + " -> " + fmt.Sprintf("%v", value))
+	return nil
 }
 
 func GetString(option string, defaultValue string) string {
@@ -240,15 +246,15 @@ func GetString(option string, defaultValue string) string {
 	return viper.GetString(option)
 }
 
-func SetString(option string, value string) {
+func SetString(option string, value string) error {
 	viper.Set(option, value)
 	err := SaveConfig()
 	if err != nil {
-		dialog.Message("could not save config: %s", err.Error()).Title("Classic Addon Manager Error").Error()
 		logger.Error("Could not save config: ", err)
-		return
+		return err
 	}
 	logger.Info("Config update: " + option + " to " + value)
+	return nil
 }
 
 func GetAll() map[string]any {

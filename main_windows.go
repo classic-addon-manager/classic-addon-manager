@@ -4,6 +4,7 @@ package main
 
 import (
 	"ClassicAddonManager/backend/logger"
+	"ClassicAddonManager/backend/nativeui"
 	"fmt"
 	"net"
 	"net/url"
@@ -11,7 +12,6 @@ import (
 	"time"
 
 	"github.com/Microsoft/go-winio"
-	"github.com/sqweek/dialog"
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"golang.org/x/sys/windows/registry"
 )
@@ -27,7 +27,7 @@ func checkWebView2Installation() {
 		err := fmt.Errorf("failed to open registry key: %w", err)
 		errorMsg := "Microsoft Edge WebView2 Runtime is not installed. Please install it from https://developer.microsoft.com/en-us/microsoft-edge/webview2"
 		logger.Error(errorMsg, err)
-		dialog.Message("%s", errorMsg).Title("Classic Addon Manager Error").Error()
+		nativeui.ShowFatalError(fatalErrorTitle, errorMsg)
 		logger.Sync()
 		os.Exit(1)
 	}
@@ -40,7 +40,7 @@ func checkWebView2Installation() {
 		err := fmt.Errorf("failed to read 'pv' value: %w", err)
 		errorMsg := "Microsoft Edge WebView2 Runtime is not properly installed. The 'pv' registry key is missing."
 		logger.Error(errorMsg, err)
-		dialog.Message("%s", errorMsg).Title("Classic Addon Manager Error").Error()
+		nativeui.ShowFatalError(fatalErrorTitle, errorMsg)
 		logger.Sync()
 		os.Exit(1)
 	}

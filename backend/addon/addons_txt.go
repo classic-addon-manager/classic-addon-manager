@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 	"slices"
 	"sync"
-
-	"github.com/sqweek/dialog"
 )
 
 var (
@@ -74,14 +72,14 @@ func AddToAddonsTxt(addonName string) error {
 	return nil
 }
 
-func CreateAddonsTxt() {
+func CreateAddonsTxt() error {
 	err := file.WriteLines(filepath.Join(config.GetAddonDir(), "addons.txt"), []string{})
 	if err != nil {
-		dialog.Message("Error occurred while creating addons.txt: %s", err.Error()).Title("Classic Addon Manager Error").Error()
-		logger.Fatal("Error creating addons.txt:", err)
-		return
+		logger.Error("Error creating addons.txt:", err)
+		return err
 	}
 	setInstalledAddonNames([]string{})
+	return nil
 }
 
 func RemoveFromAddonsTxt(addonName string) error {

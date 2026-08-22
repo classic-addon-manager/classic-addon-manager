@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 
 import type { AddonViewMode } from '@/components/addons/types'
+import { toast } from '@/components/ui/toast'
 import {
   ACCENT_PRESETS,
   type AccentColorId,
@@ -11,6 +12,16 @@ import { safeCall } from '@/lib/utils'
 import { ApplicationService } from '@/lib/wails'
 
 const LEGACY_STORAGE_KEY = 'ui-preferences'
+
+const savePreference = async (operation: Promise<unknown>) => {
+  const [, err] = await safeCall(operation)
+  if (err) {
+    toast({
+      title: 'Failed to save preferences',
+      description: err.message,
+    })
+  }
+}
 
 interface PreferencesState {
   addonViewMode: AddonViewMode
@@ -67,13 +78,13 @@ export const usePreferencesStore = create<PreferencesState>((set, get) => ({
 
   setAddonViewMode: mode => {
     set({ addonViewMode: mode })
-    void safeCall(ApplicationService.SetAddonViewMode(mode))
+    void savePreference(ApplicationService.SetAddonViewMode(mode))
   },
 
   setAccentColor: id => {
     set({ accentColor: id })
     applyAccentColor(id)
-    void safeCall(ApplicationService.SetAccentColor(id))
+    void savePreference(ApplicationService.SetAccentColor(id))
   },
 
   hydrate: async () => {
@@ -112,10 +123,10 @@ export const usePreferencesStore = create<PreferencesState>((set, get) => ({
       // retries on the next launch instead of dropping the legacy preference.
       if (!err) {
         if (migratedAccent) {
-          void safeCall(ApplicationService.SetAccentColor(accentColor))
+          void savePreference(ApplicationService.SetAccentColor(accentColor))
         }
         if (migratedViewMode) {
-          void safeCall(ApplicationService.SetAddonViewMode(addonViewMode))
+          void savePreference(ApplicationService.SetAddonViewMode(addonViewMode))
         }
 
         if (legacy.existed) {
