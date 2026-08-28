@@ -12,32 +12,6 @@ import (
 	"strings"
 )
 
-func ListFiles(path string) ([]string, error) {
-	var files []string
-
-	// Open the directory
-	dir, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer dir.Close()
-
-	// Read directory entries
-	entries, err := dir.Readdir(-1)
-	if err != nil {
-		return nil, err
-	}
-
-	// Filter entries to include only files
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			files = append(files, entry.Name())
-		}
-	}
-
-	return files, nil
-}
-
 func FileExists(path string) bool {
 	_, err := os.Stat(path)
 	if err != nil {

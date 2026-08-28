@@ -1,7 +1,11 @@
+import { AlertTriangleIcon, CheckIcon } from 'lucide-react'
 import { create } from 'zustand'
 
+import { toast } from '@/components/ui/toast'
 import { apiClient } from '@/lib/api'
-import { ApplicationService } from '@/lib/wails'
+import type { AddonManifest } from '@/lib/wails'
+import { ApplicationService, LocalAddonService, RemoteAddonService } from '@/lib/wails'
+import { useAddonStore } from '@/stores/addonStore'
 
 interface User {
   username: string
@@ -27,6 +31,79 @@ const emptyUser: User = {
   username: '',
   avatar: '',
   discord_id: '',
+}
+
+let restoreInFlight: Promise<void> | null = null
+
+function restoreSubscribedAddons() {
+  if (!restoreInFlight) {
+    restoreInFlight = runRestore().finally(() => {
+      restoreInFlight = null
+    })
+  }
+
+  return restoreInFlight
+}
+
+async function runRestore() {
+  let addons: AddonManifest[]
+
+  try {
+    addons = await RemoteAddonService.GetSubscribedAddons()
+  } catch (error) {
+    console.error('Error fetching subscribed addons:', error)
+    toast({
+      title: 'Error',
+      description: 'Failed to fetch subscribed addons.',
+      icon: AlertTriangleIcon,
+    })
+    return
+  }
+
+  if (addons.length === 0) return
+
+  let installed = 0
+  let failed = 0
+  let stateChanged = false
+
+  for (const addon of addons) {
+    try {
+      if (await LocalAddonService.IsInstalled(addon.name)) continue
+
+      const result = await RemoteAddonService.InstallAddonWithDependencies(addon, 'latest')
+      stateChanged = true
+
+      if (result.success) {
+        installed++
+      } else {
+        console.error(`Install reported failure for ${addon.name}:`, result.mainAddon?.error)
+        failed++
+      }
+    } catch (error) {
+      console.error(`Error restoring ${addon.name}:`, error)
+      failed++
+    }
+  }
+
+  if (stateChanged) {
+    await useAddonStore.getState().refreshAfterAddonChange()
+  }
+
+  if (installed > 0) {
+    toast({
+      title: 'Addons restored',
+      description: `${installed} addon(s) were restored from the server.`,
+      icon: CheckIcon,
+    })
+  }
+
+  if (failed > 0) {
+    toast({
+      title: 'Error',
+      description: `${failed} addon(s) failed to restore. Check logfile for details.`,
+      icon: AlertTriangleIcon,
+    })
+  }
 }
 
 export const useUserStore = create<UserState>((set, get) => ({
@@ -71,6 +148,7 @@ export const useUserStore = create<UserState>((set, get) => ({
       if (resp.status === 200) {
         const userData = await resp.json()
         get().setUser(userData)
+        void restoreSubscribedAddons()
       } else if (resp.status === 401) {
         await ApplicationService.ClearAuthToken()
         get().clearLocalAuthState()
