@@ -10,7 +10,9 @@ interface SectionProps {
 
 export const Section = ({ label, children, className }: SectionProps) => (
   <section className={cn('border-t border-border/60 px-6 py-5', className)}>
-    <h3 className="mb-3 text-[11px] font-medium uppercase tracking-wide text-primary/80">{label}</h3>
+    <h3 className="mb-3 text-[11px] font-medium uppercase tracking-wide text-primary/80">
+      {label}
+    </h3>
     {children}
   </section>
 )

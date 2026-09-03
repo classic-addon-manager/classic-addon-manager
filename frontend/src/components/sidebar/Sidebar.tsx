@@ -1,6 +1,7 @@
 import { Browser } from '@wailsio/runtime'
 import { useAtom, useAtomValue } from 'jotai'
 import { ArrowUpCircle, Globe } from 'lucide-react'
+import { useEffect } from 'react'
 
 import { updateAvailableAtom, updateDialogOpenAtom, versionAtom } from '@/atoms/applicationAtoms'
 import { activePageAtom } from '@/atoms/sidebarAtoms'
@@ -8,6 +9,7 @@ import { PAGE_DEFINITIONS } from '@/components/sidebar/pageDefinitions.ts'
 import { UserBar } from '@/components/sidebar/UserBar'
 import { cn } from '@/lib/utils'
 import { useAddonStore } from '@/stores/addonStore'
+import { useUserStore } from '@/stores/userStore.ts'
 
 import { SidebarItem } from './SidebarItem'
 
@@ -17,12 +19,21 @@ export const Sidebar = () => {
   const updateAvailable = useAtomValue(updateAvailableAtom)
   const [, setUpdateDialogOpen] = useAtom(updateDialogOpenAtom)
   const { updatesAvailableCount } = useAddonStore()
+  const isAuthenticated = useUserStore(s => s.user.discord_id !== '')
+
+  useEffect(() => {
+    if (!isAuthenticated && activeItem === 'developer') {
+      setActiveItem('dashboard')
+    }
+  }, [isAuthenticated, activeItem, setActiveItem])
+
+  const navItems = PAGE_DEFINITIONS.filter(item => item.id !== 'developer' || isAuthenticated)
 
   return (
     <>
       <div className="flex-1 relative">
         <nav className="grid items-start px-2 text-sm font-medium gap-1 relative z-10">
-          {PAGE_DEFINITIONS.map(item => (
+          {navItems.map(item => (
             <SidebarItem
               key={item.id}
               name={item.name}

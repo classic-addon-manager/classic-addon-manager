@@ -1,8 +1,9 @@
-import { Blocks, Home, Settings2Icon, WrenchIcon } from 'lucide-react'
+import { Blocks, Code2, Home, Settings2Icon, WrenchIcon } from 'lucide-react'
 import type { ComponentType, SVGProps } from 'react'
 
 import { Addons } from '@/components/Addons.tsx'
 import { Dashboard } from '@/components/Dashboard.tsx'
+import { Developer } from '@/components/Developer.tsx'
 import { Settings } from '@/components/Settings.tsx'
 import { Troubleshooting } from '@/components/Troubleshooting.tsx'
 
@@ -25,6 +26,12 @@ export const PAGE_DEFINITIONS = [
     name: 'Addons',
     icon: Blocks,
     component: Addons,
+  },
+  {
+    id: 'developer',
+    name: 'Developer',
+    icon: Code2,
+    component: Developer,
   },
   {
     id: 'troubleshooting',

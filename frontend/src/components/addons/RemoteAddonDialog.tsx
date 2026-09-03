@@ -102,11 +102,7 @@ export const RemoteAddonDialog = ({
             <div className="flex-1">
               <Header manifest={manifest} release={release} />
               <Warning text={manifest.warning} />
-              <StatBar
-                manifest={manifest}
-                release={release}
-                isLoadingRelease={isLoadingRelease}
-              />
+              <StatBar manifest={manifest} release={release} isLoadingRelease={isLoadingRelease} />
 
               <DescriptionSection readme={readme} isLoading={isLoadingReadme} />
               <ChangelogSection
