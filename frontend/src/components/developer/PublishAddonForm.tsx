@@ -156,6 +156,7 @@ export const PublishAddonForm = ({ onClose }: PublishAddonFormProps) => {
   const [form, setForm] = useState<PublishFormState>(INITIAL_PUBLISH_FORM)
   const [discardOpen, setDiscardOpen] = useState(false)
   const [validating, setValidating] = useState(false)
+  const [validated, setValidated] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
 
   const setField = <K extends keyof PublishFormState>(
@@ -170,6 +171,7 @@ export const PublishAddonForm = ({ onClose }: PublishAddonFormProps) => {
       if (Object.is(nextValue, prev[key])) return prev
       return { ...prev, [key]: nextValue }
     })
+    setValidated(false)
     setFieldErrors(prev => {
       if (!prev[key]) return prev
       const next = { ...prev }
@@ -190,6 +192,7 @@ export const PublishAddonForm = ({ onClose }: PublishAddonFormProps) => {
     if (validating) return
     setValidating(true)
     setFieldErrors({})
+    let validationPassed = false
     try {
       const result = await validateAddon(publishFormToValidatePayload(form))
       if (result.status === 'error') {
@@ -201,6 +204,7 @@ export const PublishAddonForm = ({ onClose }: PublishAddonFormProps) => {
         return
       }
       if (result.status === 'valid') {
+        validationPassed = true
         toast({
           title: 'Valid',
           description: 'This declaration looks good.',
@@ -220,8 +224,24 @@ export const PublishAddonForm = ({ onClose }: PublishAddonFormProps) => {
         icon: AlertTriangleIcon,
       })
     } finally {
+      setValidated(validationPassed)
       setValidating(false)
     }
+  }
+
+  const handlePublish = () => {
+    toast({
+      title: 'Not implemented',
+      description: 'Publish is not implemented yet.',
+    })
+  }
+
+  const handlePrimaryAction = () => {
+    if (validated) {
+      handlePublish()
+      return
+    }
+    void handleValidate()
   }
 
   return (
@@ -449,9 +469,9 @@ export const PublishAddonForm = ({ onClose }: PublishAddonFormProps) => {
       </main>
 
       <footer className="flex shrink-0 justify-end border-t bg-background/95 px-4 py-3">
-        <Button type="button" disabled={validating} onClick={() => void handleValidate()}>
+        <Button type="button" disabled={validating} onClick={handlePrimaryAction}>
           {validating && <LoaderCircle className="animate-spin" />}
-          Validate
+          {validated ? 'Publish' : 'Validate'}
         </Button>
       </footer>
 
