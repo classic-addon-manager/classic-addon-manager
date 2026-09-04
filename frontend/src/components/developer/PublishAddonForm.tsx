@@ -1,5 +1,12 @@
 import { Browser } from '@wailsio/runtime'
-import { ArrowLeft, Code2, GithubIcon } from 'lucide-react'
+import {
+  AlertTriangleIcon,
+  ArrowLeft,
+  CircleAlert,
+  Code2,
+  GithubIcon,
+  LoaderCircle,
+} from 'lucide-react'
 import { type ReactNode, useState } from 'react'
 
 import {
@@ -10,6 +17,11 @@ import {
 } from '@/components/developer/constants'
 import { DependenciesCombobox } from '@/components/developer/DependenciesCombobox'
 import { KeywordsInput } from '@/components/developer/KeywordsInput'
+import {
+  type FieldErrors,
+  publishFormToValidatePayload,
+  validateAddon,
+} from '@/components/developer/validate'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,9 +35,11 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from '@/components/ui/toast'
 import { Toggle } from '@/components/ui/toggle'
+import { cn, getErrorMessage } from '@/lib/utils'
 
 const Section = ({
   title,
@@ -49,19 +63,90 @@ const Field = ({
   id,
   label,
   hint,
+  error,
+  errorMode = 'focus',
   children,
 }: {
   id?: string
   label: string
   hint?: ReactNode
+  error?: string[]
+  errorMode?: 'focus' | 'label'
   children: ReactNode
-}) => (
-  <div className="space-y-1.5">
-    <Label htmlFor={id}>{label}</Label>
-    {children}
-    {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
-  </div>
-)
+}) => {
+  const [active, setActive] = useState(false)
+  const hasError = !!error?.length
+  const showOnLabel = errorMode === 'label'
+  const open = hasError && active
+
+  const errorPopover = (
+    <PopoverContent
+      side="top"
+      align="start"
+      sideOffset={8}
+      className="pointer-events-none w-auto max-w-xs p-3"
+      onOpenAutoFocus={event => event.preventDefault()}
+      onCloseAutoFocus={event => event.preventDefault()}
+    >
+      <div className="flex gap-2">
+        <CircleAlert className="mt-0.5 size-3.5 shrink-0 text-destructive" />
+        <div className="space-y-1">
+          {error?.map((message, index) => (
+            <p key={`${message}-${index}`} className="text-xs font-medium text-destructive">
+              {message}
+            </p>
+          ))}
+        </div>
+      </div>
+    </PopoverContent>
+  )
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-1.5">
+        <Label htmlFor={id}>{label}</Label>
+        {showOnLabel && hasError && (
+          <Popover modal={false} open={open}>
+            <PopoverAnchor asChild>
+              <button
+                type="button"
+                className="cursor-pointer text-destructive"
+                aria-label="Validation error"
+                onMouseEnter={() => setActive(true)}
+                onMouseLeave={() => setActive(false)}
+                onFocus={() => setActive(true)}
+                onBlur={() => setActive(false)}
+              >
+                <CircleAlert className="size-3.5" />
+              </button>
+            </PopoverAnchor>
+            {errorPopover}
+          </Popover>
+        )}
+      </div>
+      {showOnLabel ? (
+        children
+      ) : (
+        <Popover modal={false} open={open}>
+          <PopoverAnchor asChild>
+            <div
+              onFocusCapture={() => setActive(true)}
+              onBlurCapture={event => {
+                const next = event.relatedTarget
+                if (next instanceof Node && event.currentTarget.contains(next)) return
+                setActive(false)
+              }}
+            >
+              {children}
+            </div>
+          </PopoverAnchor>
+          {errorPopover}
+        </Popover>
+      )}
+      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+    </div>
+  )
+}
 
 interface PublishAddonFormProps {
   onClose: () => void
@@ -70,9 +155,27 @@ interface PublishAddonFormProps {
 export const PublishAddonForm = ({ onClose }: PublishAddonFormProps) => {
   const [form, setForm] = useState<PublishFormState>(INITIAL_PUBLISH_FORM)
   const [discardOpen, setDiscardOpen] = useState(false)
+  const [validating, setValidating] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
 
-  const setField = <K extends keyof PublishFormState>(key: K, value: PublishFormState[K]) => {
-    setForm(prev => ({ ...prev, [key]: value }))
+  const setField = <K extends keyof PublishFormState>(
+    key: K,
+    value: PublishFormState[K] | ((prev: PublishFormState[K]) => PublishFormState[K])
+  ) => {
+    setForm(prev => {
+      const nextValue =
+        typeof value === 'function'
+          ? (value as (prev: PublishFormState[K]) => PublishFormState[K])(prev[key])
+          : value
+      if (Object.is(nextValue, prev[key])) return prev
+      return { ...prev, [key]: nextValue }
+    })
+    setFieldErrors(prev => {
+      if (!prev[key]) return prev
+      const next = { ...prev }
+      delete next[key]
+      return next
+    })
   }
 
   const handleBack = () => {
@@ -81,6 +184,44 @@ export const PublishAddonForm = ({ onClose }: PublishAddonFormProps) => {
       return
     }
     onClose()
+  }
+
+  const handleValidate = async () => {
+    if (validating) return
+    setValidating(true)
+    setFieldErrors({})
+    try {
+      const result = await validateAddon(publishFormToValidatePayload(form))
+      if (result.status === 'error') {
+        toast({
+          title: 'Error',
+          description: result.message,
+          icon: AlertTriangleIcon,
+        })
+        return
+      }
+      if (result.status === 'valid') {
+        toast({
+          title: 'Valid',
+          description: 'This declaration looks good.',
+        })
+        return
+      }
+      setFieldErrors(result.fields)
+      toast({
+        title: 'Invalid',
+        description: result.other[0] ?? 'Fix the highlighted fields.',
+        icon: AlertTriangleIcon,
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: getErrorMessage(error, "Couldn't validate this addon."),
+        icon: AlertTriangleIcon,
+      })
+    } finally {
+      setValidating(false)
+    }
   }
 
   return (
@@ -96,7 +237,13 @@ export const PublishAddonForm = ({ onClose }: PublishAddonFormProps) => {
               <p className="text-sm text-muted-foreground">Fill in the addon declaration.</p>
             </div>
           </div>
-          <Button type="button" variant="outline" className="w-32" onClick={handleBack}>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-32"
+            disabled={validating}
+            onClick={handleBack}
+          >
             <ArrowLeft />
             Back
           </Button>
@@ -108,32 +255,45 @@ export const PublishAddonForm = ({ onClose }: PublishAddonFormProps) => {
           <Section title="Identity">
             <div className="space-y-4 px-4 py-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Field id="addon-name" label="Name" hint="No spaces. Starts with A–Z.">
+                <Field
+                  id="addon-name"
+                  label="Name"
+                  hint="No spaces. Starts with A–Z."
+                  error={fieldErrors.name}
+                >
                   <Input
                     id="addon-name"
                     value={form.name}
+                    disabled={validating}
+                    aria-invalid={!!fieldErrors.name}
                     onChange={event => setField('name', event.target.value)}
                   />
                 </Field>
-                <Field id="addon-alias" label="Alias">
+                <Field id="addon-alias" label="Alias" error={fieldErrors.alias}>
                   <Input
                     id="addon-alias"
                     value={form.alias}
+                    disabled={validating}
+                    aria-invalid={!!fieldErrors.alias}
                     onChange={event => setField('alias', event.target.value)}
                   />
                 </Field>
               </div>
-              <Field id="addon-description" label="Description">
+              <Field id="addon-description" label="Description" error={fieldErrors.description}>
                 <Textarea
                   id="addon-description"
                   value={form.description}
+                  disabled={validating}
+                  aria-invalid={!!fieldErrors.description}
                   onChange={event => setField('description', event.target.value)}
                 />
               </Field>
-              <Field id="addon-author" label="Author">
+              <Field id="addon-author" label="Author" error={fieldErrors.author}>
                 <Input
                   id="addon-author"
                   value={form.author}
+                  disabled={validating}
+                  aria-invalid={!!fieldErrors.author}
                   onChange={event => setField('author', event.target.value)}
                 />
               </Field>
@@ -143,8 +303,19 @@ export const PublishAddonForm = ({ onClose }: PublishAddonFormProps) => {
           <Section title="Repository" description="GitHub user/repo and branch.">
             <div className="space-y-4 px-4 py-4">
               <div className="grid gap-4 sm:grid-cols-[1fr_10rem]">
-                <Field id="addon-repo" label="Repository" hint="Format: user/repo">
-                  <div className="border-input dark:bg-input/30 focus-within:border-ring focus-within:ring-ring/50 flex h-9 overflow-hidden rounded-md border shadow-xs focus-within:ring-[3px]">
+                <Field
+                  id="addon-repo"
+                  label="Repository"
+                  hint="Format: user/repo"
+                  error={fieldErrors.repo}
+                >
+                  <div
+                    className={cn(
+                      'border-input dark:bg-input/30 focus-within:border-ring focus-within:ring-ring/50 flex h-9 overflow-hidden rounded-md border shadow-xs focus-within:ring-[3px]',
+                      fieldErrors.repo &&
+                        'border-destructive focus-within:border-destructive focus-within:ring-destructive/20'
+                    )}
+                  >
                     <span className="text-muted-foreground flex shrink-0 items-center gap-1.5 border-r border-input px-2.5 text-sm">
                       <GithubIcon className="size-3.5" />
                       github.com/
@@ -153,16 +324,20 @@ export const PublishAddonForm = ({ onClose }: PublishAddonFormProps) => {
                       id="addon-repo"
                       value={form.repo}
                       placeholder="user/repo"
+                      disabled={validating}
+                      aria-invalid={!!fieldErrors.repo}
                       onChange={event => setField('repo', event.target.value)}
                       className="h-full rounded-none border-0 bg-transparent shadow-none focus-visible:ring-0 dark:bg-transparent"
                     />
                   </div>
                 </Field>
-                <Field id="addon-branch" label="Branch">
+                <Field id="addon-branch" label="Branch" error={fieldErrors.branch}>
                   <Input
                     id="addon-branch"
                     value={form.branch}
                     placeholder="main"
+                    disabled={validating}
+                    aria-invalid={!!fieldErrors.branch}
                     onChange={event => setField('branch', event.target.value)}
                   />
                 </Field>
@@ -172,8 +347,13 @@ export const PublishAddonForm = ({ onClose }: PublishAddonFormProps) => {
 
           <Section title="Catalog">
             <div className="space-y-4 px-4 py-4">
-              <Field label="Tags" hint="Pick up to 3.">
-                <div className="flex flex-wrap gap-1.5">
+              <Field label="Tags" hint="Pick up to 3." error={fieldErrors.tags} errorMode="label">
+                <div
+                  role="group"
+                  aria-label="Tags"
+                  aria-invalid={fieldErrors.tags ? true : undefined}
+                  className="flex flex-wrap gap-1.5"
+                >
                   {APPROVED_TAGS.map(tag => {
                     const selected = form.tags.includes(tag)
                     return (
@@ -182,14 +362,14 @@ export const PublishAddonForm = ({ onClose }: PublishAddonFormProps) => {
                         size="sm"
                         variant="outline"
                         pressed={selected}
-                        disabled={!selected && form.tags.length >= 3}
+                        disabled={validating || (!selected && form.tags.length >= 3)}
                         onPressedChange={pressed => {
-                          setForm(prev => {
+                          setField('tags', prev => {
                             if (pressed) {
-                              if (prev.tags.includes(tag) || prev.tags.length >= 3) return prev
-                              return { ...prev, tags: [...prev.tags, tag] }
+                              if (prev.includes(tag) || prev.length >= 3) return prev
+                              return [...prev, tag]
                             }
-                            return { ...prev, tags: prev.tags.filter(item => item !== tag) }
+                            return prev.filter(item => item !== tag)
                           })
                         }}
                         className="px-2.5 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
@@ -204,10 +384,13 @@ export const PublishAddonForm = ({ onClose }: PublishAddonFormProps) => {
                 id="addon-keywords"
                 label="Keywords"
                 hint="Space-separated. No spaces inside a token."
+                error={fieldErrors.keywords}
               >
                 <KeywordsInput
                   id="addon-keywords"
                   value={form.keywords}
+                  invalid={!!fieldErrors.keywords}
+                  disabled={validating}
                   onChange={keywords => setField('keywords', keywords)}
                 />
               </Field>
@@ -219,9 +402,12 @@ export const PublishAddonForm = ({ onClose }: PublishAddonFormProps) => {
               <Field
                 label="Dependencies"
                 hint="Selected addons will be installed alongside your addon."
+                error={fieldErrors.dependencies}
               >
                 <DependenciesCombobox
                   selected={form.dependencies}
+                  invalid={!!fieldErrors.dependencies}
+                  disabled={validating}
                   onChange={names => setField('dependencies', names)}
                 />
               </Field>
@@ -247,10 +433,13 @@ export const PublishAddonForm = ({ onClose }: PublishAddonFormProps) => {
                     .
                   </>
                 }
+                error={fieldErrors.kofi}
               >
                 <Input
                   id="addon-kofi"
                   value={form.kofi}
+                  disabled={validating}
+                  aria-invalid={!!fieldErrors.kofi}
                   onChange={event => setField('kofi', event.target.value)}
                 />
               </Field>
@@ -260,15 +449,8 @@ export const PublishAddonForm = ({ onClose }: PublishAddonFormProps) => {
       </main>
 
       <footer className="flex shrink-0 justify-end border-t bg-background/95 px-4 py-3">
-        <Button
-          type="button"
-          onClick={() =>
-            toast({
-              title: 'Not available yet',
-              description: 'Addon validation is not wired up.',
-            })
-          }
-        >
+        <Button type="button" disabled={validating} onClick={() => void handleValidate()}>
+          {validating && <LoaderCircle className="animate-spin" />}
           Validate
         </Button>
       </footer>

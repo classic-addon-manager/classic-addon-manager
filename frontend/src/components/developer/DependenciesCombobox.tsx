@@ -20,9 +20,16 @@ type CatalogStatus = 'loading' | 'error' | 'success'
 interface DependenciesComboboxProps {
   selected: string[]
   onChange: (names: string[]) => void
+  invalid?: boolean
+  disabled?: boolean
 }
 
-export const DependenciesCombobox = ({ selected, onChange }: DependenciesComboboxProps) => {
+export const DependenciesCombobox = ({
+  selected,
+  onChange,
+  invalid = false,
+  disabled = false,
+}: DependenciesComboboxProps) => {
   const [open, setOpen] = useState(false)
   const [manifests, setManifests] = useState<AddonManifest[]>([])
   const [status, setStatus] = useState<CatalogStatus>('loading')
@@ -62,8 +69,9 @@ export const DependenciesCombobox = ({ selected, onChange }: DependenciesCombobo
               {aliasFor(name)}
               <button
                 type="button"
+                disabled={disabled}
                 onClick={() => onChange(selected.filter(item => item !== name))}
-                className="rounded-full p-0.5 hover:bg-primary-foreground/20"
+                className="rounded-full p-0.5 hover:bg-primary-foreground/20 disabled:pointer-events-none"
                 aria-label={`Remove ${aliasFor(name)}`}
               >
                 <X className="size-3" />
@@ -74,34 +82,57 @@ export const DependenciesCombobox = ({ selected, onChange }: DependenciesCombobo
       )}
 
       {status === 'loading' && (
-        <div className="flex h-9 items-center rounded-md border border-input px-3 text-sm text-muted-foreground">
+        <div
+          className={cn(
+            'flex h-9 items-center rounded-md border px-3 text-sm text-muted-foreground',
+            invalid ? 'border-destructive' : 'border-input'
+          )}
+        >
           Loading addons…
         </div>
       )}
 
       {status === 'error' && (
-        <div className="flex h-9 items-center justify-between gap-2 rounded-md border border-input px-3">
+        <div
+          className={cn(
+            'flex h-9 items-center justify-between gap-2 rounded-md border px-3',
+            invalid ? 'border-destructive' : 'border-input'
+          )}
+        >
           <span className="text-sm text-muted-foreground">Couldn't load addons.</span>
-          <Button type="button" variant="outline" size="sm" onClick={() => void loadCatalog()}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={disabled}
+            onClick={() => void loadCatalog()}
+          >
             Retry
           </Button>
         </div>
       )}
 
       {status === 'success' && manifests.length === 0 && (
-        <div className="flex h-9 items-center rounded-md border border-input px-3 text-sm text-muted-foreground">
+        <div
+          className={cn(
+            'flex h-9 items-center rounded-md border px-3 text-sm text-muted-foreground',
+            invalid ? 'border-destructive' : 'border-input'
+          )}
+        >
           No addons in the catalog.
         </div>
       )}
 
       {status === 'success' && manifests.length > 0 && (
-        <Popover open={open} onOpenChange={setOpen}>
+        <Popover open={disabled ? false : open} onOpenChange={next => !disabled && setOpen(next)}>
           <PopoverTrigger asChild>
             <Button
               type="button"
               variant="outline"
               role="combobox"
               aria-expanded={open}
+              aria-invalid={invalid || undefined}
+              disabled={disabled}
               className="w-full justify-between font-normal"
             >
               <span className="truncate text-muted-foreground">Select addons</span>
