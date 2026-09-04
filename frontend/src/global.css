@@ -379,3 +379,52 @@
   display: inline-block;
   animation: streamCharFade 0.2s ease-out forwards;
 }
+
+/* PublishAddonForm pass entrance */
+@keyframes publish-check-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes publish-cta-scale {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.04);
+  }
+}
+
+@keyframes publish-cta-ring {
+  0% {
+    opacity: 0.55;
+    box-shadow: 0 0 0 0 rgb(16 185 129 / 0.55);
+  }
+  100% {
+    opacity: 0;
+    box-shadow: 0 0 0 12px rgb(16 185 129 / 0);
+  }
+}
+
+.publish-check-pop {
+  animation: publish-check-pop 600ms ease-out both;
+}
+
+.publish-cta-scale {
+  animation: publish-cta-scale 600ms ease-out both;
+}
+
+.publish-cta-ring {
+  animation: publish-cta-ring 600ms ease-out both;
+}

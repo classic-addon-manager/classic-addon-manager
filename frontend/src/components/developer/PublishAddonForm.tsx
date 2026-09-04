@@ -1,13 +1,6 @@
 import { Browser } from '@wailsio/runtime'
-import {
-  AlertTriangleIcon,
-  ArrowLeft,
-  CircleAlert,
-  Code2,
-  GithubIcon,
-  LoaderCircle,
-} from 'lucide-react'
-import { type ReactNode, useState } from 'react'
+import { ArrowLeft, Check, CircleAlert, Code2, GithubIcon, LoaderCircle } from 'lucide-react'
+import { type ReactNode, useRef, useState } from 'react'
 
 import {
   APPROVED_TAGS,
@@ -39,7 +32,7 @@ import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from '@/components/ui/toast'
 import { Toggle } from '@/components/ui/toggle'
-import { cn, getErrorMessage } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 
 const Section = ({
   title,
@@ -152,12 +145,42 @@ interface PublishAddonFormProps {
   onClose: () => void
 }
 
+const FORM_FIELD_ORDER: (keyof PublishFormState)[] = [
+  'name',
+  'alias',
+  'description',
+  'author',
+  'repo',
+  'branch',
+  'tags',
+  'keywords',
+  'dependencies',
+  'kofi',
+]
+
+function scrollFirstFieldErrorIntoView(main: HTMLElement | null, errors: FieldErrors) {
+  if (!main) return
+  const firstKey = FORM_FIELD_ORDER.find(key => !!errors[key]?.length)
+  if (!firstKey) return
+  const target = document.getElementById(`addon-${firstKey}`)
+  if (!target) return
+
+  const mainRect = main.getBoundingClientRect()
+  const targetRect = target.getBoundingClientRect()
+  const fullyVisible = targetRect.top >= mainRect.top && targetRect.bottom <= mainRect.bottom
+  if (fullyVisible) return
+
+  target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
+
 export const PublishAddonForm = ({ onClose }: PublishAddonFormProps) => {
+  const mainRef = useRef<HTMLElement>(null)
   const [form, setForm] = useState<PublishFormState>(INITIAL_PUBLISH_FORM)
   const [discardOpen, setDiscardOpen] = useState(false)
   const [validating, setValidating] = useState(false)
   const [validated, setValidated] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+  const [validationError, setValidationError] = useState(false)
 
   const setField = <K extends keyof PublishFormState>(
     key: K,
@@ -192,37 +215,29 @@ export const PublishAddonForm = ({ onClose }: PublishAddonFormProps) => {
     if (validating) return
     setValidating(true)
     setFieldErrors({})
+    setValidationError(false)
     let validationPassed = false
     try {
       const result = await validateAddon(publishFormToValidatePayload(form))
       if (result.status === 'error') {
-        toast({
-          title: 'Error',
-          description: result.message,
-          icon: AlertTriangleIcon,
-        })
+        setValidationError(true)
         return
       }
       if (result.status === 'valid') {
         validationPassed = true
-        toast({
-          title: 'Valid',
-          description: 'This declaration looks good.',
+        return
+      }
+      const hasFields = FORM_FIELD_ORDER.some(key => !!result.fields[key]?.length)
+      if (hasFields) {
+        setFieldErrors(result.fields)
+        requestAnimationFrame(() => {
+          scrollFirstFieldErrorIntoView(mainRef.current, result.fields)
         })
         return
       }
-      setFieldErrors(result.fields)
-      toast({
-        title: 'Invalid',
-        description: result.other[0] ?? 'Fix the highlighted fields.',
-        icon: AlertTriangleIcon,
-      })
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: getErrorMessage(error, "Couldn't validate this addon."),
-        icon: AlertTriangleIcon,
-      })
+      setValidationError(true)
+    } catch {
+      setValidationError(true)
     } finally {
       setValidated(validationPassed)
       setValidating(false)
@@ -244,17 +259,58 @@ export const PublishAddonForm = ({ onClose }: PublishAddonFormProps) => {
     void handleValidate()
   }
 
+  const hasFieldErrors = FORM_FIELD_ORDER.some(key => !!fieldErrors[key]?.length)
+  const showFail = !validated && (hasFieldErrors || validationError)
+  const failCopy = hasFieldErrors ? 'Fix the highlighted fields.' : "Couldn't validate this addon."
+
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
-        <div className="container flex h-16 items-center justify-between gap-4 px-4">
+      <header
+        className={cn(
+          'relative border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60',
+          validated && 'border-emerald-500/20',
+          showFail && 'border-destructive/20'
+        )}
+      >
+        {validated ? (
+          <div className="pointer-events-none absolute inset-0 bg-emerald-500/10" aria-hidden />
+        ) : showFail ? (
+          <div className="pointer-events-none absolute inset-0 bg-destructive/10" aria-hidden />
+        ) : null}
+        <div className="relative container flex h-16 items-center justify-between gap-4 px-4">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="rounded-lg bg-primary/10 p-2">
-              <Code2 className="h-6 w-6 text-primary" />
+            <div
+              className={cn(
+                'rounded-lg p-2',
+                validated && 'bg-emerald-500/20 publish-check-pop',
+                showFail && 'bg-destructive/20',
+                !validated && !showFail && 'bg-primary/10'
+              )}
+            >
+              {validated ? (
+                <Check className="h-6 w-6 text-emerald-400" />
+              ) : showFail ? (
+                <CircleAlert className="h-6 w-6 text-destructive" />
+              ) : (
+                <Code2 className="h-6 w-6 text-primary" />
+              )}
             </div>
             <div className="min-w-0">
               <h1 className="text-xl font-semibold tracking-tight">Publish addon</h1>
-              <p className="text-sm text-muted-foreground">Fill in the addon declaration.</p>
+              <p
+                className={cn(
+                  'text-sm',
+                  validated && 'text-emerald-400',
+                  showFail && 'text-destructive',
+                  !validated && !showFail && 'text-muted-foreground'
+                )}
+              >
+                {validated
+                  ? 'Declaration valid - ready to publish.'
+                  : showFail
+                    ? failCopy
+                    : 'Fill in the addon declaration.'}
+              </p>
             </div>
           </div>
           <Button
@@ -270,7 +326,7 @@ export const PublishAddonForm = ({ onClose }: PublishAddonFormProps) => {
         </div>
       </header>
 
-      <main className="min-h-0 flex-1 overflow-auto">
+      <main ref={mainRef} className="min-h-0 flex-1 overflow-auto">
         <div className="container mx-auto max-w-2xl space-y-8 px-4 py-8">
           <Section title="Identity">
             <div className="space-y-4 px-4 py-4">
@@ -369,6 +425,7 @@ export const PublishAddonForm = ({ onClose }: PublishAddonFormProps) => {
             <div className="space-y-4 px-4 py-4">
               <Field label="Tags" hint="Pick up to 3." error={fieldErrors.tags} errorMode="label">
                 <div
+                  id="addon-tags"
                   role="group"
                   aria-label="Tags"
                   aria-invalid={fieldErrors.tags ? true : undefined}
@@ -424,12 +481,14 @@ export const PublishAddonForm = ({ onClose }: PublishAddonFormProps) => {
                 hint="Selected addons will be installed alongside your addon."
                 error={fieldErrors.dependencies}
               >
-                <DependenciesCombobox
-                  selected={form.dependencies}
-                  invalid={!!fieldErrors.dependencies}
-                  disabled={validating}
-                  onChange={names => setField('dependencies', names)}
-                />
+                <div id="addon-dependencies">
+                  <DependenciesCombobox
+                    selected={form.dependencies}
+                    invalid={!!fieldErrors.dependencies}
+                    disabled={validating}
+                    onChange={names => setField('dependencies', names)}
+                  />
+                </div>
               </Field>
               <Field
                 id="addon-kofi"
@@ -468,11 +527,36 @@ export const PublishAddonForm = ({ onClose }: PublishAddonFormProps) => {
         </div>
       </main>
 
-      <footer className="flex shrink-0 justify-end border-t bg-background/95 px-4 py-3">
-        <Button type="button" disabled={validating} onClick={handlePrimaryAction}>
-          {validating && <LoaderCircle className="animate-spin" />}
-          {validated ? 'Publish' : 'Validate'}
-        </Button>
+      <footer className="flex shrink-0 justify-end overflow-visible border-t bg-background/95 px-4 py-3">
+        <div className="relative">
+          {validated ? (
+            <span
+              key="publish-cta-ring"
+              className="publish-cta-ring pointer-events-none absolute inset-0 rounded-md"
+              aria-hidden
+            />
+          ) : null}
+          <Button
+            type="button"
+            disabled={validating}
+            onClick={handlePrimaryAction}
+            className={cn(
+              'w-32',
+              validated &&
+                'bg-emerald-600 text-emerald-50 hover:bg-emerald-700 focus-visible:border-emerald-600 focus-visible:ring-emerald-400/50 publish-cta-scale'
+            )}
+          >
+            {validating && <LoaderCircle className="animate-spin" />}
+            {validated ? (
+              <>
+                <Check />
+                Publish
+              </>
+            ) : (
+              'Validate'
+            )}
+          </Button>
+        </div>
       </footer>
 
       <AlertDialog open={discardOpen} onOpenChange={setDiscardOpen}>
