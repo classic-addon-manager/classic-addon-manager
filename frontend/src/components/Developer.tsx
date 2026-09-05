@@ -1,13 +1,10 @@
 import { AlertTriangleIcon, Code2, LoaderCircle, Plus } from 'lucide-react'
 import { useState } from 'react'
 
-import { OwnedAddonCard } from '@/components/developer/OwnedAddonCard'
+import { DeveloperWorkspace } from '@/components/developer/DeveloperWorkspace'
 import { PublishAddonForm } from '@/components/developer/PublishAddonForm'
-import { SubmissionRow } from '@/components/developer/SubmissionRow'
 import { type OwnedAddonsData, useOwnedAddons } from '@/components/developer/useOwnedAddons'
 import { Button } from '@/components/ui/button'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { cn } from '@/lib/utils'
 import { useUserStore } from '@/stores/userStore.ts'
 
 export const Developer = () => {
@@ -34,7 +31,7 @@ export const Developer = () => {
             </div>
             <div>
               <h1 className="text-xl font-semibold tracking-tight">Developer</h1>
-              <p className="text-sm text-muted-foreground">Your published addons</p>
+              <p className="text-sm text-muted-foreground">Your addons and submissions</p>
             </div>
           </div>
           <Button type="button" className="w-32" onClick={() => setView('form')}>
@@ -44,11 +41,7 @@ export const Developer = () => {
         </div>
       </header>
 
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="container mx-auto px-4 py-4">
-          {renderListBody(data, error, retry, setView)}
-        </div>
-      </ScrollArea>
+      {renderListBody(data, error, retry, setView, token)}
     </div>
   )
 }
@@ -57,7 +50,8 @@ function renderListBody(
   data: OwnedAddonsData | null,
   error: string | null,
   retry: () => void,
-  setView: (view: 'list' | 'form') => void
+  setView: (view: 'list' | 'form') => void,
+  sessionKey: string
 ) {
   if (data === null) {
     if (error === null) {
@@ -97,35 +91,5 @@ function renderListBody(
     )
   }
 
-  return (
-    <>
-      {data.addons.length > 0 && (
-        <>
-          <h2 className="mb-3 text-sm font-semibold tracking-tight">Published</h2>
-          <div className="flex flex-col gap-3">
-            {data.addons.map(addon => (
-              <OwnedAddonCard key={addon.name} addon={addon} />
-            ))}
-          </div>
-        </>
-      )}
-      {data.submissions.length > 0 && (
-        <>
-          <h2
-            className={cn(
-              'mb-3 text-sm font-semibold tracking-tight',
-              data.addons.length > 0 && 'mt-8'
-            )}
-          >
-            Submissions
-          </h2>
-          <div className="flex flex-col gap-2">
-            {data.submissions.map(submission => (
-              <SubmissionRow key={submission.prNumber} submission={submission} />
-            ))}
-          </div>
-        </>
-      )}
-    </>
-  )
+  return <DeveloperWorkspace key={sessionKey} data={data} />
 }
