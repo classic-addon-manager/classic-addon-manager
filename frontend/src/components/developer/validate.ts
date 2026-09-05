@@ -1,4 +1,5 @@
 import { INITIAL_PUBLISH_FORM, type PublishFormState } from '@/components/developer/constants'
+import { parseSubmitAddonResponse } from '@/components/developer/submitParse'
 import { apiClient } from '@/lib/api'
 
 export interface AddonValidationError {
@@ -66,6 +67,34 @@ function groupValidationErrors(errors: AddonValidationError[]): {
   }
 
   return { fields, other }
+}
+
+export type SubmitAddonResult =
+  | { status: 'submitted'; prNumber: number; htmlUrl: string }
+  | { status: 'already_open'; prNumber: number; htmlUrl: string }
+  | { status: 'invalid'; fields: FieldErrors; other: string[] }
+  | { status: 'error'; message: string }
+
+export async function submitAddon(payload: ValidateAddonPayload): Promise<SubmitAddonResult> {
+  const response = await apiClient.post('/addon/submit', payload)
+
+  if (response.status === 401) {
+    return { status: 'error', message: 'Sign in to publish an addon.' }
+  }
+
+  let body: unknown
+  try {
+    body = await response.json()
+  } catch {
+    return { status: 'error', message: 'Unexpected publish response.' }
+  }
+
+  const parsed = parseSubmitAddonResponse(response.status, body)
+  if (parsed.status === 'invalid') {
+    const grouped = groupValidationErrors(parsed.errors)
+    return { status: 'invalid', fields: grouped.fields, other: grouped.other }
+  }
+  return parsed
 }
 
 export async function validateAddon(payload: ValidateAddonPayload): Promise<ValidateResult> {
