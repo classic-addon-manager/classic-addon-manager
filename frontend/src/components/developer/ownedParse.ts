@@ -12,13 +12,32 @@ export type OwnedAddon = {
   addedAt: string | null
 }
 
+export type OwnedSubmissionMessage = {
+  id: number
+  body: string
+  createdAt: string | null
+}
+
+export type OwnedSubmissionPayload = {
+  name: string
+  alias: string
+  description: string
+  author: string
+  repo: string
+  branch: string
+  tags: string[]
+  keywords: string[]
+  dependencies: string[]
+  kofi: string
+}
+
 export type OwnedSubmission = {
-  prNumber: number
-  status: 'open' | 'closed'
-  htmlUrl: string
-  repo: string | null
+  id: number
+  status: 'open' | 'rejected'
   title: string
   createdAt: string | null
+  payload: OwnedSubmissionPayload
+  messages: OwnedSubmissionMessage[]
 }
 
 export type ParsedOwnedAddons =
@@ -121,39 +140,33 @@ function parseAddon(value: unknown): OwnedAddon | null {
 
 function parseSubmission(value: unknown): OwnedSubmission | null {
   if (value === null || typeof value !== 'object') return null
-  if (
-    !('pr_number' in value) ||
-    typeof value.pr_number !== 'number' ||
-    !Number.isFinite(value.pr_number)
-  ) {
+  if (!('id' in value) || typeof value.id !== 'number' || !Number.isFinite(value.id)) {
+    return null
+  }
+  if (!('status' in value) || (value.status !== 'open' && value.status !== 'rejected')) {
+    return null
+  }
+  if (!('payload' in value) || value.payload === null || typeof value.payload !== 'object') {
     return null
   }
 
-  const status = 'status' in value && value.status === 'open' ? 'open' : 'closed'
-  const htmlUrl = 'html_url' in value && typeof value.html_url === 'string' ? value.html_url : ''
+  const raw = value.payload
+  if (!('name' in raw) || typeof raw.name !== 'string' || raw.name === '') {
+    return null
+  }
 
-  const payload =
-    'payload' in value && value.payload !== null && typeof value.payload === 'object'
-      ? value.payload
-      : null
-
-  const payloadAlias =
-    payload !== null &&
-    'alias' in payload &&
-    typeof payload.alias === 'string' &&
-    payload.alias !== ''
-      ? payload.alias
-      : null
-  const payloadName =
-    payload !== null && 'name' in payload && typeof payload.name === 'string' && payload.name !== ''
-      ? payload.name
-      : null
-  const title = payloadAlias ?? payloadName ?? `PR #${value.pr_number}`
-
-  const repo =
-    payload !== null && 'repo' in payload && typeof payload.repo === 'string' && payload.repo !== ''
-      ? payload.repo
-      : null
+  const payload: OwnedSubmissionPayload = {
+    name: raw.name,
+    alias: 'alias' in raw && typeof raw.alias === 'string' ? raw.alias : '',
+    description: 'description' in raw && typeof raw.description === 'string' ? raw.description : '',
+    author: 'author' in raw && typeof raw.author === 'string' ? raw.author : '',
+    repo: 'repo' in raw && typeof raw.repo === 'string' ? raw.repo : '',
+    branch: 'branch' in raw && typeof raw.branch === 'string' ? raw.branch : '',
+    tags: 'tags' in raw && isStringArray(raw.tags) ? raw.tags : [],
+    keywords: 'keywords' in raw && isStringArray(raw.keywords) ? raw.keywords : [],
+    dependencies: 'dependencies' in raw && isStringArray(raw.dependencies) ? raw.dependencies : [],
+    kofi: 'kofi' in raw && typeof raw.kofi === 'string' ? raw.kofi : '',
+  }
 
   const createdAt =
     'created_at' in value &&
@@ -163,13 +176,31 @@ function parseSubmission(value: unknown): OwnedSubmission | null {
       : null
 
   return {
-    prNumber: value.pr_number,
-    status,
-    htmlUrl,
-    repo,
-    title,
+    id: value.id,
+    status: value.status,
+    title: payload.alias !== '' ? payload.alias : payload.name,
     createdAt,
+    payload,
+    messages: parseMessages(value),
   }
+}
+
+function parseMessages(value: object): OwnedSubmissionMessage[] {
+  if (!('messages' in value) || !Array.isArray(value.messages)) return []
+  const messages: OwnedSubmissionMessage[] = []
+  for (const item of value.messages) {
+    if (item === null || typeof item !== 'object') continue
+    if (!('id' in item) || typeof item.id !== 'number' || !Number.isFinite(item.id)) continue
+    if (!('body' in item) || typeof item.body !== 'string') continue
+    const createdAt =
+      'created_at' in item &&
+      typeof item.created_at === 'string' &&
+      isFiniteDateString(item.created_at)
+        ? item.created_at
+        : null
+    messages.push({ id: item.id, body: item.body, createdAt })
+  }
+  return messages
 }
 
 function isStringArray(value: unknown): value is string[] {

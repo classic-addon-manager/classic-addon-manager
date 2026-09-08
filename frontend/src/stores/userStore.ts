@@ -11,6 +11,7 @@ interface User {
   username: string
   avatar: string
   discord_id: string
+  admin: boolean
 }
 
 interface UserState {
@@ -31,6 +32,7 @@ const emptyUser: User = {
   username: '',
   avatar: '',
   discord_id: '',
+  admin: false,
 }
 
 let restoreInFlight: Promise<void> | null = null
@@ -126,6 +128,7 @@ export const useUserStore = create<UserState>((set, get) => ({
         username: newUser.username ?? '',
         avatar: newUser.avatar ?? '',
         discord_id: newUser.discord_id ?? '',
+        admin: newUser.admin,
       },
     })
   },

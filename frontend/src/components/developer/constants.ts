@@ -44,17 +44,50 @@ export const INITIAL_PUBLISH_FORM: PublishFormState = {
   kofi: '',
 }
 
-export function isPublishFormDirty(form: PublishFormState): boolean {
+export function isPublishFormDirty(
+  form: PublishFormState,
+  baseline: PublishFormState = INITIAL_PUBLISH_FORM
+): boolean {
   return (
-    form.name !== INITIAL_PUBLISH_FORM.name ||
-    form.alias !== INITIAL_PUBLISH_FORM.alias ||
-    form.description !== INITIAL_PUBLISH_FORM.description ||
-    form.author !== INITIAL_PUBLISH_FORM.author ||
-    form.repo !== INITIAL_PUBLISH_FORM.repo ||
-    form.branch !== INITIAL_PUBLISH_FORM.branch ||
-    form.tags.length > 0 ||
-    form.keywords !== INITIAL_PUBLISH_FORM.keywords ||
-    form.dependencies.length > 0 ||
-    form.kofi !== INITIAL_PUBLISH_FORM.kofi
+    form.name !== baseline.name ||
+    form.alias !== baseline.alias ||
+    form.description !== baseline.description ||
+    form.author !== baseline.author ||
+    form.repo !== baseline.repo ||
+    form.branch !== baseline.branch ||
+    form.keywords !== baseline.keywords ||
+    form.kofi !== baseline.kofi ||
+    form.tags.length !== baseline.tags.length ||
+    form.tags.some((tag, index) => tag !== baseline.tags[index]) ||
+    form.dependencies.length !== baseline.dependencies.length ||
+    form.dependencies.some((dep, index) => dep !== baseline.dependencies[index])
   )
+}
+
+export function publishFormFromPayload(payload: {
+  name: string
+  alias: string
+  description: string
+  author: string
+  repo: string
+  branch: string
+  tags: string[]
+  keywords: string[]
+  dependencies: string[]
+  kofi: string
+}): PublishFormState {
+  return {
+    name: payload.name,
+    alias: payload.alias,
+    description: payload.description,
+    author: payload.author,
+    repo: payload.repo,
+    branch: payload.branch,
+    tags: payload.tags
+      .filter((tag): tag is ApprovedTag => (APPROVED_TAGS as readonly string[]).includes(tag))
+      .slice(0, 3),
+    keywords: payload.keywords.join(' '),
+    dependencies: [...payload.dependencies],
+    kofi: payload.kofi,
+  }
 }

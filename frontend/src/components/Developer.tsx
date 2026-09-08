@@ -1,6 +1,7 @@
 import { AlertTriangleIcon, Code2, LoaderCircle, Plus } from 'lucide-react'
 import { useState } from 'react'
 
+import { INITIAL_PUBLISH_FORM, type PublishFormState } from '@/components/developer/constants'
 import { DeveloperWorkspace } from '@/components/developer/DeveloperWorkspace'
 import { PublishAddonForm } from '@/components/developer/PublishAddonForm'
 import { type OwnedAddonsData, useOwnedAddons } from '@/components/developer/useOwnedAddons'
@@ -11,14 +12,21 @@ export const Developer = () => {
   const isAuthenticated = useUserStore(s => s.user.discord_id !== '')
   const token = useUserStore(s => s.token)
   const [view, setView] = useState<'list' | 'form'>('list')
+  const [formInitial, setFormInitial] = useState<PublishFormState>(INITIAL_PUBLISH_FORM)
+  const [selection, setSelection] = useState<string | null>(null)
   const { data, error, retry } = useOwnedAddons(isAuthenticated && view === 'list', token)
+
+  const openForm = (initial: PublishFormState = INITIAL_PUBLISH_FORM) => {
+    setFormInitial(initial)
+    setView('form')
+  }
 
   if (!isAuthenticated) {
     return null
   }
 
   if (view === 'form') {
-    return <PublishAddonForm onClose={() => setView('list')} />
+    return <PublishAddonForm initial={formInitial} onClose={() => setView('list')} />
   }
 
   return (
@@ -34,14 +42,14 @@ export const Developer = () => {
               <p className="text-sm text-muted-foreground">Your addons and submissions</p>
             </div>
           </div>
-          <Button type="button" className="w-32" onClick={() => setView('form')}>
+          <Button type="button" className="w-32" onClick={() => openForm()}>
             <Plus />
             New addon
           </Button>
         </div>
       </header>
 
-      {renderListBody(data, error, retry, setView, token)}
+      {renderListBody(data, error, retry, openForm, token, selection, setSelection)}
     </div>
   )
 }
@@ -50,8 +58,10 @@ function renderListBody(
   data: OwnedAddonsData | null,
   error: string | null,
   retry: () => void,
-  setView: (view: 'list' | 'form') => void,
-  sessionKey: string
+  openForm: (initial?: PublishFormState) => void,
+  sessionKey: string,
+  selection: string | null,
+  onSelectionChange: (key: string) => void
 ) {
   if (data === null) {
     if (error === null) {
@@ -83,7 +93,7 @@ function renderListBody(
         <p className="mb-6 max-w-sm text-sm text-muted-foreground">
           Publish an addon to list it here.
         </p>
-        <Button type="button" onClick={() => setView('form')}>
+        <Button type="button" onClick={() => openForm()}>
           <Plus />
           New addon
         </Button>
@@ -91,5 +101,13 @@ function renderListBody(
     )
   }
 
-  return <DeveloperWorkspace key={sessionKey} data={data} />
+  return (
+    <DeveloperWorkspace
+      key={sessionKey}
+      data={data}
+      selection={selection}
+      onSelectionChange={onSelectionChange}
+      onResubmit={openForm}
+    />
+  )
 }

@@ -1,8 +1,8 @@
 export type SubmitValidationError = { field: string; message: string }
 
 export type ParsedSubmitAddon =
-  | { status: 'submitted'; prNumber: number; htmlUrl: string }
-  | { status: 'already_open'; prNumber: number; htmlUrl: string }
+  | { status: 'submitted'; id: number }
+  | { status: 'already_open'; id: number }
   | { status: 'invalid'; errors: SubmitValidationError[] }
   | { status: 'error'; message: string }
 
@@ -15,12 +15,13 @@ export function parseSubmitAddonResponse(statusCode: number, body: unknown): Par
     statusCode === 409 &&
     body !== null &&
     typeof body === 'object' &&
-    'pr_number' in body &&
-    'html_url' in body &&
-    typeof body.pr_number === 'number' &&
-    typeof body.html_url === 'string'
+    'status' in body &&
+    body.status === false &&
+    'id' in body &&
+    typeof body.id === 'number' &&
+    Number.isFinite(body.id)
   ) {
-    return { status: 'already_open', prNumber: body.pr_number, htmlUrl: body.html_url }
+    return { status: 'already_open', id: body.id }
   }
 
   if (
@@ -51,18 +52,13 @@ export function parseSubmitAddonResponse(statusCode: number, body: unknown): Par
       body.status === true &&
       body.data !== null &&
       typeof body.data === 'object' &&
-      'pr_number' in body.data &&
-      'html_url' in body.data &&
+      'id' in body.data &&
       'status' in body.data &&
-      typeof body.data.pr_number === 'number' &&
-      typeof body.data.html_url === 'string' &&
-      typeof body.data.status === 'string'
+      typeof body.data.id === 'number' &&
+      Number.isFinite(body.data.id) &&
+      body.data.status === 'open'
     ) {
-      return {
-        status: 'submitted',
-        prNumber: body.data.pr_number,
-        htmlUrl: body.data.html_url,
-      }
+      return { status: 'submitted', id: body.data.id }
     }
     return { status: 'error', message: 'Unexpected publish response.' }
   }

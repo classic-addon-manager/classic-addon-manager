@@ -70,8 +70,8 @@ function groupValidationErrors(errors: AddonValidationError[]): {
 }
 
 export type SubmitAddonResult =
-  | { status: 'submitted'; prNumber: number; htmlUrl: string }
-  | { status: 'already_open'; prNumber: number; htmlUrl: string }
+  | { status: 'submitted'; id: number }
+  | { status: 'already_open'; id: number }
   | { status: 'invalid'; fields: FieldErrors; other: string[] }
   | { status: 'error'; message: string }
 

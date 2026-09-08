@@ -153,6 +153,7 @@ const Field = ({
 
 interface PublishAddonFormProps {
   onClose: () => void
+  initial?: PublishFormState
 }
 
 const FORM_FIELD_ORDER: (keyof PublishFormState)[] = [
@@ -183,9 +184,12 @@ function scrollFirstFieldErrorIntoView(main: HTMLElement | null, errors: FieldEr
   target.scrollIntoView({ behavior: 'smooth', block: 'center' })
 }
 
-export const PublishAddonForm = ({ onClose }: PublishAddonFormProps) => {
+export const PublishAddonForm = ({
+  onClose,
+  initial = INITIAL_PUBLISH_FORM,
+}: PublishAddonFormProps) => {
   const mainRef = useRef<HTMLElement>(null)
-  const [form, setForm] = useState<PublishFormState>(INITIAL_PUBLISH_FORM)
+  const [form, setForm] = useState<PublishFormState>(initial)
   const [discardOpen, setDiscardOpen] = useState(false)
   const [validating, setValidating] = useState(false)
   const [validated, setValidated] = useState(false)
@@ -218,7 +222,7 @@ export const PublishAddonForm = ({ onClose }: PublishAddonFormProps) => {
   }
 
   const handleBack = () => {
-    if (isPublishFormDirty(form)) {
+    if (isPublishFormDirty(form, initial)) {
       setDiscardOpen(true)
       return
     }
@@ -273,16 +277,8 @@ export const PublishAddonForm = ({ onClose }: PublishAddonFormProps) => {
       if (result.status === 'submitted') {
         toast({
           title: 'Addon submitted',
-          description: 'A catalog pull request was opened.',
+          description: "It's now in review.",
           icon: CheckIcon,
-          button: result.htmlUrl.startsWith('https://github.com/')
-            ? {
-                label: 'View PR',
-                onClick: () => {
-                  void Browser.OpenURL(result.htmlUrl)
-                },
-              }
-            : undefined,
         })
         onClose()
         return
@@ -290,17 +286,10 @@ export const PublishAddonForm = ({ onClose }: PublishAddonFormProps) => {
       if (result.status === 'already_open') {
         toast({
           title: 'Submission already open',
-          description: 'A catalog pull request for this addon already exists.',
+          description: 'This addon is already in review.',
           icon: AlertTriangleIcon,
-          button: result.htmlUrl.startsWith('https://github.com/')
-            ? {
-                label: 'View PR',
-                onClick: () => {
-                  void Browser.OpenURL(result.htmlUrl)
-                },
-              }
-            : undefined,
         })
+        onClose()
         return
       }
       if (result.status === 'invalid') {
@@ -531,7 +520,7 @@ export const PublishAddonForm = ({ onClose }: PublishAddonFormProps) => {
               <Field
                 id="addon-keywords"
                 label="Keywords"
-                hint="Space-separated. No spaces inside a token."
+                hint="Space-separated. No spaces inside a keyword."
                 error={fieldErrors.keywords}
               >
                 <KeywordsInput

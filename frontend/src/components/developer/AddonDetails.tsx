@@ -151,7 +151,11 @@ export function AddonDetails({ addon }: { addon: OwnedAddon }) {
                   {addon.description || 'No description provided.'}
                 </p>
                 <dl className="divide-y rounded-xl border bg-card/40 px-4 text-sm">
-                  <DetailField label="Repository" value={addon.repo} />
+                  <DetailField
+                    label="Repository"
+                    value={addon.repo}
+                    href={addon.repo !== '' ? `https://github.com/${addon.repo}` : undefined}
+                  />
                   <DetailField label="Branch" value={addon.branch ?? 'Not specified'} />
                   <DetailField label="Tags" value={addon.tags.join(', ')} />
                   <DetailField
@@ -203,11 +207,31 @@ export function AddonDetails({ addon }: { addon: OwnedAddon }) {
   )
 }
 
-function DetailField({ label, value }: { label: string; value: string }) {
+function DetailField({
+  label,
+  value,
+  href,
+}: {
+  label: string
+  value: string
+  href?: string
+}) {
   return (
     <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 py-3">
       <dt className="text-muted-foreground">{label}</dt>
-      <dd className="min-w-0 break-words">{value || 'None'}</dd>
+      <dd className="min-w-0 break-words">
+        {value && href ? (
+          <button
+            type="button"
+            className="cursor-pointer text-left break-words text-primary underline-offset-4 hover:underline"
+            onClick={() => void Browser.OpenURL(href)}
+          >
+            {value}
+          </button>
+        ) : (
+          value || 'None'
+        )}
+      </dd>
     </div>
   )
 }
