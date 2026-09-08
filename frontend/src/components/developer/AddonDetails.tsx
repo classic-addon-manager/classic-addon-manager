@@ -2,8 +2,21 @@ import { Browser } from '@wailsio/runtime'
 import { BarChart3, BlocksIcon, GithubIcon } from 'lucide-react'
 import { useState } from 'react'
 
-import { CatalogComparison, CatalogEditForm } from '@/components/developer/CatalogEditForm'
-import { backendUnavailable, catalogFields } from '@/components/developer/catalogEditing'
+import {
+  AddonDeclarationFields,
+  type SetDeclarationField,
+} from '@/components/developer/AddonDeclarationFields'
+import { CatalogComparison } from '@/components/developer/CatalogEditForm'
+import {
+  backendUnavailable,
+  type CatalogFields,
+  catalogFields,
+} from '@/components/developer/catalogEditing'
+import {
+  isPublishFormDirty,
+  publishFormFromPayload,
+  type PublishFormState,
+} from '@/components/developer/constants'
 import {
   mockCatalogReview,
   mockDownloadTrends,
@@ -106,16 +119,11 @@ export function AddonDetails({ addon }: { addon: OwnedAddon }) {
       <ScrollArea className="min-h-0 flex-1">
         <TabsContent value="overview" className="space-y-5 p-5">
           {mode === 'edit' ? (
-            <CatalogEditForm
-              initial={editableProposal}
-              published={published}
+            <AddonEditPanel
+              addon={addon}
+              initialCatalog={editableProposal}
               submitLabel={submitLabel}
               onCancel={() => setMode('view')}
-              onSubmit={() => {
-                // TODO(backend): Submit, update, or reopen the versioned catalog review here.
-                // Rejected edits reopen the same thread. Never change published values optimistically.
-                backendUnavailable(submitLabel)
-              }}
             />
           ) : mode === 'compare' && review ? (
             <>
@@ -207,15 +215,80 @@ export function AddonDetails({ addon }: { addon: OwnedAddon }) {
   )
 }
 
-function DetailField({
-  label,
-  value,
-  href,
+function AddonEditPanel({
+  addon,
+  initialCatalog,
+  submitLabel,
+  onCancel,
 }: {
-  label: string
-  value: string
-  href?: string
+  addon: OwnedAddon
+  initialCatalog: CatalogFields
+  submitLabel: string
+  onCancel: () => void
 }) {
+  const initial = publishFormFromPayload({
+    name: addon.name,
+    alias: initialCatalog.alias,
+    description: initialCatalog.description,
+    author: addon.author,
+    repo: initialCatalog.repo,
+    branch: initialCatalog.branch,
+    tags: initialCatalog.tags,
+    keywords: [],
+    dependencies: [],
+    kofi: '',
+  })
+  const [form, setForm] = useState<PublishFormState>(initial)
+  const setField: SetDeclarationField = (key, value) => {
+    setForm(prev => {
+      const nextValue =
+        typeof value === 'function'
+          ? (value as (current: PublishFormState[typeof key]) => PublishFormState[typeof key])(
+              prev[key]
+            )
+          : value
+      if (Object.is(nextValue, prev[key])) return prev
+      return { ...prev, [key]: nextValue }
+    })
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="font-medium">Edit catalog details</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Leaving this form discards unsent edits. Your published listing stays unchanged until
+          approval.
+        </p>
+      </div>
+      <AddonDeclarationFields
+        form={form}
+        setField={setField}
+        fieldErrors={{}}
+        busy={false}
+        lockedFields={['name']}
+      />
+      <div className="flex flex-wrap gap-2 border-t pt-4">
+        <Button
+          type="button"
+          disabled={!isPublishFormDirty(form, initial)}
+          onClick={() => {
+            // TODO(backend): Submit, update, or reopen the versioned catalog review here.
+            // Rejected edits reopen the same thread. Never change published values optimistically.
+            backendUnavailable(submitLabel)
+          }}
+        >
+          {submitLabel}
+        </Button>
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+function DetailField({ label, value, href }: { label: string; value: string; href?: string }) {
   return (
     <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 py-3">
       <dt className="text-muted-foreground">{label}</dt>
