@@ -10,14 +10,26 @@ import { apiClient } from '@/lib/api'
 
 export type { ParseSaveResult, ParseValidateResult }
 
+export function editorValidatePath(submissionId: number | null): string {
+  return submissionId === null
+    ? '/dev/addon/validate'
+    : `/dev/addon/submissions/${submissionId}/validate`
+}
+
+export function editorSaveRequest(submissionId: number | null): {
+  method: 'POST' | 'PUT'
+  path: string
+} {
+  return submissionId === null
+    ? { method: 'POST', path: '/dev/addon/submit' }
+    : { method: 'PUT', path: `/dev/addon/submissions/${submissionId}` }
+}
+
 export async function validateDeclaration(
   values: DeclarationValues,
   submissionId: number | null
 ): Promise<ParseValidateResult> {
-  const path =
-    submissionId === null
-      ? '/dev/addon/validate'
-      : `/dev/addon/submissions/${submissionId}/validate`
+  const path = editorValidatePath(submissionId)
   try {
     const response = await apiClient.post(path, values)
     let body: unknown
@@ -40,10 +52,11 @@ export async function saveDeclaration(
   submissionId: number | null
 ): Promise<ParseSaveResult> {
   try {
+    const save = editorSaveRequest(submissionId)
     const response =
-      submissionId === null
-        ? await apiClient.post('/dev/addon/submit', values)
-        : await apiClient.put(`/dev/addon/submissions/${submissionId}`, values)
+      save.method === 'POST'
+        ? await apiClient.post(save.path, values)
+        : await apiClient.put(save.path, values)
     let body: unknown
     try {
       body = await response.json()

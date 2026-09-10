@@ -26,7 +26,13 @@ export type SchemaField = {
 export type AddonSchema = { version: number; widgets: Widget[]; fields: SchemaField[] }
 
 export type SourceAddon = { uuid: string; name: string; alias: string }
-export type SourceSubmission = { id: number; kind: DeclarationKind; name: string }
+export type SourceSubmission = {
+  id: number
+  kind: DeclarationKind
+  name: string
+  status?: string
+  createdAt?: string
+}
 export type AddonSources = { addons: SourceAddon[]; submissions: SourceSubmission[] }
 
 export type EditorSource =

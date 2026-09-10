@@ -122,7 +122,6 @@ function renderListBody(
       selection={selection}
       onSelectionChange={onSelectionChange}
       onResubmit={openForm}
-      onRefresh={retry}
     />
   )
 }

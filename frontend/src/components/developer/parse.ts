@@ -364,7 +364,15 @@ function parseSourceSubmission(value: unknown): SourceSubmission | null {
   if (!('id' in value) || typeof value.id !== 'number' || !Number.isFinite(value.id)) return null
   if (!('kind' in value) || (value.kind !== 'new' && value.kind !== 'update')) return null
   if (!('name' in value) || typeof value.name !== 'string' || value.name === '') return null
-  return { id: value.id, kind: value.kind, name: value.name }
+  const status =
+    'status' in value && typeof value.status === 'string' && value.status !== ''
+      ? value.status
+      : undefined
+  const createdAt =
+    'created_at' in value && typeof value.created_at === 'string' && value.created_at !== ''
+      ? value.created_at
+      : undefined
+  return { id: value.id, kind: value.kind, name: value.name, status, createdAt }
 }
 
 function mapWireValue(field: SchemaField, raw: unknown): WireValue | 'error' {

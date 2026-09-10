@@ -162,6 +162,10 @@ export const PublishAddonForm = ({
         setPublishError('This submission is no longer open.')
         return
       }
+      if (result.status === 'already_open') {
+        setAlreadyOpenId(result.id)
+        return
+      }
       if (result.status === 'error') {
         setValidationError(true)
         return
@@ -187,9 +191,10 @@ export const PublishAddonForm = ({
     try {
       const result = await submitAddon(form, submissionId)
       if (result.status === 'submitted') {
+        const created = submissionId === null
         toast({
-          title: submissionId === null ? 'Addon submitted' : 'Submission updated',
-          description: submissionId === null ? "It's now in review." : 'Your changes were saved.',
+          title: created ? 'Addon submitted' : 'Submission updated',
+          description: created ? "It's now in review." : 'Your changes were saved.',
           icon: CheckIcon,
         })
         onClose()
@@ -344,7 +349,7 @@ export const PublishAddonForm = ({
             ) : validated ? (
               <>
                 <Check />
-                {submissionId === null ? 'Submit for review' : 'Update'}
+                {submissionId === null ? 'Submit' : 'Update'}
               </>
             ) : (
               'Validate'

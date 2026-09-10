@@ -1,3 +1,12 @@
+export type ReviewHistoryEntry = {
+  number: number
+  status: string
+  date: string
+  submissionId: number | null
+  statusMocked: boolean
+  dateMocked: boolean
+}
+
 export type OwnedAddon = {
   uuid: string
   name: string
@@ -11,6 +20,7 @@ export type OwnedAddon = {
   likePercentage: number | null
   warning: string | null
   addedAt: string | null
+  reviewHistory: ReviewHistoryEntry[]
 }
 
 export type OwnedSubmissionMessage = {
@@ -141,6 +151,7 @@ function parseAddon(value: unknown): OwnedAddon | null {
     likePercentage,
     warning,
     addedAt,
+    reviewHistory: [],
   }
 }
 

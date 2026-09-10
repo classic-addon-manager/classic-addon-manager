@@ -24,7 +24,6 @@ import {
 import {
   mockCatalogReview,
   mockDownloadTrends,
-  mockReviewHistory,
   type PreviewReviewState,
 } from '@/components/developer/developerMocks'
 import { valuesToForm } from '@/components/developer/formValues.ts'
@@ -52,11 +51,9 @@ import { cn, formatToLocalDate } from '@/lib/utils'
 
 export function AddonDetails({
   addon,
-  onRefresh,
   onSelect,
 }: {
   addon: OwnedAddon
-  onRefresh: () => Promise<void>
   onSelect: (key: string) => void
 }) {
   const loaded = useDevAddonValues({
@@ -180,8 +177,6 @@ export function AddonDetails({
               initialForm={form}
               submitLabel={submitLabel}
               onCancel={() => setMode('view')}
-              onRefresh={onRefresh}
-              onSelect={onSelect}
             />
           ) : mode === 'compare' && review ? (
             <>
@@ -233,28 +228,51 @@ export function AddonDetails({
               <details
                 className="border-t pt-4 text-sm"
                 onToggle={event => {
-                  if (event.currentTarget.open) backendUnavailable('Review history')
+                  if (
+                    event.currentTarget.open &&
+                    display.reviewHistory.every(entry => entry.submissionId === null)
+                  ) {
+                    backendUnavailable('Review history')
+                  }
                 }}
               >
                 <summary className="cursor-pointer font-medium">
-                  Review history{' '}
-                  <span className="text-xs font-normal text-muted-foreground">· Sample data</span>
+                  Review history
+                  {display.reviewHistory.some(
+                    entry => entry.submissionId === null || entry.statusMocked || entry.dateMocked
+                  ) && (
+                    <span className="text-xs font-normal text-muted-foreground"> · Mocked</span>
+                  )}
                 </summary>
-                {/* TODO(backend): Load all review outcomes, including closed withdrawn threads. */}
                 <div className="mt-3 divide-y">
-                  {mockReviewHistory.map(entry => (
+                  {display.reviewHistory.map(entry => (
                     <div
-                      key={entry.number}
+                      key={entry.submissionId ?? entry.number}
                       className="flex flex-wrap items-center justify-between gap-2 py-3"
                     >
                       <div>
                         #{entry.number} · {entry.status}
-                        <p className="text-xs text-muted-foreground">{entry.date}</p>
+                        {entry.statusMocked && (
+                          <span className="text-xs font-normal text-muted-foreground">
+                            {' '}
+                            · Mocked
+                          </span>
+                        )}
+                        <p className="text-xs text-muted-foreground">
+                          {formatToLocalDate(entry.date)}
+                          {entry.dateMocked && ' · Mocked'}
+                        </p>
                       </div>
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => backendUnavailable('Review history')}
+                        onClick={() => {
+                          if (entry.submissionId !== null) {
+                            onSelect(`submission:${entry.submissionId}`)
+                            return
+                          }
+                          backendUnavailable('Review history')
+                        }}
                       >
                         View review
                       </Button>
@@ -278,16 +296,12 @@ function AddonEditPanel({
   initialForm,
   submitLabel,
   onCancel,
-  onRefresh,
-  onSelect,
 }: {
   addon: OwnedAddon
   initialCatalog: CatalogFields
   initialForm: PublishFormState | null
   submitLabel: string
   onCancel: () => void
-  onRefresh: () => Promise<void>
-  onSelect: (key: string) => void
 }) {
   const initial =
     initialForm ??
@@ -402,6 +416,10 @@ function AddonEditPanel({
         setPublishError('This submission is no longer open.')
         return
       }
+      if (result.status === 'already_open') {
+        setAlreadyOpenId(result.id)
+        return
+      }
       if (result.status === 'error') {
         setValidationError(true)
         return
@@ -427,12 +445,12 @@ function AddonEditPanel({
     try {
       const result = await submitAddon(form, submissionId)
       if (result.status === 'submitted') {
+        const created = submissionId === null
         toast({
-          title: submissionId === null ? 'Addon submitted' : 'Submission updated',
-          description: submissionId === null ? "It's now in review." : 'Your changes were saved.',
+          title: created ? 'Addon submitted' : 'Submission updated',
+          description: created ? "It's now in review." : 'Your changes were saved.',
         })
-        await onRefresh()
-        onSelect(`submission:${result.id}`)
+        onCancel()
         return
       }
       if (result.status === 'already_open') {

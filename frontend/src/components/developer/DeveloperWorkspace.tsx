@@ -29,7 +29,6 @@ export function DeveloperWorkspace({
   selection,
   onSelectionChange,
   onResubmit,
-  onRefresh,
 }: {
   data: OwnedAddonsData
   selection: string | null
@@ -38,8 +37,8 @@ export function DeveloperWorkspace({
     initial: PublishFormState,
     options?: { submissionId?: number; lockedName?: boolean }
   ) => void
-  onRefresh: () => Promise<void>
 }) {
+  const publishedNames = new Set(data.addons.map(addon => addon.name))
   const entries = [
     ...data.addons.map(addon => ({ key: `addon:${addon.name}`, addon, submission: null })),
     ...data.submissions.map(submission => ({
@@ -56,9 +55,16 @@ export function DeveloperWorkspace({
       <ScrollArea className="min-h-0 border-b md:border-r md:border-b-0">
         <nav className="space-y-6 p-3" aria-label="Your published addons and submissions">
           {(['Published', 'Submissions'] as const).map(group => {
-            const matching = entries.filter(entry =>
-              group === 'Published' ? entry.addon : entry.submission
-            )
+            const matching = entries.filter(entry => {
+              if (group === 'Published') return entry.addon
+              return (
+                entry.submission &&
+                !(
+                  entry.submission.kind === 'update' &&
+                  publishedNames.has(entry.submission.payload.name)
+                )
+              )
+            })
             if (!matching.length) return null
             return (
               <section key={group}>
@@ -111,12 +117,7 @@ export function DeveloperWorkspace({
       </ScrollArea>
       <section className="min-h-0 min-w-0" aria-label="Selected addon details">
         {selected.addon ? (
-          <AddonDetails
-            key={selected.key}
-            addon={selected.addon}
-            onRefresh={onRefresh}
-            onSelect={onSelectionChange}
-          />
+          <AddonDetails key={selected.key} addon={selected.addon} onSelect={onSelectionChange} />
         ) : (
           selected.submission && (
             <SubmissionDetails
@@ -222,7 +223,10 @@ function SubmissionDetails({
               variant="outline"
               onClick={() => {
                 onSelectionChange(`submission:${submission.id}`)
-                onResubmit(publishFormFromPayload(payload))
+                onResubmit(publishFormFromPayload(payload), {
+                  submissionId: submission.id,
+                  lockedName: submission.kind === 'update',
+                })
               }}
             >
               Resubmit for review
