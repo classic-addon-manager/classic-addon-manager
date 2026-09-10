@@ -1,4 +1,5 @@
 export type OwnedAddon = {
+  uuid: string
   name: string
   alias: string
   repo: string
@@ -33,6 +34,7 @@ export type OwnedSubmissionPayload = {
 
 export type OwnedSubmission = {
   id: number
+  kind?: 'new' | 'update'
   status: 'open' | 'rejected'
   title: string
   createdAt: string | null
@@ -124,6 +126,10 @@ function parseAddon(value: unknown): OwnedAddon | null {
       : null
 
   return {
+    uuid:
+      'uuid' in value && typeof value.uuid === 'string' && value.uuid !== ''
+        ? value.uuid
+        : value.name,
     name: value.name,
     alias,
     repo,
@@ -143,30 +149,48 @@ function parseSubmission(value: unknown): OwnedSubmission | null {
   if (!('id' in value) || typeof value.id !== 'number' || !Number.isFinite(value.id)) {
     return null
   }
-  if (!('status' in value) || (value.status !== 'open' && value.status !== 'rejected')) {
-    return null
-  }
-  if (!('payload' in value) || value.payload === null || typeof value.payload !== 'object') {
+
+  const emptyPayload = (name: string): OwnedSubmissionPayload => ({
+    name,
+    alias: name,
+    description: '',
+    author: '',
+    repo: '',
+    branch: '',
+    tags: [],
+    keywords: [],
+    dependencies: [],
+    kofi: '',
+  })
+
+  let payload: OwnedSubmissionPayload
+  if ('payload' in value && value.payload !== null && typeof value.payload === 'object') {
+    const raw = value.payload
+    if (!('name' in raw) || typeof raw.name !== 'string' || raw.name === '') return null
+    payload = {
+      name: raw.name,
+      alias: 'alias' in raw && typeof raw.alias === 'string' ? raw.alias : '',
+      description:
+        'description' in raw && typeof raw.description === 'string' ? raw.description : '',
+      author: 'author' in raw && typeof raw.author === 'string' ? raw.author : '',
+      repo: 'repo' in raw && typeof raw.repo === 'string' ? raw.repo : '',
+      branch: 'branch' in raw && typeof raw.branch === 'string' ? raw.branch : '',
+      tags: 'tags' in raw && isStringArray(raw.tags) ? raw.tags : [],
+      keywords: 'keywords' in raw && isStringArray(raw.keywords) ? raw.keywords : [],
+      dependencies:
+        'dependencies' in raw && isStringArray(raw.dependencies) ? raw.dependencies : [],
+      kofi: 'kofi' in raw && typeof raw.kofi === 'string' ? raw.kofi : '',
+    }
+  } else if ('name' in value && typeof value.name === 'string' && value.name !== '') {
+    payload = emptyPayload(value.name)
+  } else {
     return null
   }
 
-  const raw = value.payload
-  if (!('name' in raw) || typeof raw.name !== 'string' || raw.name === '') {
-    return null
-  }
-
-  const payload: OwnedSubmissionPayload = {
-    name: raw.name,
-    alias: 'alias' in raw && typeof raw.alias === 'string' ? raw.alias : '',
-    description: 'description' in raw && typeof raw.description === 'string' ? raw.description : '',
-    author: 'author' in raw && typeof raw.author === 'string' ? raw.author : '',
-    repo: 'repo' in raw && typeof raw.repo === 'string' ? raw.repo : '',
-    branch: 'branch' in raw && typeof raw.branch === 'string' ? raw.branch : '',
-    tags: 'tags' in raw && isStringArray(raw.tags) ? raw.tags : [],
-    keywords: 'keywords' in raw && isStringArray(raw.keywords) ? raw.keywords : [],
-    dependencies: 'dependencies' in raw && isStringArray(raw.dependencies) ? raw.dependencies : [],
-    kofi: 'kofi' in raw && typeof raw.kofi === 'string' ? raw.kofi : '',
-  }
+  const status =
+    'status' in value && (value.status === 'open' || value.status === 'rejected')
+      ? value.status
+      : 'open'
 
   const createdAt =
     'created_at' in value &&
@@ -177,7 +201,7 @@ function parseSubmission(value: unknown): OwnedSubmission | null {
 
   return {
     id: value.id,
-    status: value.status,
+    status,
     title: payload.alias !== '' ? payload.alias : payload.name,
     createdAt,
     payload,

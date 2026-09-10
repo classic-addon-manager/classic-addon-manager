@@ -59,6 +59,16 @@ class ApiClient {
       body: JSON.stringify(data),
     })
   }
+
+  async put(url: string, data: unknown): Promise<Response> {
+    await this.initPromise
+
+    return fetch(API_URL + url, {
+      method: 'PUT',
+      headers: createHeaders(this.version!, this.getToken()),
+      body: JSON.stringify(data),
+    })
+  }
 }
 
 export const apiClient = ApiClient.getInstance()

@@ -1,11 +1,13 @@
 import { Browser } from '@wailsio/runtime'
-import { GithubIcon, Inbox } from 'lucide-react'
+import { GithubIcon, Inbox, LoaderCircle } from 'lucide-react'
 import { useState } from 'react'
 
 import { AddonDetails, AddonIcon } from '@/components/developer/AddonDetails'
 import { backendUnavailable } from '@/components/developer/catalogEditing'
 import { publishFormFromPayload, type PublishFormState } from '@/components/developer/constants'
+import { valuesToForm } from '@/components/developer/formValues.ts'
 import type { OwnedSubmission } from '@/components/developer/ownedParse'
+import { useDevAddonValues } from '@/components/developer/useDevAddonValues.ts'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,11 +29,16 @@ export function DeveloperWorkspace({
   selection,
   onSelectionChange,
   onResubmit,
+  onRefresh,
 }: {
   data: OwnedAddonsData
   selection: string | null
   onSelectionChange: (key: string) => void
-  onResubmit: (initial: PublishFormState) => void
+  onResubmit: (
+    initial: PublishFormState,
+    options?: { submissionId?: number; lockedName?: boolean }
+  ) => void
+  onRefresh: () => Promise<void>
 }) {
   const entries = [
     ...data.addons.map(addon => ({ key: `addon:${addon.name}`, addon, submission: null })),
@@ -104,7 +111,12 @@ export function DeveloperWorkspace({
       </ScrollArea>
       <section className="min-h-0 min-w-0" aria-label="Selected addon details">
         {selected.addon ? (
-          <AddonDetails key={selected.key} addon={selected.addon} />
+          <AddonDetails
+            key={selected.key}
+            addon={selected.addon}
+            onRefresh={onRefresh}
+            onSelect={onSelectionChange}
+          />
         ) : (
           selected.submission && (
             <SubmissionDetails
@@ -127,32 +139,82 @@ function SubmissionDetails({
 }: {
   submission: OwnedSubmission
   onSelectionChange: (key: string) => void
-  onResubmit: (initial: PublishFormState) => void
+  onResubmit: (
+    initial: PublishFormState,
+    options?: { submissionId?: number; lockedName?: boolean }
+  ) => void
 }) {
+  const loaded = useDevAddonValues({
+    type: 'submission',
+    id: submission.id,
+    kind: 'new',
+    name: submission.title,
+  })
+  const form = loaded.values ? valuesToForm(loaded.values) : null
+  const payload = form
+    ? {
+        name: form.name,
+        alias: form.alias,
+        description: form.description,
+        author: form.author,
+        repo: form.repo,
+        branch: form.branch,
+        tags: [...form.tags],
+        keywords: [...form.keywords],
+        dependencies: [...form.dependencies],
+        kofi: form.kofi,
+      }
+    : submission.payload
   const [withdrawing, setWithdrawing] = useState(false)
   const open = submission.status === 'open'
   const hasMessages = submission.messages.length > 0
+  if (loaded.loading) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
+        <LoaderCircle className="size-8 animate-spin opacity-50" strokeWidth={1.5} />
+        <p className="mt-3 text-sm">Loading declaration...</p>
+      </div>
+    )
+  }
+  if (loaded.error) {
+    return (
+      <div className="flex h-full items-center justify-center p-5 text-sm text-destructive">
+        {loaded.error}
+      </div>
+    )
+  }
   return (
     <ScrollArea className="h-full">
       <div className="space-y-5 p-5">
         <div>
-          <h2 className="break-words text-xl font-semibold tracking-tight">{submission.title}</h2>
+          <h2 className="wrap-break-word text-xl font-semibold tracking-tight">
+            {submission.title}
+          </h2>
           <p className="mt-1 text-sm text-muted-foreground">
             {open ? 'In review' : 'Changes requested'}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {submission.payload.repo !== '' && (
+          {payload.repo !== '' && (
             <Button
               variant="outline"
-              onClick={() => void Browser.OpenURL(`https://github.com/${submission.payload.repo}`)}
+              onClick={() => void Browser.OpenURL(`https://github.com/${payload.repo}`)}
             >
               <GithubIcon />
               View code
             </Button>
           )}
           {open ? (
-            <Button variant="outline" onClick={() => backendUnavailable('Revise submission')}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                onSelectionChange(`submission:${submission.id}`)
+                onResubmit(publishFormFromPayload(payload), {
+                  submissionId: submission.id,
+                  lockedName: submission.kind === 'update',
+                })
+              }}
+            >
               Revise submission
             </Button>
           ) : (
@@ -160,7 +222,7 @@ function SubmissionDetails({
               variant="outline"
               onClick={() => {
                 onSelectionChange(`submission:${submission.id}`)
-                onResubmit(publishFormFromPayload(submission.payload))
+                onResubmit(publishFormFromPayload(payload))
               }}
             >
               Resubmit for review
@@ -203,7 +265,7 @@ function SubmissionDetails({
                   <div className="mt-1 space-y-3">
                     {submission.messages.map(message => (
                       <div key={message.id}>
-                        <p className="whitespace-pre-wrap break-words">{message.body}</p>
+                        <p className="whitespace-pre-wrap wrap-break-word">{message.body}</p>
                         {message.createdAt !== null && (
                           <p className="mt-1 text-xs text-muted-foreground">
                             {formatToLocalTime(message.createdAt)}
@@ -213,7 +275,7 @@ function SubmissionDetails({
                     ))}
                   </div>
                 ) : (
-                  <p className="mt-1 whitespace-pre-wrap break-words">
+                  <p className="mt-1 whitespace-pre-wrap wrap-break-word">
                     Feedback is not available here.
                   </p>
                 )}
@@ -226,7 +288,7 @@ function SubmissionDetails({
             <h3 className="text-sm font-medium">Review</h3>
             {submission.messages.map(message => (
               <div key={message.id}>
-                <p className="whitespace-pre-wrap break-words text-sm">{message.body}</p>
+                <p className="whitespace-pre-wrap wrap-break-word text-sm">{message.body}</p>
                 {message.createdAt !== null && (
                   <p className="mt-1 text-xs text-muted-foreground">
                     {formatToLocalTime(message.createdAt)}
@@ -238,34 +300,26 @@ function SubmissionDetails({
         )}
         <section className="space-y-3">
           <h3 className="text-sm font-medium">Submitted declaration</h3>
-          <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">
-            {submission.payload.description || 'No description provided.'}
+          <p className="whitespace-pre-wrap wrap-break-word text-sm text-muted-foreground">
+            {payload.description || 'No description provided.'}
           </p>
           <dl className="divide-y rounded-xl border bg-card/40 px-4 text-sm">
-            <DetailField label="Name" value={submission.payload.name} />
-            <DetailField label="Alias" value={submission.payload.alias} />
-            <DetailField label="Author" value={submission.payload.author} />
+            <DetailField label="Name" value={payload.name} />
+            <DetailField label="Alias" value={payload.alias} />
+            <DetailField label="Author" value={payload.author} />
             <DetailField
               label="Repository"
-              value={submission.payload.repo}
-              href={
-                submission.payload.repo !== ''
-                  ? `https://github.com/${submission.payload.repo}`
-                  : undefined
-              }
+              value={payload.repo}
+              href={payload.repo !== '' ? `https://github.com/${payload.repo}` : undefined}
             />
-            <DetailField label="Branch" value={submission.payload.branch} />
-            <DetailField label="Tags" value={submission.payload.tags.join(', ')} />
-            <DetailField label="Keywords" value={submission.payload.keywords.join(', ')} />
-            <DetailField label="Dependencies" value={submission.payload.dependencies.join(', ')} />
+            <DetailField label="Branch" value={payload.branch} />
+            <DetailField label="Tags" value={payload.tags.join(', ')} />
+            <DetailField label="Keywords" value={payload.keywords.join(', ')} />
+            <DetailField label="Dependencies" value={payload.dependencies.join(', ')} />
             <DetailField
               label="Ko-fi"
-              value={submission.payload.kofi}
-              href={
-                submission.payload.kofi !== ''
-                  ? `https://ko-fi.com/${submission.payload.kofi}`
-                  : undefined
-              }
+              value={payload.kofi}
+              href={payload.kofi !== '' ? `https://ko-fi.com/${payload.kofi}` : undefined}
             />
             <DetailField
               label="Submitted"
@@ -307,11 +361,11 @@ function DetailField({ label, value, href }: { label: string; value: string; hre
   return (
     <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 py-3">
       <dt className="text-muted-foreground">{label}</dt>
-      <dd className="min-w-0 break-words">
+      <dd className="min-w-0 wrap-break-word">
         {value && href ? (
           <button
             type="button"
-            className="cursor-pointer text-left break-words text-primary underline-offset-4 hover:underline"
+            className="cursor-pointer text-left wrap-break-word text-primary underline-offset-4 hover:underline"
             onClick={() => void Browser.OpenURL(href)}
           >
             {value}

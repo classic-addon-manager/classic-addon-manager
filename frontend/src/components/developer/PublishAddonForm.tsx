@@ -1,12 +1,4 @@
-import {
-  AlertTriangleIcon,
-  ArrowLeft,
-  Check,
-  CheckIcon,
-  CircleAlert,
-  Code2,
-  LoaderCircle,
-} from 'lucide-react'
+import { ArrowLeft, Check, CheckIcon, CircleAlert, Code2, LoaderCircle } from 'lucide-react'
 import { useRef, useState } from 'react'
 
 import { AddonDeclarationFields } from '@/components/developer/AddonDeclarationFields'
@@ -15,12 +7,10 @@ import {
   isPublishFormDirty,
   type PublishFormState,
 } from '@/components/developer/constants'
-import {
-  type FieldErrors,
-  publishFormToValidatePayload,
-  submitAddon,
-  validateAddon,
-} from '@/components/developer/validate'
+import { valuesToForm } from '@/components/developer/formValues.ts'
+import { requireAddonSchema } from '@/components/developer/schema.ts'
+import { type FieldErrors, submitAddon, validateAddon } from '@/components/developer/validate'
+import { getAddonValues } from '@/components/developer/values.ts'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,6 +28,8 @@ import { cn } from '@/lib/utils'
 interface PublishAddonFormProps {
   onClose: () => void
   initial?: PublishFormState
+  submissionId?: number | null
+  lockedName?: boolean
 }
 
 const FORM_FIELD_ORDER: (keyof PublishFormState)[] = [
@@ -71,9 +63,15 @@ function scrollFirstFieldErrorIntoView(main: HTMLElement | null, errors: FieldEr
 export const PublishAddonForm = ({
   onClose,
   initial = INITIAL_PUBLISH_FORM,
+  submissionId: initialSubmissionId = null,
+  lockedName = false,
 }: PublishAddonFormProps) => {
   const mainRef = useRef<HTMLElement>(null)
   const [form, setForm] = useState<PublishFormState>(initial)
+  const [submissionId, setSubmissionId] = useState<number | null>(initialSubmissionId)
+  const [nameLocked, setNameLocked] = useState(lockedName)
+  const [editable, setEditable] = useState(true)
+  const [alreadyOpenId, setAlreadyOpenId] = useState<number | null>(null)
   const [discardOpen, setDiscardOpen] = useState(false)
   const [validating, setValidating] = useState(false)
   const [validated, setValidated] = useState(false)
@@ -81,7 +79,7 @@ export const PublishAddonForm = ({
   const [validationError, setValidationError] = useState(false)
   const [publishing, setPublishing] = useState(false)
   const [publishError, setPublishError] = useState<string | null>(null)
-  const busy = validating || publishing
+  const busy = validating || publishing || !editable
 
   const setField = <K extends keyof PublishFormState>(
     key: K,
@@ -125,6 +123,31 @@ export const PublishAddonForm = ({
     setValidationError(true)
   }
 
+  const resumeSubmission = async (id: number) => {
+    const schema = await requireAddonSchema()
+    if (!schema) {
+      setPublishError('This source is unavailable.')
+      return
+    }
+    const result = await getAddonValues({ type: 'submission', id, kind: 'new', name: '' }, schema)
+    if (result.status !== 'ok') {
+      setPublishError(
+        result.status === 'error' ||
+          result.status === 'unauthorized' ||
+          result.status === 'not_found'
+          ? result.message
+          : 'This source is unavailable.'
+      )
+      return
+    }
+    setSubmissionId(id)
+    setNameLocked(result.kind === 'update')
+    setForm(valuesToForm(result.values))
+    setValidated(false)
+    setFieldErrors({})
+    setPublishError(null)
+  }
+
   const handleValidate = async () => {
     if (validating) return
     setValidating(true)
@@ -133,7 +156,12 @@ export const PublishAddonForm = ({
     setValidationError(false)
     let validationPassed = false
     try {
-      const result = await validateAddon(publishFormToValidatePayload(form))
+      const result = await validateAddon(form, submissionId)
+      if (result.status === 'not_open') {
+        setEditable(false)
+        setPublishError('This submission is no longer open.')
+        return
+      }
       if (result.status === 'error') {
         setValidationError(true)
         return
@@ -157,28 +185,28 @@ export const PublishAddonForm = ({
     setPublishError(null)
     setFieldErrors({})
     try {
-      const result = await submitAddon(publishFormToValidatePayload(form))
+      const result = await submitAddon(form, submissionId)
       if (result.status === 'submitted') {
         toast({
-          title: 'Addon submitted',
-          description: "It's now in review.",
+          title: submissionId === null ? 'Addon submitted' : 'Submission updated',
+          description: submissionId === null ? "It's now in review." : 'Your changes were saved.',
           icon: CheckIcon,
         })
         onClose()
         return
       }
       if (result.status === 'already_open') {
-        toast({
-          title: 'Submission already open',
-          description: 'This addon is already in review.',
-          icon: AlertTriangleIcon,
-        })
-        onClose()
+        setAlreadyOpenId(result.id)
         return
       }
       if (result.status === 'invalid') {
         setValidated(false)
         applyInvalidResult(result.fields)
+        return
+      }
+      if (result.status === 'not_open') {
+        setEditable(false)
+        setPublishError('This submission is no longer open.')
         return
       }
       setPublishError(result.message)
@@ -240,7 +268,9 @@ export const PublishAddonForm = ({
               )}
             </div>
             <div className="min-w-0">
-              <h1 className="text-xl font-semibold tracking-tight">Publish addon</h1>
+              <h1 className="text-xl font-semibold tracking-tight">
+                {submissionId === null ? 'Publish addon' : 'Update submission'}
+              </h1>
               <p
                 className={cn(
                   'text-sm',
@@ -277,6 +307,7 @@ export const PublishAddonForm = ({
             setField={setField}
             fieldErrors={fieldErrors}
             busy={busy}
+            lockedFields={nameLocked ? ['name'] : []}
           />
         </div>
       </main>
@@ -303,7 +334,7 @@ export const PublishAddonForm = ({
             {publishing ? (
               <>
                 <LoaderCircle className="animate-spin" />
-                Publish
+                {submissionId === null ? 'Publish' : 'Update'}
               </>
             ) : validating ? (
               <>
@@ -313,7 +344,7 @@ export const PublishAddonForm = ({
             ) : validated ? (
               <>
                 <Check />
-                Publish
+                {submissionId === null ? 'Submit for review' : 'Update'}
               </>
             ) : (
               'Validate'
@@ -332,6 +363,37 @@ export const PublishAddonForm = ({
             <AlertDialogCancel>Stay</AlertDialogCancel>
             <AlertDialogAction variant="destructive" onClick={onClose}>
               Discard
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={alreadyOpenId !== null}
+        onOpenChange={open => {
+          if (!open) setAlreadyOpenId(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Submission already open</AlertDialogTitle>
+            <AlertDialogDescription>
+              You already have an open submission for this name.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setAlreadyOpenId(null)}>
+              Keep editing
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const id = alreadyOpenId
+                setAlreadyOpenId(null)
+                if (id === null) return
+                void resumeSubmission(id)
+              }}
+            >
+              Resume existing
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

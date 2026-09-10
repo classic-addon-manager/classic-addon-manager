@@ -26,7 +26,7 @@ export interface PublishFormState {
   repo: string
   branch: string
   tags: ApprovedTag[]
-  keywords: string
+  keywords: string[]
   dependencies: string[]
   kofi: string
 }
@@ -39,7 +39,7 @@ export const INITIAL_PUBLISH_FORM: PublishFormState = {
   repo: '',
   branch: '',
   tags: [],
-  keywords: '',
+  keywords: [],
   dependencies: [],
   kofi: '',
 }
@@ -55,7 +55,8 @@ export function isPublishFormDirty(
     form.author !== baseline.author ||
     form.repo !== baseline.repo ||
     form.branch !== baseline.branch ||
-    form.keywords !== baseline.keywords ||
+    form.keywords.length !== baseline.keywords.length ||
+    form.keywords.some((keyword, index) => keyword !== baseline.keywords[index]) ||
     form.kofi !== baseline.kofi ||
     form.tags.length !== baseline.tags.length ||
     form.tags.some((tag, index) => tag !== baseline.tags[index]) ||
@@ -86,7 +87,7 @@ export function publishFormFromPayload(payload: {
     tags: payload.tags
       .filter((tag): tag is ApprovedTag => (APPROVED_TAGS as readonly string[]).includes(tag))
       .slice(0, 3),
-    keywords: payload.keywords.join(' '),
+    keywords: [...payload.keywords],
     dependencies: [...payload.dependencies],
     kofi: payload.kofi,
   }

@@ -1,9 +1,10 @@
-import {
-  type OwnedAddon,
-  type OwnedSubmission,
-  parseOwnedAddonsResponse,
+import type {
+  OwnedAddon,
+  OwnedSubmission,
+  OwnedSubmissionPayload,
 } from '@/components/developer/ownedParse'
-import { apiClient } from '@/lib/api'
+import { getAddonSources } from '@/components/developer/sources.ts'
+import type { SourceAddon, SourceSubmission } from '@/components/developer/types.ts'
 
 export type GetOwnedAddonsResult =
   | { status: 'ok'; addons: OwnedAddon[]; submissions: OwnedSubmission[] }
@@ -11,39 +12,55 @@ export type GetOwnedAddonsResult =
   | { status: 'error'; message: string }
 
 export async function getOwnedAddons(): Promise<GetOwnedAddonsResult> {
-  try {
-    const response = await apiClient.get('/me/owned-addons')
-
-    if (response.status === 401) {
-      return { status: 'unauthorized', message: 'Sign in to view your addons.' }
-    }
-
-    if (response.status !== 200) {
-      return {
-        status: 'error',
-        message: await errorMessage(response, "Couldn't load your addons."),
-      }
-    }
-
-    let body: unknown
-    try {
-      body = await response.json()
-    } catch {
-      return { status: 'error', message: 'Unexpected owned addons response.' }
-    }
-
-    return parseOwnedAddonsResponse(200, body)
-  } catch {
-    return { status: 'error', message: "Couldn't load your addons." }
+  const result = await getAddonSources()
+  if (result.status !== 'ok') return result
+  return {
+    status: 'ok',
+    addons: result.sources.addons.map(toOwnedAddon),
+    submissions: result.sources.submissions.map(toOwnedSubmission),
   }
 }
 
-async function errorMessage(response: Response, fallback: string): Promise<string> {
-  try {
-    const body = (await response.json()) as { message?: string }
-    if (typeof body.message === 'string' && body.message.trim()) return body.message
-  } catch {
-    // keep fallback
+function toOwnedAddon(addon: SourceAddon): OwnedAddon {
+  return {
+    uuid: addon.uuid,
+    name: addon.name,
+    alias: addon.alias,
+    repo: '',
+    branch: null,
+    author: '',
+    description: '',
+    tags: [],
+    downloads: 0,
+    likePercentage: null,
+    warning: null,
+    addedAt: null,
   }
-  return fallback
+}
+
+function emptyPayload(name: string): OwnedSubmissionPayload {
+  return {
+    name,
+    alias: name,
+    description: '',
+    author: '',
+    repo: '',
+    branch: '',
+    tags: [],
+    keywords: [],
+    dependencies: [],
+    kofi: '',
+  }
+}
+
+function toOwnedSubmission(submission: SourceSubmission): OwnedSubmission {
+  return {
+    id: submission.id,
+    kind: submission.kind,
+    status: 'open',
+    title: submission.name,
+    createdAt: null,
+    payload: emptyPayload(submission.name),
+    messages: [],
+  }
 }

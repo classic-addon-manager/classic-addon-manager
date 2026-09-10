@@ -6,13 +6,11 @@ import { cn } from '@/lib/utils'
 
 interface KeywordsInputProps {
   id?: string
-  value: string
-  onChange: (value: string) => void
+  value: string[]
+  onChange: (value: string[]) => void
   invalid?: boolean
   disabled?: boolean
 }
-
-const tokensFrom = (value: string) => value.split(/\s+/).filter(Boolean)
 
 export const KeywordsInput = ({
   id,
@@ -22,19 +20,11 @@ export const KeywordsInput = ({
   disabled = false,
 }: KeywordsInputProps) => {
   const [draft, setDraft] = useState('')
-  const tokens = tokensFrom(value)
-
-  const setTokens = (next: string[]) => {
-    onChange(next.join(' '))
-  }
 
   const addTokens = (parts: string[]) => {
-    const next = [...tokens]
-    for (const part of parts) {
-      if (!part || next.includes(part)) continue
-      next.push(part)
-    }
-    if (next.length !== tokens.length) setTokens(next)
+    const added = parts.filter(Boolean)
+    if (added.length === 0) return
+    onChange([...value, ...added])
   }
 
   const commitDraft = () => {
@@ -53,25 +43,22 @@ export const KeywordsInput = ({
       setDraft(next)
       return
     }
-
     const parts = next.split(/\s+/)
     const pending = /\s$/.test(next) ? '' : (parts.pop() ?? '')
-    addTokens(parts.filter(Boolean))
+    addTokens(parts)
     setDraft(pending)
   }
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.nativeEvent.isComposing) return
-
     if (event.key === 'Enter') {
       event.preventDefault()
       commitDraft()
       return
     }
-
-    if (event.key === 'Backspace' && draft === '' && tokens.length > 0) {
+    if (event.key === 'Backspace' && draft === '' && value.length > 0) {
       event.preventDefault()
-      setTokens(tokens.slice(0, -1))
+      onChange(value.slice(0, -1))
     }
   }
 
@@ -85,13 +72,13 @@ export const KeywordsInput = ({
         disabled && 'pointer-events-none cursor-not-allowed opacity-50'
       )}
     >
-      {tokens.map(token => (
-        <Badge key={token} variant="secondary" className="gap-1 rounded-full pr-1">
+      {value.map((token, index) => (
+        <Badge key={`${index}-${token}`} variant="secondary" className="gap-1 rounded-full pr-1">
           {token}
           <button
             type="button"
             disabled={disabled}
-            onClick={() => setTokens(tokens.filter(item => item !== token))}
+            onClick={() => onChange(value.filter((_, itemIndex) => itemIndex !== index))}
             className="rounded-full p-0.5 hover:bg-background/50 disabled:pointer-events-none"
             aria-label={`Remove ${token}`}
           >

@@ -13,11 +13,18 @@ export const Developer = () => {
   const token = useUserStore(s => s.token)
   const [view, setView] = useState<'list' | 'form'>('list')
   const [formInitial, setFormInitial] = useState<PublishFormState>(INITIAL_PUBLISH_FORM)
+  const [formSubmissionId, setFormSubmissionId] = useState<number | null>(null)
+  const [formLockedName, setFormLockedName] = useState(false)
   const [selection, setSelection] = useState<string | null>(null)
   const { data, error, retry } = useOwnedAddons(isAuthenticated && view === 'list', token)
 
-  const openForm = (initial: PublishFormState = INITIAL_PUBLISH_FORM) => {
+  const openForm = (
+    initial: PublishFormState = INITIAL_PUBLISH_FORM,
+    options?: { submissionId?: number; lockedName?: boolean }
+  ) => {
     setFormInitial(initial)
+    setFormSubmissionId(options?.submissionId ?? null)
+    setFormLockedName(options?.lockedName ?? false)
     setView('form')
   }
 
@@ -26,7 +33,14 @@ export const Developer = () => {
   }
 
   if (view === 'form') {
-    return <PublishAddonForm initial={formInitial} onClose={() => setView('list')} />
+    return (
+      <PublishAddonForm
+        initial={formInitial}
+        submissionId={formSubmissionId}
+        lockedName={formLockedName}
+        onClose={() => setView('list')}
+      />
+    )
   }
 
   return (
@@ -57,7 +71,7 @@ export const Developer = () => {
 function renderListBody(
   data: OwnedAddonsData | null,
   error: string | null,
-  retry: () => void,
+  retry: () => Promise<void>,
   openForm: (initial?: PublishFormState) => void,
   sessionKey: string,
   selection: string | null,
@@ -108,6 +122,7 @@ function renderListBody(
       selection={selection}
       onSelectionChange={onSelectionChange}
       onResubmit={openForm}
+      onRefresh={retry}
     />
   )
 }

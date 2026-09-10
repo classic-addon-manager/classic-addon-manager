@@ -1,5 +1,5 @@
 import { Browser } from '@wailsio/runtime'
-import { BarChart3, BlocksIcon, GithubIcon } from 'lucide-react'
+import { BarChart3, BlocksIcon, GithubIcon, LoaderCircle } from 'lucide-react'
 import { useState } from 'react'
 
 import {
@@ -23,19 +23,61 @@ import {
   mockReviewHistory,
   type PreviewReviewState,
 } from '@/components/developer/developerMocks'
+import { valuesToForm } from '@/components/developer/formValues.ts'
 import type { OwnedAddon } from '@/components/developer/ownedParse'
 import { ReviewStatus } from '@/components/developer/ReviewStatus'
+import { requireAddonSchema } from '@/components/developer/schema.ts'
+import { useDevAddonValues } from '@/components/developer/useDevAddonValues.ts'
+import { type FieldErrors, submitAddon } from '@/components/developer/validate'
+import { getAddonValues } from '@/components/developer/values.ts'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { toast } from '@/components/ui/toast'
 import { formatToLocalDate } from '@/lib/utils'
 
-export function AddonDetails({ addon }: { addon: OwnedAddon }) {
+export function AddonDetails({
+  addon,
+  onRefresh,
+  onSelect,
+}: {
+  addon: OwnedAddon
+  onRefresh: () => Promise<void>
+  onSelect: (key: string) => void
+}) {
+  const loaded = useDevAddonValues({
+    type: 'addon',
+    uuid: addon.uuid,
+    name: addon.name,
+    alias: addon.alias,
+  })
+  const form = loaded.values ? valuesToForm(loaded.values) : null
+  const display: OwnedAddon = form
+    ? {
+        ...addon,
+        alias: form.alias || addon.alias,
+        repo: form.repo,
+        branch: form.branch || null,
+        author: form.author,
+        description: form.description,
+        tags: [...form.tags],
+      }
+    : addon
   const [tab, setTab] = useState('overview')
   const [mode, setMode] = useState<'view' | 'edit' | 'compare'>('view')
   const [previewState, setPreviewState] = useState<PreviewReviewState>('none')
-  const review = mockCatalogReview(addon, previewState)
-  const published = catalogFields(addon)
+  const review = mockCatalogReview(display, previewState)
+  const published = catalogFields(display)
   const editableProposal =
     review?.status === 'in_review' || review?.status === 'rejected' ? review.proposed : published
   const submitLabel =
@@ -62,26 +104,26 @@ export function AddonDetails({ addon }: { addon: OwnedAddon }) {
     >
       <div className="shrink-0 space-y-4 px-5 pt-5">
         <div className="flex items-start gap-3">
-          <AddonIcon addon={addon} />
+          <AddonIcon addon={display} />
           <div className="min-w-0">
-            <h2 className="break-words text-xl font-semibold tracking-tight">{addon.alias}</h2>
+            <h2 className="wrap-break-word text-xl font-semibold tracking-tight">{display.alias}</h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              Published{addon.author && ` · ${addon.author}`}
+              Published{display.author && ` · ${display.author}`}
             </p>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button onClick={edit}>
+          <Button onClick={edit} disabled={loaded.loading || !!loaded.error}>
             {review?.status === 'rejected'
               ? 'Revise changes'
               : review?.status === 'in_review'
                 ? 'Edit pending changes'
                 : 'Edit details'}
           </Button>
-          {addon.repo && (
+          {display.repo && (
             <Button
               variant="outline"
-              onClick={() => void Browser.OpenURL(`https://github.com/${addon.repo}`)}
+              onClick={() => void Browser.OpenURL(`https://github.com/${display.repo}`)}
             >
               <GithubIcon />
               View code
@@ -118,12 +160,22 @@ export function AddonDetails({ addon }: { addon: OwnedAddon }) {
       </div>
       <ScrollArea className="min-h-0 flex-1">
         <TabsContent value="overview" className="space-y-5 p-5">
-          {mode === 'edit' ? (
+          {loaded.loading ? (
+            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+              <LoaderCircle className="size-8 animate-spin opacity-50" strokeWidth={1.5} />
+              <p className="mt-3 text-sm">Loading declaration...</p>
+            </div>
+          ) : loaded.error ? (
+            <p className="text-sm text-destructive">{loaded.error}</p>
+          ) : mode === 'edit' ? (
             <AddonEditPanel
-              addon={addon}
+              addon={display}
               initialCatalog={editableProposal}
+              initialForm={form}
               submitLabel={submitLabel}
               onCancel={() => setMode('view')}
+              onRefresh={onRefresh}
+              onSelect={onSelect}
             />
           ) : mode === 'compare' && review ? (
             <>
@@ -148,27 +200,27 @@ export function AddonDetails({ addon }: { addon: OwnedAddon }) {
                   onInspect={() => setMode('compare')}
                 />
               )}
-              {addon.warning && (
+              {display.warning && (
                 <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm">
-                  {addon.warning}
+                  {display.warning}
                 </p>
               )}
               <section className="space-y-3">
                 <h3 className="text-sm font-medium">Catalog details</h3>
-                <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">
-                  {addon.description || 'No description provided.'}
+                <p className="whitespace-pre-wrap wrap-break-word text-sm text-muted-foreground">
+                  {display.description || 'No description provided.'}
                 </p>
                 <dl className="divide-y rounded-xl border bg-card/40 px-4 text-sm">
                   <DetailField
                     label="Repository"
-                    value={addon.repo}
-                    href={addon.repo !== '' ? `https://github.com/${addon.repo}` : undefined}
+                    value={display.repo}
+                    href={display.repo !== '' ? `https://github.com/${display.repo}` : undefined}
                   />
-                  <DetailField label="Branch" value={addon.branch ?? 'Not specified'} />
-                  <DetailField label="Tags" value={addon.tags.join(', ')} />
+                  <DetailField label="Branch" value={display.branch ?? 'Not specified'} />
+                  <DetailField label="Tags" value={display.tags.join(', ')} />
                   <DetailField
                     label="Added to catalog"
-                    value={addon.addedAt ? formatToLocalDate(addon.addedAt) : 'Not available'}
+                    value={display.addedAt ? formatToLocalDate(display.addedAt) : 'Not available'}
                   />
                 </dl>
               </section>
@@ -208,37 +260,48 @@ export function AddonDetails({ addon }: { addon: OwnedAddon }) {
           )}
         </TabsContent>
         <TabsContent value="statistics" className="p-5">
-          <AddonStatistics addon={addon} />
+          <AddonStatistics addon={display} />
         </TabsContent>
       </ScrollArea>
     </Tabs>
   )
 }
-
 function AddonEditPanel({
   addon,
   initialCatalog,
+  initialForm,
   submitLabel,
   onCancel,
+  onRefresh,
+  onSelect,
 }: {
   addon: OwnedAddon
   initialCatalog: CatalogFields
+  initialForm: PublishFormState | null
   submitLabel: string
   onCancel: () => void
+  onRefresh: () => Promise<void>
+  onSelect: (key: string) => void
 }) {
-  const initial = publishFormFromPayload({
-    name: addon.name,
-    alias: initialCatalog.alias,
-    description: initialCatalog.description,
-    author: addon.author,
-    repo: initialCatalog.repo,
-    branch: initialCatalog.branch,
-    tags: initialCatalog.tags,
-    keywords: [],
-    dependencies: [],
-    kofi: '',
-  })
+  const initial =
+    initialForm ??
+    publishFormFromPayload({
+      name: addon.name,
+      alias: initialCatalog.alias,
+      description: initialCatalog.description,
+      author: addon.author,
+      repo: initialCatalog.repo,
+      branch: initialCatalog.branch,
+      tags: initialCatalog.tags,
+      keywords: [],
+      dependencies: [],
+      kofi: '',
+    })
   const [form, setForm] = useState<PublishFormState>(initial)
+  const [submissionId, setSubmissionId] = useState<number | null>(null)
+  const [alreadyOpenId, setAlreadyOpenId] = useState<number | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const setField: SetDeclarationField = (key, value) => {
     setForm(prev => {
       const nextValue =
@@ -250,6 +313,39 @@ function AddonEditPanel({
       if (Object.is(nextValue, prev[key])) return prev
       return { ...prev, [key]: nextValue }
     })
+    setFieldErrors(prev => {
+      if (!prev[key]) return prev
+      const next = { ...prev }
+      delete next[key]
+      return next
+    })
+  }
+
+  const resumeExisting = async (id: number) => {
+    const schema = await requireAddonSchema()
+    if (!schema) {
+      toast({ title: submitLabel, description: 'This source is unavailable.' })
+      return
+    }
+    const result = await getAddonValues(
+      { type: 'submission', id, kind: 'update', name: addon.name },
+      schema
+    )
+    if (result.status !== 'ok') {
+      toast({
+        title: submitLabel,
+        description:
+          result.status === 'unauthorized' ||
+          result.status === 'error' ||
+          result.status === 'not_found'
+            ? result.message
+            : 'This source is unavailable.',
+      })
+      return
+    }
+    setSubmissionId(id)
+    setForm(valuesToForm(result.values))
+    setFieldErrors({})
   }
 
   return (
@@ -264,26 +360,84 @@ function AddonEditPanel({
       <AddonDeclarationFields
         form={form}
         setField={setField}
-        fieldErrors={{}}
-        busy={false}
+        fieldErrors={fieldErrors}
+        busy={saving}
         lockedFields={['name']}
       />
       <div className="flex flex-wrap gap-2 border-t pt-4">
         <Button
           type="button"
-          disabled={!isPublishFormDirty(form, initial)}
+          disabled={!isPublishFormDirty(form, initial) || saving}
           onClick={() => {
-            // TODO(backend): Submit, update, or reopen the versioned catalog review here.
-            // Rejected edits reopen the same thread. Never change published values optimistically.
-            backendUnavailable(submitLabel)
+            void (async () => {
+              setSaving(true)
+              try {
+                const result = await submitAddon(form, submissionId)
+                if (result.status === 'submitted') {
+                  toast({
+                    title: submissionId === null ? 'Addon submitted' : 'Submission updated',
+                    description:
+                      submissionId === null ? "It's now in review." : 'Your changes were saved.',
+                  })
+                  await onRefresh()
+                  onSelect(`submission:${result.id}`)
+                  return
+                }
+                if (result.status === 'invalid') {
+                  setFieldErrors(result.fields)
+                  return
+                }
+                if (result.status === 'already_open') {
+                  setAlreadyOpenId(result.id)
+                  return
+                }
+                toast({
+                  title: submitLabel,
+                  description:
+                    'message' in result ? result.message : 'This submission is no longer open.',
+                })
+              } finally {
+                setSaving(false)
+              }
+            })()
           }}
         >
           {submitLabel}
         </Button>
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
           Cancel
         </Button>
       </div>
+      <AlertDialog
+        open={alreadyOpenId !== null}
+        onOpenChange={open => {
+          if (!open) setAlreadyOpenId(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Submission already open</AlertDialogTitle>
+            <AlertDialogDescription>
+              You already have an open submission for this name.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setAlreadyOpenId(null)}>
+              Keep editing
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const id = alreadyOpenId
+                setAlreadyOpenId(null)
+                if (id === null) return
+                void resumeExisting(id)
+              }}
+            >
+              Resume existing
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
@@ -292,11 +446,11 @@ function DetailField({ label, value, href }: { label: string; value: string; hre
   return (
     <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 py-3">
       <dt className="text-muted-foreground">{label}</dt>
-      <dd className="min-w-0 break-words">
+      <dd className="min-w-0 wrap-break-word">
         {value && href ? (
           <button
             type="button"
-            className="cursor-pointer text-left break-words text-primary underline-offset-4 hover:underline"
+            className="cursor-pointer text-left wrap-break-word text-primary underline-offset-4 hover:underline"
             onClick={() => void Browser.OpenURL(href)}
           >
             {value}

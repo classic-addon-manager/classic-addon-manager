@@ -16,7 +16,7 @@ export function useOwnedAddons(
 ): {
   data: OwnedAddonsData | null
   error: string | null
-  retry: () => void
+  retry: () => Promise<void>
 } {
   const [data, setData] = useState<OwnedAddonsData | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -25,23 +25,21 @@ export function useOwnedAddons(
   const generationRef = useRef(0)
   const inFlightRef = useRef(false)
 
-  const loadRef = useRef<(kind: 'user' | 'poll') => void>(() => {})
-  loadRef.current = (kind: 'user' | 'poll') => {
-    void (async () => {
-      if (kind === 'poll' && inFlightRef.current) return
-      const my = ++generationRef.current
-      inFlightRef.current = true
-      try {
-        const result = await getOwnedAddons()
-        if (my !== generationRef.current) return
+  const loadRef = useRef<(kind: 'user' | 'poll') => Promise<void>>(async () => {})
+  loadRef.current = async (kind: 'user' | 'poll') => {
+    if (kind === 'poll' && inFlightRef.current) return
+    const my = ++generationRef.current
+    inFlightRef.current = true
+    try {
+      const result = await getOwnedAddons()
+      if (my !== generationRef.current) return
+      inFlightRef.current = false
+      applyResult(kind, result, dataRef.current, setData, setError)
+    } finally {
+      if (my === generationRef.current) {
         inFlightRef.current = false
-        applyResult(kind, result, dataRef.current, setData, setError)
-      } finally {
-        if (my === generationRef.current) {
-          inFlightRef.current = false
-        }
       }
-    })()
+    }
   }
 
   useEffect(() => {
@@ -69,7 +67,7 @@ export function useOwnedAddons(
 
   const retry = () => {
     setError(null)
-    void loadRef.current('user')
+    return loadRef.current('user')
   }
 
   return { data, error, retry }
