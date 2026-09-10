@@ -1,5 +1,5 @@
 import { Browser } from '@wailsio/runtime'
-import { BarChart3, BlocksIcon, GithubIcon, LoaderCircle } from 'lucide-react'
+import { BarChart3, BlocksIcon, Check, GithubIcon, LoaderCircle } from 'lucide-react'
 import { useState } from 'react'
 
 import {
@@ -18,6 +18,10 @@ import {
   type PublishFormState,
 } from '@/components/developer/constants'
 import {
+  FORM_FIELD_ORDER,
+  scrollFirstFieldErrorIntoView,
+} from '@/components/developer/declarationFields'
+import {
   mockCatalogReview,
   mockDownloadTrends,
   mockReviewHistory,
@@ -28,7 +32,7 @@ import type { OwnedAddon } from '@/components/developer/ownedParse'
 import { ReviewStatus } from '@/components/developer/ReviewStatus'
 import { requireAddonSchema } from '@/components/developer/schema.ts'
 import { useDevAddonValues } from '@/components/developer/useDevAddonValues.ts'
-import { type FieldErrors, submitAddon } from '@/components/developer/validate'
+import { type FieldErrors, submitAddon, validateAddon } from '@/components/developer/validate'
 import { getAddonValues } from '@/components/developer/values.ts'
 import {
   AlertDialog,
@@ -44,7 +48,7 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from '@/components/ui/toast'
-import { formatToLocalDate } from '@/lib/utils'
+import { cn, formatToLocalDate } from '@/lib/utils'
 
 export function AddonDetails({
   addon,
@@ -106,7 +110,9 @@ export function AddonDetails({
         <div className="flex items-start gap-3">
           <AddonIcon addon={display} />
           <div className="min-w-0">
-            <h2 className="wrap-break-word text-xl font-semibold tracking-tight">{display.alias}</h2>
+            <h2 className="wrap-break-word text-xl font-semibold tracking-tight">
+              {display.alias}
+            </h2>
             <p className="mt-1 text-xs text-muted-foreground">
               Published{display.author && ` · ${display.author}`}
             </p>
@@ -300,8 +306,23 @@ function AddonEditPanel({
   const [form, setForm] = useState<PublishFormState>(initial)
   const [submissionId, setSubmissionId] = useState<number | null>(null)
   const [alreadyOpenId, setAlreadyOpenId] = useState<number | null>(null)
+  const [validating, setValidating] = useState(false)
+  const [validated, setValidated] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [editable, setEditable] = useState(true)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+  const [validationError, setValidationError] = useState(false)
+  const [publishError, setPublishError] = useState<string | null>(null)
+  const busy = validating || saving || !editable
+  const dirty = isPublishFormDirty(form, initial)
+  const hasFieldErrors = FORM_FIELD_ORDER.some(key => !!fieldErrors[key]?.length)
+  const failCopy = hasFieldErrors
+    ? 'Fix the highlighted fields.'
+    : publishError !== null
+      ? publishError
+      : validationError
+        ? "Couldn't validate this addon."
+        : null
   const setField: SetDeclarationField = (key, value) => {
     setForm(prev => {
       const nextValue =
@@ -313,12 +334,27 @@ function AddonEditPanel({
       if (Object.is(nextValue, prev[key])) return prev
       return { ...prev, [key]: nextValue }
     })
+    setValidated(false)
+    setValidationError(false)
+    setPublishError(null)
     setFieldErrors(prev => {
       if (!prev[key]) return prev
       const next = { ...prev }
       delete next[key]
       return next
     })
+  }
+
+  const applyInvalidResult = (fields: FieldErrors) => {
+    const hasFields = FORM_FIELD_ORDER.some(key => !!fields[key]?.length)
+    if (hasFields) {
+      setFieldErrors(fields)
+      requestAnimationFrame(() => {
+        scrollFirstFieldErrorIntoView(fields)
+      })
+      return
+    }
+    setValidationError(true)
   }
 
   const resumeExisting = async (id: number) => {
@@ -345,7 +381,80 @@ function AddonEditPanel({
     }
     setSubmissionId(id)
     setForm(valuesToForm(result.values))
+    setValidated(false)
+    setValidationError(false)
     setFieldErrors({})
+    setPublishError(null)
+    setEditable(true)
+  }
+
+  const handleValidate = async () => {
+    if (busy) return
+    setValidating(true)
+    setPublishError(null)
+    setFieldErrors({})
+    setValidationError(false)
+    let validationPassed = false
+    try {
+      const result = await validateAddon(form, submissionId)
+      if (result.status === 'not_open') {
+        setEditable(false)
+        setPublishError('This submission is no longer open.')
+        return
+      }
+      if (result.status === 'error') {
+        setValidationError(true)
+        return
+      }
+      if (result.status === 'valid') {
+        validationPassed = true
+        return
+      }
+      applyInvalidResult(result.fields)
+    } catch {
+      setValidationError(true)
+    } finally {
+      setValidated(validationPassed)
+      setValidating(false)
+    }
+  }
+
+  const handleSubmit = async () => {
+    if (busy || !validated) return
+    setSaving(true)
+    setPublishError(null)
+    setFieldErrors({})
+    try {
+      const result = await submitAddon(form, submissionId)
+      if (result.status === 'submitted') {
+        toast({
+          title: submissionId === null ? 'Addon submitted' : 'Submission updated',
+          description: submissionId === null ? "It's now in review." : 'Your changes were saved.',
+        })
+        await onRefresh()
+        onSelect(`submission:${result.id}`)
+        return
+      }
+      if (result.status === 'already_open') {
+        setAlreadyOpenId(result.id)
+        return
+      }
+      if (result.status === 'invalid') {
+        setValidated(false)
+        applyInvalidResult(result.fields)
+        return
+      }
+      if (result.status === 'not_open') {
+        setEditable(false)
+        setPublishError('This submission is no longer open.')
+        return
+      }
+      setPublishError('message' in result ? result.message : "Couldn't publish this addon.")
+    } catch {
+      setPublishError("Couldn't publish this addon.")
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -361,50 +470,54 @@ function AddonEditPanel({
         form={form}
         setField={setField}
         fieldErrors={fieldErrors}
-        busy={saving}
+        busy={busy}
         lockedFields={['name']}
       />
+      {failCopy && <p className="text-sm text-destructive">{failCopy}</p>}
       <div className="flex flex-wrap gap-2 border-t pt-4">
-        <Button
-          type="button"
-          disabled={!isPublishFormDirty(form, initial) || saving}
-          onClick={() => {
-            void (async () => {
-              setSaving(true)
-              try {
-                const result = await submitAddon(form, submissionId)
-                if (result.status === 'submitted') {
-                  toast({
-                    title: submissionId === null ? 'Addon submitted' : 'Submission updated',
-                    description:
-                      submissionId === null ? "It's now in review." : 'Your changes were saved.',
-                  })
-                  await onRefresh()
-                  onSelect(`submission:${result.id}`)
-                  return
-                }
-                if (result.status === 'invalid') {
-                  setFieldErrors(result.fields)
-                  return
-                }
-                if (result.status === 'already_open') {
-                  setAlreadyOpenId(result.id)
-                  return
-                }
-                toast({
-                  title: submitLabel,
-                  description:
-                    'message' in result ? result.message : 'This submission is no longer open.',
-                })
-              } finally {
-                setSaving(false)
+        <div className="relative">
+          {validated ? (
+            <span
+              className="publish-cta-ring pointer-events-none absolute inset-0 rounded-md"
+              aria-hidden
+            />
+          ) : null}
+          <Button
+            type="button"
+            disabled={busy || (!validated && !dirty)}
+            onClick={() => {
+              if (validated) {
+                void handleSubmit()
+                return
               }
-            })()
-          }}
-        >
-          {submitLabel}
-        </Button>
-        <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
+              void handleValidate()
+            }}
+            className={cn(
+              validated &&
+                'bg-emerald-600 text-emerald-50 hover:bg-emerald-700 focus-visible:border-emerald-600 focus-visible:ring-emerald-400/50 publish-cta-scale'
+            )}
+          >
+            {saving ? (
+              <>
+                <LoaderCircle className="animate-spin" />
+                {submitLabel}
+              </>
+            ) : validating ? (
+              <>
+                <LoaderCircle className="animate-spin" />
+                Validate
+              </>
+            ) : validated ? (
+              <>
+                <Check />
+                {submitLabel}
+              </>
+            ) : (
+              'Validate'
+            )}
+          </Button>
+        </div>
+        <Button type="button" variant="outline" onClick={onCancel} disabled={busy}>
           Cancel
         </Button>
       </div>
