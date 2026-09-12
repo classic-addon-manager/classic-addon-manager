@@ -1,5 +1,12 @@
 import { Browser } from '@wailsio/runtime'
-import { AlertTriangleIcon, CheckIcon, GithubIcon, Inbox, LoaderCircle } from 'lucide-react'
+import {
+  AlertTriangleIcon,
+  ArrowLeft,
+  CheckIcon,
+  GithubIcon,
+  Inbox,
+  LoaderCircle,
+} from 'lucide-react'
 import { useState } from 'react'
 
 import { AddonDetails, AddonIcon } from '@/components/developer/AddonDetails'
@@ -7,6 +14,7 @@ import { publishFormFromPayload, type PublishFormState } from '@/components/deve
 import { withdrawDeclaration } from '@/components/developer/declarationApi.ts'
 import { valuesToForm } from '@/components/developer/formValues.ts'
 import type { OwnedSubmission } from '@/components/developer/ownedParse'
+import { useDevAddonSubmission } from '@/components/developer/useDevAddonSubmission.ts'
 import { useDevAddonValues } from '@/components/developer/useDevAddonValues.ts'
 import {
   AlertDialog,
@@ -55,6 +63,10 @@ export function DeveloperWorkspace({
   // Polling may remove a submission after publication; fall back without retaining an old form.
   const selected = entries.find(entry => entry.key === selection) ?? entries[0]
   if (!selected) return null
+  // A submission reached from an addon's review history returns to that addon.
+  const backToAddon = selected.submission
+    ? data.addons.find(addon => addon.name === selected.submission?.payload.name)
+    : undefined
   return (
     <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,180px)_minmax(0,1fr)] md:grid-cols-[220px_minmax(0,1fr)] md:grid-rows-1">
       <ScrollArea className="min-h-0 border-b md:border-r md:border-b-0">
@@ -128,6 +140,14 @@ export function DeveloperWorkspace({
             <SubmissionDetails
               key={selected.key}
               submission={selected.submission}
+              backTo={
+                backToAddon
+                  ? {
+                      key: `addon:${backToAddon.name}`,
+                      label: backToAddon.alias || backToAddon.name,
+                    }
+                  : undefined
+              }
               onSelectionChange={onSelectionChange}
               onResubmit={onResubmit}
               onRefresh={onRefresh}
@@ -142,12 +162,14 @@ export function DeveloperWorkspace({
 
 function SubmissionDetails({
   submission,
+  backTo,
   onSelectionChange,
   onResubmit,
   onRefresh,
   onDropSubmission,
 }: {
   submission: OwnedSubmission
+  backTo?: { key: string; label: string }
   onSelectionChange: (key: string) => void
   onResubmit: (
     initial: PublishFormState,
@@ -162,6 +184,10 @@ function SubmissionDetails({
     kind: 'new',
     name: submission.title,
   })
+  // Review metadata comes from the submission endpoint; the list payload only
+  // seeds the sidebar and is not authoritative for status, kind, or comments.
+  const detail = useDevAddonSubmission(submission.id)
+  const submissionDetail = detail.submission
   const form = loaded.values ? valuesToForm(loaded.values) : null
   const payload = form
     ? {
@@ -180,9 +206,14 @@ function SubmissionDetails({
   const [withdrawing, setWithdrawing] = useState(false)
   const [busy, setBusy] = useState(false)
   const [closed, setClosed] = useState(false)
-  const open = submission.status === 'open'
+  const status = submissionDetail?.status ?? submission.status
+  const kind = submissionDetail?.kind ?? submission.kind
+  const createdAt = submissionDetail?.createdAt ?? submission.createdAt
+  const messages = submissionDetail?.messages ?? submission.messages
+  const open = status === 'open'
+  const rejected = status === 'rejected'
   const editable = open && !closed
-  const hasMessages = submission.messages.length > 0
+  const hasMessages = messages.length > 0
 
   const handleWithdraw = async () => {
     if (busy) return
@@ -231,7 +262,7 @@ function SubmissionDetails({
       setBusy(false)
     }
   }
-  if (loaded.loading) {
+  if (loaded.loading || detail.loading) {
     return (
       <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
         <LoaderCircle className="size-8 animate-spin opacity-50" strokeWidth={1.5} />
@@ -239,27 +270,45 @@ function SubmissionDetails({
       </div>
     )
   }
-  if (loaded.error) {
+  const loadError = loaded.error ?? detail.error
+  if (loadError) {
     return (
       <div className="flex h-full items-center justify-center p-5 text-sm text-destructive">
-        {loaded.error}
+        {loadError}
       </div>
     )
   }
   return (
     <ScrollArea className="h-full">
       <div className="space-y-5 p-5">
-        <div>
-          <h2 className="wrap-break-word text-xl font-semibold tracking-tight">
-            {submission.title}
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {closed
-              ? 'This submission is no longer open.'
-              : open
-                ? 'In review'
-                : 'Changes requested'}
-          </p>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="wrap-break-word text-xl font-semibold tracking-tight">
+              {payload.alias || payload.name}
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {closed
+                ? 'This submission is no longer open.'
+                : open
+                  ? 'In review'
+                  : rejected
+                    ? 'Changes requested'
+                    : status === 'approved'
+                      ? 'Approved'
+                      : 'Withdrawn'}
+            </p>
+          </div>
+          {backTo && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="shrink-0"
+              onClick={() => onSelectionChange(backTo.key)}
+            >
+              <ArrowLeft />
+              Back to {backTo.label}
+            </Button>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           {payload.repo !== '' && (
@@ -278,13 +327,14 @@ function SubmissionDetails({
                 onSelectionChange(`submission:${submission.id}`)
                 onResubmit(publishFormFromPayload(payload), {
                   submissionId: submission.id,
-                  lockedName: submission.kind === 'update',
+                  lockedName: kind === 'update',
                 })
               }}
             >
               Revise submission
             </Button>
           ) : (
+            rejected &&
             !closed && (
               <Button
                 variant="outline"
@@ -292,7 +342,7 @@ function SubmissionDetails({
                   onSelectionChange(`submission:${submission.id}`)
                   onResubmit(publishFormFromPayload(payload), {
                     submissionId: submission.id,
-                    lockedName: submission.kind === 'update',
+                    lockedName: kind === 'update',
                   })
                 }}
               >
@@ -309,7 +359,7 @@ function SubmissionDetails({
         <section
           className={cn(
             'space-y-3 rounded-xl border bg-primary/5 p-4',
-            !open && 'border-destructive/30 bg-destructive/5'
+            rejected && 'border-destructive/30 bg-destructive/5'
           )}
         >
           {open ? (
@@ -323,19 +373,19 @@ function SubmissionDetails({
                 </p>
               )}
             </>
-          ) : (
+          ) : rejected ? (
             <>
               <div>
                 <h3 className="text-sm font-medium">Changes requested</h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  This addon is not published. None of these details are live.
+                  None of these changes are live.
                 </p>
               </div>
               <div className="border-l-2 border-destructive pl-3 text-sm">
                 <p className="text-xs text-muted-foreground">Reviewer feedback</p>
                 {hasMessages ? (
                   <div className="mt-1 space-y-3">
-                    {submission.messages.map(message => (
+                    {messages.map(message => (
                       <div key={message.id}>
                         <p className="whitespace-pre-wrap wrap-break-word">{message.body}</p>
                         {message.createdAt !== null && (
@@ -353,12 +403,23 @@ function SubmissionDetails({
                 )}
               </div>
             </>
+          ) : (
+            <>
+              <h3 className="text-sm font-medium">
+                {status === 'approved' ? 'Approved' : 'Withdrawn'}
+              </h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {status === 'approved'
+                  ? 'This submission was approved and is now live in the catalog.'
+                  : 'This review is closed and no longer actionable.'}
+              </p>
+            </>
           )}
         </section>
-        {open && hasMessages && (
+        {!rejected && hasMessages && (
           <section className="space-y-3">
             <h3 className="text-sm font-medium">Review</h3>
-            {submission.messages.map(message => (
+            {messages.map(message => (
               <div key={message.id}>
                 <p className="whitespace-pre-wrap wrap-break-word text-sm">{message.body}</p>
                 {message.createdAt !== null && (
@@ -395,9 +456,7 @@ function SubmissionDetails({
             />
             <DetailField
               label="Submitted"
-              value={
-                submission.createdAt ? formatToLocalDate(submission.createdAt) : 'Not available'
-              }
+              value={createdAt ? formatToLocalDate(createdAt) : 'Not available'}
             />
           </dl>
         </section>

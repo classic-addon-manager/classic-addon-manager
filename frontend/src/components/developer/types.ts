@@ -35,6 +35,21 @@ export type SourceSubmission = {
 }
 export type AddonSources = { addons: SourceAddon[]; submissions: SourceSubmission[] }
 
+export type SubmissionStatus = 'open' | 'approved' | 'rejected' | 'withdrawn'
+export type SubmissionMessage = { id: number; body: string; createdAt: string | null }
+
+export type SubmissionDetail = {
+  id: number
+  kind: DeclarationKind
+  status: SubmissionStatus
+  targetAddonUuid: string | null
+  revision: number
+  createdAt: string | null
+  approvedAt: string | null
+  rejectedAt: string | null
+  messages: SubmissionMessage[]
+}
+
 export type EditorSource =
   | { type: 'new' }
   | { type: 'addon'; uuid: string; name: string; alias: string }

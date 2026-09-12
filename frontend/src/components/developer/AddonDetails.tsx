@@ -100,6 +100,12 @@ export function AddonDetails({
         setTab(value)
         // TODO(backend): Load statistics on selection, including keyboard tab navigation.
         if (value === 'statistics') backendUnavailable('Addon statistics')
+        if (
+          value === 'history' &&
+          display.reviewHistory.every(entry => entry.submissionId === null)
+        ) {
+          backendUnavailable('Submission history')
+        }
       }}
       className="h-full min-h-0 gap-0"
     >
@@ -121,7 +127,7 @@ export function AddonDetails({
               ? 'Revise changes'
               : review?.status === 'in_review'
                 ? 'Edit pending changes'
-                : 'Edit details'}
+                : 'Update details'}
           </Button>
           {display.repo && (
             <Button
@@ -158,6 +164,9 @@ export function AddonDetails({
           </TabsTrigger>
           <TabsTrigger value="statistics" className="rounded-none px-3 py-2">
             Statistics
+          </TabsTrigger>
+          <TabsTrigger value="history" className="rounded-none px-3 py-2">
+            Submission history
           </TabsTrigger>
         </TabsList>
       </div>
@@ -225,64 +234,45 @@ export function AddonDetails({
                   />
                 </dl>
               </section>
-              <details
-                className="border-t pt-4 text-sm"
-                onToggle={event => {
-                  if (
-                    event.currentTarget.open &&
-                    display.reviewHistory.every(entry => entry.submissionId === null)
-                  ) {
-                    backendUnavailable('Submission history')
-                  }
-                }}
-              >
-                <summary className="cursor-pointer font-medium">
-                  Submission history
-                  {display.reviewHistory.some(
-                    entry => entry.submissionId === null || entry.statusMocked || entry.dateMocked
-                  ) && <span className="text-xs font-normal text-muted-foreground"> · Mocked</span>}
-                </summary>
-                <div className="mt-3 divide-y">
-                  {display.reviewHistory.map(entry => (
-                    <div
-                      key={entry.submissionId ?? entry.number}
-                      className="flex flex-wrap items-center justify-between gap-2 py-3"
-                    >
-                      <div>
-                        #{entry.number} · {entry.status}
-                        {entry.statusMocked && (
-                          <span className="text-xs font-normal text-muted-foreground">
-                            {' '}
-                            · Mocked
-                          </span>
-                        )}
-                        <p className="text-xs text-muted-foreground">
-                          {formatToLocalDate(entry.date)}
-                          {entry.dateMocked && ' · Mocked'}
-                        </p>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          if (entry.submissionId !== null) {
-                            onSelect(`submission:${entry.submissionId}`)
-                            return
-                          }
-                          backendUnavailable('Submission history')
-                        }}
-                      >
-                        View review
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </details>
             </>
           )}
         </TabsContent>
         <TabsContent value="statistics" className="p-5">
           <AddonStatistics addon={display} />
+        </TabsContent>
+        <TabsContent value="history" className="p-5">
+          <div className="divide-y">
+            {display.reviewHistory.map(entry => (
+              <div
+                key={entry.submissionId ?? entry.number}
+                className="flex flex-wrap items-center justify-between gap-2 py-3"
+              >
+                <div>
+                  #{entry.number} · {entry.status}
+                  {entry.statusMocked && (
+                    <span className="text-xs font-normal text-muted-foreground"> · Mocked</span>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    {formatToLocalDate(entry.date)}
+                    {entry.dateMocked && ' · Mocked'}
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    if (entry.submissionId !== null) {
+                      onSelect(`submission:${entry.submissionId}`)
+                      return
+                    }
+                    backendUnavailable('Submission history')
+                  }}
+                >
+                  View review
+                </Button>
+              </div>
+            ))}
+          </div>
         </TabsContent>
       </ScrollArea>
     </Tabs>

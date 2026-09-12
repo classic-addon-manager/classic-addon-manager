@@ -1,3 +1,5 @@
+import type { SubmissionMessage } from '@/components/developer/types.ts'
+
 export type ReviewHistoryEntry = {
   number: number
   status: string
@@ -23,11 +25,7 @@ export type OwnedAddon = {
   reviewHistory: ReviewHistoryEntry[]
 }
 
-export type OwnedSubmissionMessage = {
-  id: number
-  body: string
-  createdAt: string | null
-}
+export type OwnedSubmissionMessage = SubmissionMessage
 
 export type OwnedSubmissionPayload = {
   name: string

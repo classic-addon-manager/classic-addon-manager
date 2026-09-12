@@ -7,6 +7,9 @@ import type {
   SchemaField,
   SourceAddon,
   SourceSubmission,
+  SubmissionDetail,
+  SubmissionMessage,
+  SubmissionStatus,
   Widget,
   WireValue,
 } from './types.ts'
@@ -53,6 +56,19 @@ export type ParseWithdrawResult =
   | { status: 'not_found'; message: string }
   | { status: 'unauthorized'; message: string }
   | { status: 'error'; message: string }
+
+export type ParseSubmissionDetailResult =
+  | { status: 'ok'; submission: SubmissionDetail }
+  | { status: 'not_found'; message: string }
+  | { status: 'unauthorized'; message: string }
+  | { status: 'error'; message: string }
+
+const SUBMISSION_STATUSES: Record<string, true> = {
+  open: true,
+  approved: true,
+  rejected: true,
+  withdrawn: true,
+}
 
 const WIDGETS: Record<string, true> = {
   text: true,
@@ -315,6 +331,78 @@ export function parseWithdrawResponse(statusCode: number, body: unknown): ParseW
     return { status: 'error', message: 'Unexpected withdraw response.' }
   }
   return { status: 'withdrawn', id: data.id, revision: data.revision }
+}
+
+export function parseSubmissionDetail(
+  statusCode: number,
+  body: unknown
+): ParseSubmissionDetailResult {
+  const envelope = parseEnvelope(body)
+  if (statusCode === 401) {
+    return { status: 'unauthorized', message: 'Sign in to view this submission.' }
+  }
+  if (isNotFound(statusCode, envelope)) {
+    return { status: 'not_found', message: 'This submission is unavailable.' }
+  }
+  if (statusCode !== 200 || envelope === null || envelope.status !== true) {
+    return { status: 'error', message: envelope?.message || 'Unexpected submission response.' }
+  }
+  const data = envelope.data
+  if (
+    data === null ||
+    typeof data !== 'object' ||
+    !('id' in data) ||
+    typeof data.id !== 'number' ||
+    !Number.isFinite(data.id) ||
+    !('kind' in data) ||
+    (data.kind !== 'new' && data.kind !== 'update') ||
+    !('status' in data) ||
+    typeof data.status !== 'string' ||
+    SUBMISSION_STATUSES[data.status] !== true
+  ) {
+    return { status: 'error', message: 'Unexpected submission response.' }
+  }
+  const revision =
+    'revision' in data && typeof data.revision === 'number' && Number.isFinite(data.revision)
+      ? data.revision
+      : 0
+  const targetAddonUuid =
+    'target_addon_uuid' in data &&
+    typeof data.target_addon_uuid === 'string' &&
+    data.target_addon_uuid !== ''
+      ? data.target_addon_uuid
+      : null
+  return {
+    status: 'ok',
+    submission: {
+      id: data.id,
+      kind: data.kind,
+      status: data.status as SubmissionStatus,
+      targetAddonUuid,
+      revision,
+      createdAt: parseTimestamp(data, 'created_at'),
+      approvedAt: parseTimestamp(data, 'approved_at'),
+      rejectedAt: parseTimestamp(data, 'rejected_at'),
+      messages: parseSubmissionMessages(data),
+    },
+  }
+}
+
+function parseSubmissionMessages(value: object): SubmissionMessage[] {
+  if (!('messages' in value) || !Array.isArray(value.messages)) return []
+  const messages: SubmissionMessage[] = []
+  for (const item of value.messages) {
+    if (item === null || typeof item !== 'object') continue
+    if (!('id' in item) || typeof item.id !== 'number' || !Number.isFinite(item.id)) continue
+    if (!('body' in item) || typeof item.body !== 'string') continue
+    messages.push({ id: item.id, body: item.body, createdAt: parseTimestamp(item, 'created_at') })
+  }
+  return messages
+}
+
+function parseTimestamp(value: object, key: string): string | null {
+  const raw = key in value ? (value as Record<string, unknown>)[key] : undefined
+  return typeof raw === 'string' && raw !== '' ? raw : null
 }
 
 function isWidget(value: unknown): value is Widget {
