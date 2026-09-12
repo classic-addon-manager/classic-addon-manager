@@ -94,7 +94,7 @@ export function ReviewStatus({
             <AlertDialogTitle>Withdraw these changes?</AlertDialogTitle>
             <AlertDialogDescription>
               This closes the review and removes the working proposal. The published addon and
-              review history stay unchanged.
+              Submission history stay unchanged.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -1,10 +1,10 @@
 import { Browser } from '@wailsio/runtime'
-import { GithubIcon, Inbox, LoaderCircle } from 'lucide-react'
+import { AlertTriangleIcon, CheckIcon, GithubIcon, Inbox, LoaderCircle } from 'lucide-react'
 import { useState } from 'react'
 
 import { AddonDetails, AddonIcon } from '@/components/developer/AddonDetails'
-import { backendUnavailable } from '@/components/developer/catalogEditing'
 import { publishFormFromPayload, type PublishFormState } from '@/components/developer/constants'
+import { withdrawDeclaration } from '@/components/developer/declarationApi.ts'
 import { valuesToForm } from '@/components/developer/formValues.ts'
 import type { OwnedSubmission } from '@/components/developer/ownedParse'
 import { useDevAddonValues } from '@/components/developer/useDevAddonValues.ts'
@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { toast } from '@/components/ui/toast'
 import { cn, formatToLocalDate, formatToLocalTime } from '@/lib/utils'
 
 import type { OwnedAddonsData } from './useOwnedAddons'
@@ -29,6 +30,8 @@ export function DeveloperWorkspace({
   selection,
   onSelectionChange,
   onResubmit,
+  onRefresh,
+  onDropSubmission,
 }: {
   data: OwnedAddonsData
   selection: string | null
@@ -37,6 +40,8 @@ export function DeveloperWorkspace({
     initial: PublishFormState,
     options?: { submissionId?: number; lockedName?: boolean }
   ) => void
+  onRefresh: () => Promise<void>
+  onDropSubmission: (id: number) => void
 }) {
   const publishedNames = new Set(data.addons.map(addon => addon.name))
   const entries = [
@@ -125,6 +130,8 @@ export function DeveloperWorkspace({
               submission={selected.submission}
               onSelectionChange={onSelectionChange}
               onResubmit={onResubmit}
+              onRefresh={onRefresh}
+              onDropSubmission={onDropSubmission}
             />
           )
         )}
@@ -137,6 +144,8 @@ function SubmissionDetails({
   submission,
   onSelectionChange,
   onResubmit,
+  onRefresh,
+  onDropSubmission,
 }: {
   submission: OwnedSubmission
   onSelectionChange: (key: string) => void
@@ -144,6 +153,8 @@ function SubmissionDetails({
     initial: PublishFormState,
     options?: { submissionId?: number; lockedName?: boolean }
   ) => void
+  onRefresh: () => Promise<void>
+  onDropSubmission: (id: number) => void
 }) {
   const loaded = useDevAddonValues({
     type: 'submission',
@@ -167,8 +178,59 @@ function SubmissionDetails({
       }
     : submission.payload
   const [withdrawing, setWithdrawing] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [closed, setClosed] = useState(false)
   const open = submission.status === 'open'
+  const editable = open && !closed
   const hasMessages = submission.messages.length > 0
+
+  const handleWithdraw = async () => {
+    if (busy) return
+    setBusy(true)
+    try {
+      const result = await withdrawDeclaration(submission.id)
+      if (result.status === 'withdrawn') {
+        setWithdrawing(false)
+        toast({
+          title: 'Submission withdrawn',
+          description: 'The review is closed.',
+          icon: CheckIcon,
+        })
+        onDropSubmission(submission.id)
+        void onRefresh()
+        return
+      }
+      if (result.status === 'not_open') {
+        setWithdrawing(false)
+        setClosed(true)
+        toast({
+          title: 'Withdraw submission',
+          description: 'This submission is no longer open.',
+          icon: AlertTriangleIcon,
+        })
+        void onRefresh()
+        return
+      }
+      if (result.status === 'not_found') {
+        setWithdrawing(false)
+        toast({
+          title: 'Withdraw submission',
+          description: result.message,
+          icon: AlertTriangleIcon,
+        })
+        onDropSubmission(submission.id)
+        void onRefresh()
+        return
+      }
+      toast({
+        title: 'Withdraw submission',
+        description: result.message,
+        icon: AlertTriangleIcon,
+      })
+    } finally {
+      setBusy(false)
+    }
+  }
   if (loaded.loading) {
     return (
       <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
@@ -192,7 +254,11 @@ function SubmissionDetails({
             {submission.title}
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            {open ? 'In review' : 'Changes requested'}
+            {closed
+              ? 'This submission is no longer open.'
+              : open
+                ? 'In review'
+                : 'Changes requested'}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -205,7 +271,7 @@ function SubmissionDetails({
               View code
             </Button>
           )}
-          {open ? (
+          {editable ? (
             <Button
               variant="outline"
               onClick={() => {
@@ -219,21 +285,23 @@ function SubmissionDetails({
               Revise submission
             </Button>
           ) : (
-            <Button
-              variant="outline"
-              onClick={() => {
-                onSelectionChange(`submission:${submission.id}`)
-                onResubmit(publishFormFromPayload(payload), {
-                  submissionId: submission.id,
-                  lockedName: submission.kind === 'update',
-                })
-              }}
-            >
-              Resubmit for review
-            </Button>
+            !closed && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  onSelectionChange(`submission:${submission.id}`)
+                  onResubmit(publishFormFromPayload(payload), {
+                    submissionId: submission.id,
+                    lockedName: submission.kind === 'update',
+                  })
+                }}
+              >
+                Resubmit for review
+              </Button>
+            )
           )}
-          {open && (
-            <Button variant="ghost" onClick={() => setWithdrawing(true)}>
+          {editable && (
+            <Button variant="ghost" onClick={() => setWithdrawing(true)} disabled={busy}>
               Withdraw submission
             </Button>
           )}
@@ -334,25 +402,31 @@ function SubmissionDetails({
           </dl>
         </section>
       </div>
-      <AlertDialog open={withdrawing} onOpenChange={setWithdrawing}>
+      <AlertDialog
+        open={withdrawing}
+        onOpenChange={next => {
+          if (!busy) setWithdrawing(next)
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Withdraw this submission?</AlertDialogTitle>
             <AlertDialogDescription>
-              This closes the review and removes the working proposal. Review history is retained.
+              This closes the review and removes the working proposal. Submission history is
+              retained.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Keep in review</AlertDialogCancel>
+            <AlertDialogCancel disabled={busy}>Keep in review</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
+              disabled={busy}
               onClick={event => {
                 event.preventDefault()
-                // TODO(backend): Close the new-addon review, retaining history only after confirmation.
-                backendUnavailable('Withdraw submission')
+                void handleWithdraw()
               }}
             >
-              Withdraw submission
+              {busy ? 'Withdrawing...' : 'Withdraw submission'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

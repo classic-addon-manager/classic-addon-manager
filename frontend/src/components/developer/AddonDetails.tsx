@@ -232,17 +232,15 @@ export function AddonDetails({
                     event.currentTarget.open &&
                     display.reviewHistory.every(entry => entry.submissionId === null)
                   ) {
-                    backendUnavailable('Review history')
+                    backendUnavailable('Submission history')
                   }
                 }}
               >
                 <summary className="cursor-pointer font-medium">
-                  Review history
+                  Submission history
                   {display.reviewHistory.some(
                     entry => entry.submissionId === null || entry.statusMocked || entry.dateMocked
-                  ) && (
-                    <span className="text-xs font-normal text-muted-foreground"> · Mocked</span>
-                  )}
+                  ) && <span className="text-xs font-normal text-muted-foreground"> · Mocked</span>}
                 </summary>
                 <div className="mt-3 divide-y">
                   {display.reviewHistory.map(entry => (
@@ -271,7 +269,7 @@ export function AddonDetails({
                             onSelect(`submission:${entry.submissionId}`)
                             return
                           }
-                          backendUnavailable('Review history')
+                          backendUnavailable('Submission history')
                         }}
                       >
                         View review
@@ -413,6 +411,7 @@ function AddonEditPanel({
       const result = await validateAddon(form, submissionId)
       if (result.status === 'not_open') {
         setEditable(false)
+        setSubmissionId(null)
         setPublishError('This submission is no longer open.')
         return
       }
@@ -464,6 +463,7 @@ function AddonEditPanel({
       }
       if (result.status === 'not_open') {
         setEditable(false)
+        setSubmissionId(null)
         setPublishError('This submission is no longer open.')
         return
       }

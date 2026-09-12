@@ -3,12 +3,14 @@ import {
   type ParseSaveResult,
   parseValidateResponse,
   type ParseValidateResult,
+  parseWithdrawResponse,
+  type ParseWithdrawResult,
 } from '@/components/developer/parse.ts'
 import type { DeclarationValues } from '@/components/developer/types.ts'
 import { v1SchemaKeys } from '@/components/developer/types.ts'
 import { apiClient } from '@/lib/api'
 
-export type { ParseSaveResult, ParseValidateResult }
+export type { ParseSaveResult, ParseValidateResult, ParseWithdrawResult }
 
 export function editorValidatePath(submissionId: number | null): string {
   return submissionId === null
@@ -23,6 +25,10 @@ export function editorSaveRequest(submissionId: number | null): {
   return submissionId === null
     ? { method: 'POST', path: '/dev/addon/submit' }
     : { method: 'PUT', path: `/dev/addon/submissions/${submissionId}` }
+}
+
+export function editorWithdrawPath(submissionId: number): string {
+  return `/dev/addon/submissions/${submissionId}/withdraw`
 }
 
 export async function validateDeclaration(
@@ -69,5 +75,23 @@ export async function saveDeclaration(
     return parseSaveResponse(response.status, body, v1SchemaKeys())
   } catch {
     return { status: 'error', message: 'Unexpected save response.' }
+  }
+}
+
+export async function withdrawDeclaration(submissionId: number): Promise<ParseWithdrawResult> {
+  try {
+    const response = await apiClient.post(editorWithdrawPath(submissionId))
+    let body: unknown
+    try {
+      body = await response.json()
+    } catch {
+      if (response.status === 401) {
+        return { status: 'unauthorized', message: 'Sign in to withdraw a submission.' }
+      }
+      return { status: 'error', message: 'Unexpected withdraw response.' }
+    }
+    return parseWithdrawResponse(response.status, body)
+  } catch {
+    return { status: 'error', message: 'Unexpected withdraw response.' }
   }
 }

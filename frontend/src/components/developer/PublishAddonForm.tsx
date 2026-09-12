@@ -159,6 +159,7 @@ export const PublishAddonForm = ({
       const result = await validateAddon(form, submissionId)
       if (result.status === 'not_open') {
         setEditable(false)
+        setSubmissionId(null)
         setPublishError('This submission is no longer open.')
         return
       }
@@ -211,6 +212,7 @@ export const PublishAddonForm = ({
       }
       if (result.status === 'not_open') {
         setEditable(false)
+        setSubmissionId(null)
         setPublishError('This submission is no longer open.')
         return
       }

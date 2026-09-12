@@ -47,6 +47,13 @@ export type ParseSaveResult =
   | { status: 'not_found'; message: string }
   | { status: 'error'; message: string }
 
+export type ParseWithdrawResult =
+  | { status: 'withdrawn'; id: number; revision: number }
+  | { status: 'not_open'; id: number }
+  | { status: 'not_found'; message: string }
+  | { status: 'unauthorized'; message: string }
+  | { status: 'error'; message: string }
+
 const WIDGETS: Record<string, true> = {
   text: true,
   textarea: true,
@@ -277,6 +284,37 @@ export function parseSaveResponse(
     return { status: 'error', message: 'Unexpected save response.' }
   }
   return { status: 'saved', id: data.id, revision: data.revision }
+}
+
+export function parseWithdrawResponse(statusCode: number, body: unknown): ParseWithdrawResult {
+  const envelope = parseEnvelope(body)
+  if (statusCode === 401) {
+    return { status: 'unauthorized', message: 'Sign in to withdraw a submission.' }
+  }
+  const closed = closedConflict(statusCode, envelope)
+  if (closed) return closed
+  if (isNotFound(statusCode, envelope)) {
+    return { status: 'not_found', message: SOURCE_UNAVAILABLE }
+  }
+  if (statusCode !== 200 || envelope === null || envelope.status !== true) {
+    return { status: 'error', message: envelope?.message || 'Unexpected withdraw response.' }
+  }
+  const data = envelope.data
+  if (
+    data === null ||
+    typeof data !== 'object' ||
+    !('id' in data) ||
+    typeof data.id !== 'number' ||
+    !Number.isFinite(data.id) ||
+    !('revision' in data) ||
+    typeof data.revision !== 'number' ||
+    !Number.isFinite(data.revision) ||
+    !('status' in data) ||
+    data.status !== 'withdrawn'
+  ) {
+    return { status: 'error', message: 'Unexpected withdraw response.' }
+  }
+  return { status: 'withdrawn', id: data.id, revision: data.revision }
 }
 
 function isWidget(value: unknown): value is Widget {

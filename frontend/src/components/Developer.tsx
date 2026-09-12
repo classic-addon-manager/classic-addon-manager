@@ -16,7 +16,16 @@ export const Developer = () => {
   const [formSubmissionId, setFormSubmissionId] = useState<number | null>(null)
   const [formLockedName, setFormLockedName] = useState(false)
   const [selection, setSelection] = useState<string | null>(null)
-  const { data, error, retry } = useOwnedAddons(isAuthenticated && view === 'list', token)
+  const { data, error, retry, removeSubmission } = useOwnedAddons(
+    isAuthenticated && view === 'list',
+    token
+  )
+
+  const dropSubmission = (id: number) => {
+    removeSubmission(id)
+    if (formSubmissionId === id) setFormSubmissionId(null)
+    if (selection === `submission:${id}`) setSelection(null)
+  }
 
   const openForm = (
     initial: PublishFormState = INITIAL_PUBLISH_FORM,
@@ -63,7 +72,7 @@ export const Developer = () => {
         </div>
       </header>
 
-      {renderListBody(data, error, retry, openForm, token, selection, setSelection)}
+      {renderListBody(data, error, retry, openForm, token, selection, setSelection, dropSubmission)}
     </div>
   )
 }
@@ -75,7 +84,8 @@ function renderListBody(
   openForm: (initial?: PublishFormState) => void,
   sessionKey: string,
   selection: string | null,
-  onSelectionChange: (key: string) => void
+  onSelectionChange: (key: string) => void,
+  onDropSubmission: (id: number) => void
 ) {
   if (data === null) {
     if (error === null) {
@@ -122,6 +132,8 @@ function renderListBody(
       selection={selection}
       onSelectionChange={onSelectionChange}
       onResubmit={openForm}
+      onRefresh={retry}
+      onDropSubmission={onDropSubmission}
     />
   )
 }

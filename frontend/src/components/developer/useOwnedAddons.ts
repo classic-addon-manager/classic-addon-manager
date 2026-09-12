@@ -17,6 +17,7 @@ export function useOwnedAddons(
   data: OwnedAddonsData | null
   error: string | null
   retry: () => Promise<void>
+  removeSubmission: (id: number) => void
 } {
   const [data, setData] = useState<OwnedAddonsData | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -70,7 +71,18 @@ export function useOwnedAddons(
     return loadRef.current('user')
   }
 
-  return { data, error, retry }
+  const removeSubmission = (id: number) => {
+    setData(current =>
+      current
+        ? {
+            addons: current.addons,
+            submissions: current.submissions.filter(submission => submission.id !== id),
+          }
+        : current
+    )
+  }
+
+  return { data, error, retry, removeSubmission }
 }
 
 function applyResult(
