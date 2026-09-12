@@ -400,7 +400,7 @@ function SubmissionDetails({
               </h3>
               <p className="mt-1 text-sm text-muted-foreground">
                 {status === 'approved'
-                  ? 'This submission was approved and is now live in the catalog.'
+                  ? 'This submission was approved and is now live in the app.'
                   : 'This review is closed and no longer actionable.'}
               </p>
             </>
@@ -437,7 +437,7 @@ function SubmissionDetails({
             nameLocked={kind === 'update'}
             requireChanges={false}
             introTitle={rejected ? 'Resubmit for review' : 'Update submission'}
-            introNote="Leaving this form discards unsent edits. The catalog only changes when this submission is approved."
+            introNote="Leaving this form discards unsent edits. Nothing goes live until this submission is approved."
             submitLabel={rejected ? 'Resubmit for review' : 'Update submission'}
             onCancel={() => {
               setEditing(false)

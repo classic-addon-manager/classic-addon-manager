@@ -1,7 +1,8 @@
-import { Browser } from '@wailsio/runtime'
+import { AlertTriangleIcon, CheckIcon } from 'lucide-react'
 import { useState } from 'react'
 
-import { backendUnavailable, type CatalogReview } from '@/components/developer/catalogEditing'
+import type { AddonReview } from '@/components/developer/catalogEditing'
+import { withdrawDeclaration } from '@/components/developer/declarationApi.ts'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,23 +14,29 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { toast } from '@/components/ui/toast'
 import { cn } from '@/lib/utils'
 
 export function ReviewStatus({
   review,
   onInspect,
+  onRefresh,
 }: {
-  review: CatalogReview
+  review: AddonReview
   onInspect: () => void
+  onRefresh: () => Promise<void>
 }) {
   const [withdrawing, setWithdrawing] = useState(false)
   const [dismissed, setDismissed] = useState(false)
+  const [busy, setBusy] = useState(false)
+  // The backend can close a review underneath us, stop offering withdrawal once it does.
+  const [closed, setClosed] = useState(false)
   if (dismissed && review.status === 'approved') return null
   const labels = {
     in_review: ['Changes in review', 'Your published listing remains live until approval.'],
-    approved: ['Changes approved and published', 'Your updated catalog details are now live.'],
+    approved: ['Changes approved and published', 'Your updated listing is now live.'],
     rejected: [
-      'Catalog edits rejected',
+      'Listing edits rejected',
       'Your addon is still published. None of these changes went live.',
     ],
     withdrawn: [
@@ -37,6 +44,54 @@ export function ReviewStatus({
       'The review is closed. Future edits start from the published listing.',
     ],
   }
+
+  const handleWithdraw = async () => {
+    if (busy) return
+    setBusy(true)
+    try {
+      const result = await withdrawDeclaration(review.submissionId)
+      if (result.status === 'withdrawn') {
+        setWithdrawing(false)
+        setClosed(true)
+        toast({
+          title: 'Changes withdrawn',
+          description: 'The review is closed.',
+          icon: CheckIcon,
+        })
+        void onRefresh()
+        return
+      }
+      if (result.status === 'not_open') {
+        setWithdrawing(false)
+        setClosed(true)
+        toast({
+          title: 'Withdraw changes',
+          description: 'This review is no longer open.',
+          icon: AlertTriangleIcon,
+        })
+        void onRefresh()
+        return
+      }
+      if (result.status === 'not_found') {
+        setWithdrawing(false)
+        toast({
+          title: 'Withdraw changes',
+          description: result.message,
+          icon: AlertTriangleIcon,
+        })
+        void onRefresh()
+        return
+      }
+      toast({
+        title: 'Withdraw changes',
+        description: result.message,
+        icon: AlertTriangleIcon,
+      })
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <>
       <section
@@ -50,34 +105,14 @@ export function ReviewStatus({
           <h3 className="text-sm font-medium">{labels[review.status][0]}</h3>
           <p className="mt-1 text-sm text-muted-foreground">{labels[review.status][1]}</p>
         </div>
-        {review.status === 'rejected' && (
-          <div className="border-l-2 border-destructive pl-3 text-sm">
-            <p className="text-xs text-muted-foreground">Reviewer feedback</p>
-            <p className="mt-1 whitespace-pre-wrap wrap-break-word">
-              {review.feedback ?? 'Feedback is not available. Open the review for details.'}
-            </p>
-          </div>
-        )}
         <div className="flex flex-wrap gap-2">
           {(review.status === 'in_review' || review.status === 'rejected') && (
             <Button variant="outline" size="sm" onClick={onInspect}>
               View {review.status === 'rejected' ? 'rejected' : 'submitted'} changes
             </Button>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              // TODO(backend): Return the actual review URL with the review payload.
-              if (review.htmlUrl.startsWith('https://github.com/'))
-                void Browser.OpenURL(review.htmlUrl)
-              else backendUnavailable('View review')
-            }}
-          >
-            View review · #{review.prNumber}
-          </Button>
-          {review.status === 'in_review' && (
-            <Button variant="ghost" size="sm" onClick={() => setWithdrawing(true)}>
+          {review.status === 'in_review' && !closed && (
+            <Button variant="ghost" size="sm" onClick={() => setWithdrawing(true)} disabled={busy}>
               Withdraw changes
             </Button>
           )}
@@ -88,7 +123,12 @@ export function ReviewStatus({
           )}
         </div>
       </section>
-      <AlertDialog open={withdrawing} onOpenChange={setWithdrawing}>
+      <AlertDialog
+        open={withdrawing}
+        onOpenChange={next => {
+          if (!busy) setWithdrawing(next)
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Withdraw these changes?</AlertDialogTitle>
@@ -98,17 +138,16 @@ export function ReviewStatus({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Keep in review</AlertDialogCancel>
+            <AlertDialogCancel disabled={busy}>Keep in review</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
+              disabled={busy}
               onClick={event => {
                 event.preventDefault()
-                // TODO(backend): Withdraw this review, check its latest revision/state, then refresh.
-                // Do not remove the proposal on failure or claim success if approval won the race.
-                backendUnavailable('Withdraw changes')
+                void handleWithdraw()
               }}
             >
-              Withdraw changes
+              {busy ? 'Withdrawing...' : 'Withdraw changes'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

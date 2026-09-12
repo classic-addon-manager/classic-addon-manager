@@ -1,4 +1,3 @@
-import { mockReviewHistory } from '@/components/developer/developerMocks'
 import {
   isFiniteDateString,
   type OwnedAddon,
@@ -14,9 +13,6 @@ export type GetOwnedAddonsResult =
   | { status: 'ok'; addons: OwnedAddon[]; submissions: OwnedSubmission[] }
   | { status: 'unauthorized'; message: string }
   | { status: 'error'; message: string }
-
-/** Placeholder used when a source submission has no date. Visibly labeled as mocked. */
-const MOCK_REVIEW_DATE = '2026-08-18'
 
 export async function getOwnedAddons(): Promise<GetOwnedAddonsResult> {
   const result = await getAddonSources()
@@ -70,34 +66,16 @@ function toOwnedAddon(addon: SourceAddon, submissions: SourceSubmission[]): Owne
 }
 
 function toReviewHistory(submissions: SourceSubmission[]): ReviewHistoryEntry[] {
-  if (submissions.length === 0) {
-    // TODO(backend): Drop fallback rows once closed reviews are returned with the addon.
-    return mockReviewHistory.map(entry => ({
-      number: entry.number,
-      status: reviewStatus(entry.status).value,
-      tone: statusTone(entry.status),
-      date: entry.date,
-      submissionId: null,
-      statusMocked: true,
-      dateMocked: true,
-    }))
-  }
   return submissions
     .slice()
     .sort((a, b) => b.id - a.id)
-    .map(submission => {
-      const status = reviewStatus(submission.status)
-      const date = reviewDate(submission.createdAt)
-      return {
-        number: submission.id,
-        status: status.value,
-        tone: statusTone(submission.status),
-        date: date.value,
-        submissionId: submission.id,
-        statusMocked: status.mocked,
-        dateMocked: date.mocked,
-      }
-    })
+    .map(submission => ({
+      number: submission.id,
+      status: reviewStatus(submission.status),
+      tone: statusTone(submission.status),
+      date: reviewDate(submission.createdAt),
+      submissionId: submission.id,
+    }))
 }
 
 const REVIEW_STATUS_LABELS: Record<string, string> = {
@@ -121,19 +99,18 @@ const REVIEW_STATUS_TONES: Record<string, ReviewHistoryTone> = {
  * map stays visibly distinct instead of passing through as an unremarkable string.
  */
 export function statusTone(status: string | undefined): ReviewHistoryTone {
-  // A missing status renders as "In review" (mocked), so it shares that tone.
-  if (!status) return 'review'
+  // A missing status cannot be asserted as a real outcome, so it stays unknown.
+  if (!status) return 'unknown'
   return REVIEW_STATUS_TONES[status] ?? 'unknown'
 }
 
-function reviewStatus(status: string | undefined): { value: string; mocked: boolean } {
-  if (!status) return { value: 'In review', mocked: true }
-  return { value: REVIEW_STATUS_LABELS[status] ?? status, mocked: false }
+function reviewStatus(status: string | undefined): string {
+  if (!status) return 'Unknown'
+  return REVIEW_STATUS_LABELS[status] ?? status
 }
 
-function reviewDate(createdAt: string | undefined): { value: string; mocked: boolean } {
-  if (createdAt && isFiniteDateString(createdAt)) return { value: createdAt, mocked: false }
-  return { value: MOCK_REVIEW_DATE, mocked: true }
+function reviewDate(createdAt: string | undefined): string | null {
+  return createdAt && isFiniteDateString(createdAt) ? createdAt : null
 }
 
 function emptyPayload(name: string): OwnedSubmissionPayload {

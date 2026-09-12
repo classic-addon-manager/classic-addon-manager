@@ -1,46 +1,41 @@
 import { InfoIcon } from 'lucide-react'
 
-import type { OwnedAddon } from '@/components/developer/ownedParse'
+import type { ReviewHistoryEntry, ReviewHistoryTone } from '@/components/developer/ownedParse'
 import { toast } from '@/components/ui/toast'
 
-export type CatalogFields = Pick<OwnedAddon, 'alias' | 'description' | 'repo' | 'tags'> & {
-  branch: string
+/** Catalog-review outcome the addon's latest submission can be in. */
+export type ReviewOutcome = 'in_review' | 'approved' | 'rejected' | 'withdrawn'
+
+ // The addon's current catalog-review status, derived from its newest submission.
+export type AddonReview = {
+  /** Submission whose detail shows the real proposed declaration and feedback. */
+  submissionId: number
+  status: ReviewOutcome
 }
 
-// TODO(backend): Add an owned-addon review endpoint, linking reviews by immutable addon name.
-// Published catalog values must remain separate from the proposed, versioned review payload.
-export interface CatalogReview {
-  prNumber: number
-  htmlUrl: string
-  status: 'in_review' | 'approved' | 'rejected' | 'withdrawn'
-  proposed: CatalogFields
-  feedback: string | null
+/** Maps the shared review tones onto review outcomes, unknown stays unmapped. */
+const REVIEW_OUTCOMES: Record<ReviewHistoryTone, ReviewOutcome | null> = {
+  review: 'in_review',
+  approved: 'approved',
+  rejected: 'rejected',
+  withdrawn: 'withdrawn',
+  // An unmapped backend status must never be presented as a known outcome.
+  unknown: null,
 }
 
-export function catalogFields(addon: OwnedAddon): CatalogFields {
+/**
+ * Current review status from the addon's latest submission. History is
+ * newest-first, an empty history or an unmapped status yields no review.
+ */
+export function latestReview(history: ReviewHistoryEntry[]): AddonReview | null {
+  const latest = history[0]
+  if (!latest) return null
+  const status = REVIEW_OUTCOMES[latest.tone]
+  if (!status) return null
   return {
-    alias: addon.alias,
-    description: addon.description,
-    repo: addon.repo,
-    branch: addon.branch ?? '',
-    tags: [...addon.tags],
+    submissionId: latest.submissionId,
+    status,
   }
-}
-
-export const catalogFieldLabels: Record<keyof CatalogFields, string> = {
-  alias: 'Display name',
-  description: 'Description',
-  repo: 'Repository',
-  branch: 'Branch',
-  tags: 'Tags',
-}
-
-export function changedCatalogFields(before: CatalogFields, after: CatalogFields) {
-  return (Object.keys(catalogFieldLabels) as (keyof CatalogFields)[]).filter(key => {
-    if (key === 'tags')
-      return [...before.tags].sort().join('\0') !== [...after.tags].sort().join('\0')
-    return before[key] !== after[key]
-  })
 }
 
 export function backendUnavailable(action: string) {

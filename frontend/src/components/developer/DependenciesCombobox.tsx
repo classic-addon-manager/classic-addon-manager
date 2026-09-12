@@ -85,7 +85,7 @@ export const DependenciesCombobox = ({
       </div>
     ) : manifests.length === 0 ? (
       <div className="flex h-9 items-center px-3 text-sm text-muted-foreground">
-        No addons in the catalog.
+        No addons available.
       </div>
     ) : null
 

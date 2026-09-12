@@ -7,10 +7,8 @@ export type ReviewHistoryEntry = {
   number: number
   status: string
   tone: ReviewHistoryTone
-  date: string
-  submissionId: number | null
-  statusMocked: boolean
-  dateMocked: boolean
+  date: string | null
+  submissionId: number
 }
 
 export type OwnedAddon = {

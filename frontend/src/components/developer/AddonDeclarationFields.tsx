@@ -237,7 +237,7 @@ export function AddonDeclarationFields({
         </div>
       </Section>
 
-      <Section title="Catalog">
+      <Section title="Discoverability">
         <div className="space-y-4 px-4 py-4">
           <Field label="Tags" hint="Pick up to 3." error={fieldErrors.tags} errorMode="label">
             <div

@@ -6,12 +6,7 @@ import {
   AddonDeclarationFields,
   type SetDeclarationField,
 } from '@/components/developer/AddonDeclarationFields'
-import { CatalogComparison } from '@/components/developer/CatalogEditForm'
-import {
-  backendUnavailable,
-  type CatalogFields,
-  catalogFields,
-} from '@/components/developer/catalogEditing'
+import { backendUnavailable, latestReview } from '@/components/developer/catalogEditing'
 import {
   isPublishFormDirty,
   publishFormFromPayload,
@@ -21,11 +16,7 @@ import {
   FORM_FIELD_ORDER,
   scrollFirstFieldErrorIntoView,
 } from '@/components/developer/declarationFields'
-import {
-  mockCatalogReview,
-  mockDownloadTrends,
-  type PreviewReviewState,
-} from '@/components/developer/developerMocks'
+import { mockDownloadTrends } from '@/components/developer/developerMocks'
 import { valuesToForm } from '@/components/developer/formValues.ts'
 import type { OwnedAddon } from '@/components/developer/ownedParse'
 import { ReviewStatus } from '@/components/developer/ReviewStatus'
@@ -78,12 +69,9 @@ export function AddonDetails({
       }
     : addon
   const [tab, setTab] = useState('overview')
-  const [mode, setMode] = useState<'view' | 'edit' | 'compare'>('view')
-  const [previewState, setPreviewState] = useState<PreviewReviewState>('none')
-  const review = mockCatalogReview(display, previewState)
-  const published = catalogFields(display)
-  const editableProposal =
-    review?.status === 'in_review' || review?.status === 'rejected' ? review.proposed : published
+  const [mode, setMode] = useState<'view' | 'edit'>('view')
+  // The addon's current status is its latest submission, never a previewed one.
+  const review = latestReview(display.reviewHistory)
   const submitLabel =
     review?.status === 'in_review'
       ? 'Update submission'
@@ -103,12 +91,6 @@ export function AddonDetails({
         setTab(value)
         // TODO(backend): Load statistics on selection, including keyboard tab navigation.
         if (value === 'statistics') backendUnavailable('Addon statistics')
-        if (
-          value === 'history' &&
-          display.reviewHistory.every(entry => entry.submissionId === null)
-        ) {
-          backendUnavailable('Submission history')
-        }
       }}
       className="h-full min-h-0 gap-0"
     >
@@ -142,25 +124,6 @@ export function AddonDetails({
             </Button>
           )}
         </div>
-        {/* TODO(backend): Remove the sample selector when real review state is available. */}
-        <label className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          Sample review state
-          <select
-            aria-label="Sample review state"
-            className="max-w-full rounded-md border bg-background px-2 py-1.5 text-foreground"
-            value={previewState}
-            onChange={event => {
-              setMode('view')
-              setPreviewState(event.target.value as PreviewReviewState)
-            }}
-          >
-            <option value="none">No pending edits</option>
-            <option value="in_review">In review</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
-            <option value="withdrawn">Withdrawn</option>
-          </select>
-        </label>
         <TabsList className="h-auto rounded-none border-b bg-transparent p-0">
           <TabsTrigger value="overview" className="rounded-none px-3 py-2">
             Overview
@@ -185,33 +148,19 @@ export function AddonDetails({
           ) : mode === 'edit' ? (
             <AddonEditPanel
               addon={display}
-              initialCatalog={editableProposal}
               initialForm={form}
               submitLabel={submitLabel}
               onCancel={() => setMode('view')}
               onSubmitted={() => void onRefresh()}
             />
-          ) : mode === 'compare' && review ? (
-            <>
-              <h3 className="font-medium">
-                {review.status === 'rejected' ? 'Rejected changes' : 'Submitted changes'}{' '}
-                <span className="text-xs text-muted-foreground">· Sample data</span>
-              </h3>
-              <CatalogComparison published={published} proposed={review.proposed} />
-              <div className="flex flex-wrap gap-2">
-                <Button onClick={edit}>Revise changes</Button>
-                <Button variant="outline" onClick={() => setMode('view')}>
-                  Back to overview
-                </Button>
-              </div>
-            </>
           ) : (
             <>
               {review && (
                 <ReviewStatus
-                  key={previewState}
+                  key={`${review.status}:${review.submissionId}`}
                   review={review}
-                  onInspect={() => setMode('compare')}
+                  onInspect={() => onSelect(`submission:${review.submissionId}`)}
+                  onRefresh={onRefresh}
                 />
               )}
               {display.warning && (
@@ -220,7 +169,7 @@ export function AddonDetails({
                 </p>
               )}
               <section className="space-y-3">
-                <h3 className="text-sm font-medium">Catalog details</h3>
+                <h3 className="text-sm font-medium">Listing details</h3>
                 <p className="whitespace-pre-wrap wrap-break-word text-sm text-muted-foreground">
                   {display.description || 'No description provided.'}
                 </p>
@@ -233,7 +182,7 @@ export function AddonDetails({
                   <DetailField label="Branch" value={display.branch ?? 'Not specified'} />
                   <DetailField label="Tags" value={display.tags.join(', ')} />
                   <DetailField
-                    label="Added to catalog"
+                    label="Published on"
                     value={display.addedAt ? formatToLocalDate(display.addedAt) : 'Not available'}
                   />
                 </dl>
@@ -245,43 +194,37 @@ export function AddonDetails({
           <AddonStatistics addon={display} />
         </TabsContent>
         <TabsContent value="history" className="p-5">
-          <div className="divide-y">
-            {display.reviewHistory.map(entry => (
-              <div
-                key={entry.submissionId ?? entry.number}
-                className="flex flex-wrap items-center justify-between gap-2 py-3"
-              >
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs tabular-nums text-muted-foreground">
-                      #{entry.number}
-                    </span>
-                    <StatusChip tone={entry.tone} label={entry.status} />
-                    {entry.statusMocked && (
-                      <span className="text-xs text-muted-foreground">· Mocked</span>
-                    )}
-                  </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {formatToLocalDate(entry.date)}
-                    {entry.dateMocked && ' · Mocked'}
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    if (entry.submissionId !== null) {
-                      onSelect(`submission:${entry.submissionId}`)
-                      return
-                    }
-                    backendUnavailable('Submission history')
-                  }}
+          {display.reviewHistory.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No submissions yet.</p>
+          ) : (
+            <div className="divide-y">
+              {display.reviewHistory.map(entry => (
+                <div
+                  key={entry.submissionId}
+                  className="flex flex-wrap items-center justify-between gap-2 py-3"
                 >
-                  View review
-                </Button>
-              </div>
-            ))}
-          </div>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs tabular-nums text-muted-foreground">
+                        #{entry.number}
+                      </span>
+                      <StatusChip tone={entry.tone} label={entry.status} />
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {entry.date ? formatToLocalDate(entry.date) : 'Not available'}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => onSelect(`submission:${entry.submissionId}`)}
+                  >
+                    View review
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
         </TabsContent>
       </ScrollArea>
     </Tabs>
@@ -289,7 +232,6 @@ export function AddonDetails({
 }
 export function AddonEditPanel({
   addon,
-  initialCatalog,
   initialForm,
   submitLabel,
   onCancel,
@@ -297,11 +239,10 @@ export function AddonEditPanel({
   initialSubmissionId,
   nameLocked = true,
   requireChanges = true,
-  introTitle = 'Edit catalog details',
+  introTitle = 'Edit listing details',
   introNote = 'Leaving this form discards unsent edits. Your published listing stays unchanged until approval.',
 }: {
   addon: OwnedAddon
-  initialCatalog?: CatalogFields
   initialForm: PublishFormState | null
   submitLabel: string
   onCancel: () => void
@@ -319,12 +260,12 @@ export function AddonEditPanel({
     initialForm ??
     publishFormFromPayload({
       name: addon.name,
-      alias: initialCatalog?.alias ?? '',
-      description: initialCatalog?.description ?? '',
+      alias: addon.alias,
+      description: addon.description,
       author: addon.author,
-      repo: initialCatalog?.repo ?? '',
-      branch: initialCatalog?.branch ?? '',
-      tags: initialCatalog?.tags ?? [],
+      repo: addon.repo,
+      branch: addon.branch ?? '',
+      tags: addon.tags,
       keywords: [],
       dependencies: [],
       kofi: '',
