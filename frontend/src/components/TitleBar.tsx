@@ -17,12 +17,12 @@ export function TitleBar() {
   const slotContent = useAtomValue(titleBarSlotAtom)
   const [isMaximised, setIsMaximised] = useState(false)
 
-  const syncMaximisedState = useCallback(async () => {
-    try {
-      setIsMaximised(await Window.IsMaximised())
-    } catch (error) {
-      console.error('Failed to query maximise state:', error)
-    }
+  const syncMaximisedState = useCallback(() => {
+    return Window.IsMaximised()
+      .then(setIsMaximised)
+      .catch(error => {
+        console.error('Failed to query maximise state:', error)
+      })
   }, [])
 
   useEffect(() => {

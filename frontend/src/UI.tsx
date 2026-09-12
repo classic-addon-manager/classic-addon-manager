@@ -1,6 +1,6 @@
 import { useAtomValue } from 'jotai'
 
-import { activeComponentAtom } from '@/atoms/sidebarAtoms'
+import { activePageElementAtom } from '@/atoms/sidebarAtoms'
 import { AppUpdateDialog } from '@/components/AppUpdateDialog'
 import { Sidebar } from '@/components/sidebar'
 import { SupportProjectDialog } from '@/components/SupportProjectDialog'
@@ -8,7 +8,7 @@ import { TitleBar } from '@/components/TitleBar'
 import { WindowResizeHandles } from '@/components/WindowResizeHandles'
 
 export default function UI() {
-  const ActiveComponent = useAtomValue(activeComponentAtom)
+  const activePage = useAtomValue(activePageElementAtom)
   return (
     <>
       <AppUpdateDialog />
@@ -23,9 +23,7 @@ export default function UI() {
             </div>
           </div>
 
-          <div className="flex min-h-0 flex-col overflow-hidden">
-            <ActiveComponent />
-          </div>
+          <div className="flex min-h-0 flex-col overflow-hidden">{activePage}</div>
         </div>
       </div>
     </>

@@ -1,7 +1,7 @@
 import { Dialogs } from '@wailsio/runtime'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { AlertTriangleIcon } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 
 import {
@@ -17,20 +17,16 @@ import { useAddonStore } from '@/stores/addonStore'
 export function useDashboardController() {
   const { installedAddons, isCheckingForUpdates, performBulkUpdateCheck, updateInstalledAddons } =
     useAddonStore()
-  const [isLoading, setIsLoading] = useState(false)
-  const [selectedAddon, setSelectedAddon] = useAtom(selectedAddonAtom)
+  const [isLoading, setIsLoading] = useState(true)
+  const [selectedAddonSnapshot, setSelectedAddon] = useAtom(selectedAddonAtom)
   const setSearchQuery = useSetAtom(searchQueryAtom)
   const filteredAddons = useAtomValue(filteredAddonsAtom)
   const versionSelectAddon = useAtomValue(versionSelectAtom)
 
-  useEffect(() => {
-    if (!selectedAddon) return
-    const fresh = installedAddons.find(a => a.name === selectedAddon.name)
-    if (fresh && fresh !== selectedAddon) setSelectedAddon(fresh)
-  }, [installedAddons, selectedAddon, setSelectedAddon])
-
-  const storeActionsRef = useRef({ updateInstalledAddons, performBulkUpdateCheck })
-  storeActionsRef.current = { updateInstalledAddons, performBulkUpdateCheck }
+  const selectedAddon = selectedAddonSnapshot
+    ? (installedAddons.find(addon => addon.name === selectedAddonSnapshot.name) ??
+      selectedAddonSnapshot)
+    : null
 
   const debouncedSetSearch = useDebouncedCallback((value: string) => {
     setSearchQuery(value)
@@ -38,15 +34,14 @@ export function useDashboardController() {
 
   useEffect(() => {
     const loadAddons = async () => {
-      setIsLoading(true)
-      await storeActionsRef.current.updateInstalledAddons()
+      await updateInstalledAddons()
       setIsLoading(false)
     }
 
     loadAddons().then(() => {
-      storeActionsRef.current.performBulkUpdateCheck()
+      performBulkUpdateCheck()
     })
-  }, [])
+  }, [updateInstalledAddons, performBulkUpdateCheck])
 
   const handleInstallZip = async () => {
     try {
@@ -71,7 +66,7 @@ export function useDashboardController() {
           title: 'Addon Installed',
           description: `${name} installed successfully!`,
         })
-        await storeActionsRef.current.updateInstalledAddons()
+        await updateInstalledAddons()
       }
     } catch (error: unknown) {
       if (error instanceof Error) {

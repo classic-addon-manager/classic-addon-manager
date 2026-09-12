@@ -11,36 +11,21 @@ import { useUserStore } from '@/stores/userStore'
 const HAPPY_EMOJIS = ['🎉', '✨', '🥳', '😊', '💖']
 const SAD_EMOJIS = ['😢', '💔', '😞', '🥺', '😭']
 
-const RatingEmojiBurst = ({ burstKey, type }: { burstKey: number; type: 'happy' | 'sad' }) => {
-  const lastProcessedKey = useRef(0)
-  const [particles, setParticles] = useState<
-    Array<{ id: number; emoji: string; x: number; y: number; rotate: number }>
-  >([])
+interface RatingBurst {
+  key: number
+  type: 'happy' | 'sad'
+  particles: Array<{ id: number; emoji: string; x: number; y: number; rotate: number }>
+}
+
+const RatingEmojiBurst = ({ particles }: { particles: RatingBurst['particles'] }) => {
+  const [visible, setVisible] = useState(true)
 
   useEffect(() => {
-    if (burstKey === 0 || burstKey === lastProcessedKey.current) return
-    lastProcessedKey.current = burstKey
-
-    const isHappy = type === 'happy'
-    const emojis = isHappy ? HAPPY_EMOJIS : SAD_EMOJIS
-    const count = emojis.length
-
-    const newParticles = Array.from({ length: count }, (_, i) => {
-      const angle = (i / (count - 1) - 0.5) * Math.PI * 0.8
-      const dist = 50 + Math.random() * 40
-      return {
-        id: burstKey * 100 + i,
-        emoji: emojis[i % emojis.length],
-        x: Math.sin(angle) * dist,
-        y: -Math.cos(angle) * dist,
-        rotate: (Math.random() - 0.5) * 100,
-      }
-    })
-
-    setParticles(newParticles)
-    const timer = setTimeout(() => setParticles([]), 2000)
+    const timer = setTimeout(() => setVisible(false), 2000)
     return () => clearTimeout(timer)
-  }, [burstKey, type])
+  }, [])
+
+  if (!visible) return null
 
   return (
     <div className="absolute inset-0 pointer-events-none overflow-visible z-50" aria-hidden>
@@ -73,36 +58,53 @@ interface AddonRatingButtonsProps {
   isManaged: boolean
 }
 
-export const AddonRatingButtons = ({
+export const AddonRatingButtons = (props: AddonRatingButtonsProps) => (
+  <AddonRatingButtonsContent key={props.addonName} {...props} />
+)
+
+const AddonRatingButtonsContent = ({
   addonName,
   addonAlias,
   isManaged,
 }: AddonRatingButtonsProps) => {
   const { isAuthenticated } = useUserStore()
+  const authenticated = isAuthenticated()
   const [rating, setRating] = useState(0)
-  const [burstType, setBurstType] = useState<'happy' | 'sad' | null>(null)
-  const [burstKey, setBurstKey] = useState(0)
+  const [burst, setBurst] = useState<RatingBurst | null>(null)
+  const nextBurstKey = useRef(0)
 
   useEffect(() => {
-    setBurstType(null)
-    setBurstKey(0)
-  }, [addonName])
-
-  useEffect(() => {
-    getMyRating(addonName, isAuthenticated(), setRating).catch(e =>
-      console.error('Failed to fetch rating: ', e)
-    )
-  }, [addonName, isAuthenticated])
+    let active = true
+    getMyRating(addonName, authenticated, value => {
+      if (active) setRating(value)
+    }).catch(e => console.error('Failed to fetch rating: ', e))
+    return () => {
+      active = false
+    }
+  }, [addonName, authenticated])
 
   if (!isManaged) return null
 
   const handleRateAddon = async (newRating: number) => {
-    setBurstType(newRating === 1 ? 'happy' : 'sad')
-    setBurstKey(k => k + 1)
+    const key = ++nextBurstKey.current
+    const type = newRating === 1 ? 'happy' : 'sad'
+    const emojis = type === 'happy' ? HAPPY_EMOJIS : SAD_EMOJIS
+    const particles = emojis.map((emoji, i) => {
+      const angle = (i / (emojis.length - 1) - 0.5) * Math.PI * 0.8
+      const dist = 50 + Math.random() * 40
+      return {
+        id: key * 100 + i,
+        emoji,
+        x: Math.sin(angle) * dist,
+        y: -Math.cos(angle) * dist,
+        rotate: (Math.random() - 0.5) * 100,
+      }
+    })
+    setBurst({ key, type, particles })
     await rateAddon(addonName, addonAlias, newRating, rating, setRating)
   }
 
-  if (!isAuthenticated()) {
+  if (!authenticated) {
     return (
       <Tooltip>
         <TooltipTrigger asChild>
@@ -143,7 +145,9 @@ export const AddonRatingButtons = ({
             })}
           />
         </Button>
-        {burstType === 'happy' && <RatingEmojiBurst burstKey={burstKey} type="happy" />}
+        {burst?.type === 'happy' && (
+          <RatingEmojiBurst key={burst.key} particles={burst.particles} />
+        )}
       </motion.div>
       <motion.div
         className="relative"
@@ -167,7 +171,7 @@ export const AddonRatingButtons = ({
             })}
           />
         </Button>
-        {burstType === 'sad' && <RatingEmojiBurst burstKey={burstKey} type="sad" />}
+        {burst?.type === 'sad' && <RatingEmojiBurst key={burst.key} particles={burst.particles} />}
       </motion.div>
     </div>
   )

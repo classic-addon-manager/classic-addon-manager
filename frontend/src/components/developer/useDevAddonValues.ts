@@ -15,45 +15,60 @@ export function sourceCacheKey(source: EditorSource): string {
 }
 
 export function useDevAddonValues(source: EditorSource) {
-  const [values, setValues] = useState<DeclarationValues | null>(null)
-  const [kind, setKind] = useState<DeclarationKind | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const key = sourceCacheKey(source)
+  const [currentSource, setCurrentSource] = useState(source)
+  const [result, setResult] = useState<{
+    values: DeclarationValues | null
+    kind: DeclarationKind | null
+    error: string | null
+  } | null>(null)
+
+  if (sourceCacheKey(currentSource) !== sourceCacheKey(source)) {
+    setCurrentSource(source)
+    setResult(null)
+  }
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
-    setValues(null)
-    setError(null)
     void (async () => {
       const schema = await requireAddonSchema()
       if (cancelled) return
       if (!schema) {
-        setError('This source is unavailable.')
-        setLoading(false)
+        setResult({
+          values: null,
+          kind: null,
+          error: 'This source is unavailable.',
+        })
         return
       }
-      const result = await getAddonValues(source, schema)
+      const loaded = await getAddonValues(currentSource, schema)
       if (cancelled) return
-      setLoading(false)
-      if (result.status === 'ok') {
-        setKind(result.kind)
-        setValues(result.values)
+      if (loaded.status === 'ok') {
+        setResult({
+          kind: loaded.kind,
+          values: loaded.values,
+          error: null,
+        })
         return
       }
-      setError(
-        result.status === 'unauthorized' ||
-          result.status === 'error' ||
-          result.status === 'not_found'
-          ? result.message
-          : 'This source is unavailable.'
-      )
+      setResult({
+        values: null,
+        kind: null,
+        error:
+          loaded.status === 'unauthorized' ||
+          loaded.status === 'error' ||
+          loaded.status === 'not_found'
+            ? loaded.message
+            : 'This source is unavailable.',
+      })
     })()
     return () => {
       cancelled = true
     }
-  }, [key])
+  }, [currentSource])
 
-  return { values, kind, error, loading }
+  if (result === null) {
+    return { values: null, kind: null, error: null, loading: true }
+  }
+
+  return { values: result.values, kind: result.kind, error: result.error, loading: false }
 }

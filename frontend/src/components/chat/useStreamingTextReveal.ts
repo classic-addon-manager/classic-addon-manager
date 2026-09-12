@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 const REVEAL_TICK_MS = 16
 /** How far behind the real content the reveal is allowed to trail. */
@@ -10,73 +10,50 @@ const charsPerTick = (backlog: number) => {
 }
 
 export const useStreamingTextReveal = (text: string, isStreaming: boolean) => {
-  const [cursor, setCursor] = useState(0)
-  const [prevText, setPrevText] = useState(text)
-  const cursorRef = useRef(0)
-  const wasStreamingRef = useRef(isStreaming)
-  const textRef = useRef(text)
+  const [reveal, setReveal] = useState(() => ({
+    text,
+    cursor: isStreaming ? 0 : text.length,
+    hasStreamed: isStreaming,
+    step: charsPerTick(text.length),
+  }))
 
-  textRef.current = text
+  if (reveal.text !== text || (isStreaming && !reveal.hasStreamed)) {
+    const hasStreamed = reveal.hasStreamed || isStreaming
+    const cursor = !hasStreamed ? text.length : text.startsWith(reveal.text) ? reveal.cursor : 0
 
-  if (isStreaming) {
-    wasStreamingRef.current = true
-  }
-
-  if (prevText !== text) {
-    setPrevText(text)
-    if (!text.startsWith(prevText)) {
-      cursorRef.current = 0
-      setCursor(0)
-    }
+    setReveal({
+      text,
+      cursor,
+      hasStreamed,
+      step: charsPerTick(text.length - cursor),
+    })
   }
 
   const completeReveal = useCallback(() => {
-    cursorRef.current = textRef.current.length
-    setCursor(cursorRef.current)
+    setReveal(current =>
+      current.cursor === current.text.length ? current : { ...current, cursor: current.text.length }
+    )
   }, [])
 
+  const { cursor, hasStreamed, step } = reveal
+  const isCatchingUp = hasStreamed && cursor < text.length
+
   useEffect(() => {
-    const targetCursor = text.length
+    if (!isCatchingUp) return
 
-    if (!wasStreamingRef.current) {
-      cursorRef.current = targetCursor
-      setCursor(targetCursor)
-      return
-    }
-
-    if (cursorRef.current >= targetCursor) {
-      return
-    }
-
-    /* The rate is fixed for this batch, the next chunk re-runs the effect and
-     * re-sizes it against the new backlog. */
-    const step = charsPerTick(targetCursor - cursorRef.current)
-
-    const revealNextBatch = () => {
-      cursorRef.current = Math.min(targetCursor, cursorRef.current + step)
-      setCursor(cursorRef.current)
-      return cursorRef.current >= targetCursor
-    }
-
-    if (revealNextBatch()) return
-
+    // Keep this batch's rate fixed until a new chunk changes the backlog.
     const intervalId = setInterval(() => {
-      if (revealNextBatch()) {
-        clearInterval(intervalId)
-      }
+      setReveal(current => {
+        if (current.text !== text || current.cursor >= text.length) return current
+        return { ...current, cursor: Math.min(text.length, current.cursor + step) }
+      })
     }, REVEAL_TICK_MS)
 
     return () => clearInterval(intervalId)
-  }, [text])
+  }, [text, step, isCatchingUp])
 
-  const targetCursor = text.length
-
-  if (!wasStreamingRef.current) {
-    return { displayedText: text, isRevealing: false, completeReveal }
-  }
-
-  const displayedText = text.slice(0, cursor)
-  const isRevealing = isStreaming || cursor < targetCursor
+  const displayedText = hasStreamed ? text.slice(0, cursor) : text
+  const isRevealing = hasStreamed && (isStreaming || isCatchingUp)
 
   return { displayedText, isRevealing, completeReveal }
 }

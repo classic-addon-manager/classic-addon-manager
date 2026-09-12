@@ -1,5 +1,5 @@
 import { AlertTriangleIcon } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { getOwnedAddons, type GetOwnedAddonsResult } from '@/components/developer/ownedAddons'
 import type { OwnedAddon, OwnedSubmission } from '@/components/developer/ownedParse'
@@ -19,15 +19,24 @@ export function useOwnedAddons(
   retry: () => Promise<void>
   removeSubmission: (id: number) => void
 } {
+  const [currentSessionKey, setCurrentSessionKey] = useState(sessionKey)
   const [data, setData] = useState<OwnedAddonsData | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const dataRef = useRef(data)
-  dataRef.current = data
+  const dataRef = useRef<OwnedAddonsData | null>(null)
   const generationRef = useRef(0)
   const inFlightRef = useRef(false)
 
-  const loadRef = useRef<(kind: 'user' | 'poll') => Promise<void>>(async () => {})
-  loadRef.current = async (kind: 'user' | 'poll') => {
+  if (currentSessionKey !== sessionKey) {
+    setCurrentSessionKey(sessionKey)
+    setData(null)
+    setError(null)
+  }
+
+  useEffect(() => {
+    dataRef.current = data
+  }, [data])
+
+  const load = useCallback(async (kind: 'user' | 'poll') => {
     if (kind === 'poll' && inFlightRef.current) return
     const my = ++generationRef.current
     inFlightRef.current = true
@@ -41,13 +50,7 @@ export function useOwnedAddons(
         inFlightRef.current = false
       }
     }
-  }
-
-  useEffect(() => {
-    setData(null)
-    setError(null)
-    generationRef.current += 1
-  }, [sessionKey])
+  }, [])
 
   useEffect(() => {
     if (!enabled) {
@@ -55,20 +58,20 @@ export function useOwnedAddons(
       return
     }
 
-    void loadRef.current('user')
+    void load('user')
     const id = window.setInterval(() => {
-      void loadRef.current('poll')
+      void load('poll')
     }, 60_000)
 
     return () => {
       window.clearInterval(id)
       generationRef.current += 1
     }
-  }, [enabled, sessionKey])
+  }, [enabled, sessionKey, load])
 
   const retry = () => {
     setError(null)
-    return loadRef.current('user')
+    return load('user')
   }
 
   const removeSubmission = (id: number) => {

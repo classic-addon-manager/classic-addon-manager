@@ -12,28 +12,28 @@ export const Readme = ({ readme }: Props) => {
   const [selectedImage, setSelectedImage] = useState<HTMLImageElement | null>(null)
 
   const components = {
-    a: ({ node, ...props }: ComponentProps<'a'> & { node?: unknown }) => (
+    a: ({ node: _node, ...props }: ComponentProps<'a'> & { node?: unknown }) => (
       <a className="text-primary hover:text-primary/80 hover:underline transition-all" {...props} />
     ),
-    h1: ({ node, ...props }: ComponentProps<'h1'> & { node?: unknown }) => (
+    h1: ({ node: _node, ...props }: ComponentProps<'h1'> & { node?: unknown }) => (
       <h1 className="my-2 border-b border-gray-600 pb-2 text-3xl font-semibold" {...props} />
     ),
-    h2: ({ node, ...props }: ComponentProps<'h2'> & { node?: unknown }) => (
+    h2: ({ node: _node, ...props }: ComponentProps<'h2'> & { node?: unknown }) => (
       <h2 className="my-2 border-b border-gray-600 pb-2 text-2xl font-semibold" {...props} />
     ),
-    h3: ({ node, ...props }: ComponentProps<'h3'> & { node?: unknown }) => (
+    h3: ({ node: _node, ...props }: ComponentProps<'h3'> & { node?: unknown }) => (
       <h3 className="my-2 border-b border-gray-600 pb-2 text-xl font-semibold" {...props} />
     ),
-    h4: ({ node, ...props }: ComponentProps<'h4'> & { node?: unknown }) => (
+    h4: ({ node: _node, ...props }: ComponentProps<'h4'> & { node?: unknown }) => (
       <h4 className="my-2 border-b border-gray-600 pb-2 text-lg font-semibold" {...props} />
     ),
-    h5: ({ node, ...props }: ComponentProps<'h5'> & { node?: unknown }) => (
+    h5: ({ node: _node, ...props }: ComponentProps<'h5'> & { node?: unknown }) => (
       <h5 className="my-2 border-b border-gray-600 pb-2 text-base font-semibold" {...props} />
     ),
-    h6: ({ node, ...props }: ComponentProps<'h6'> & { node?: unknown }) => (
+    h6: ({ node: _node, ...props }: ComponentProps<'h6'> & { node?: unknown }) => (
       <h6 className="my-2 border-b border-gray-600 pb-2 text-sm font-bold" {...props} />
     ),
-    img: ({ node, ...props }: ComponentProps<'img'> & { node?: unknown }) => (
+    img: ({ node: _node, ...props }: ComponentProps<'img'> & { node?: unknown }) => (
       <img
         onClick={event => setSelectedImage(event.currentTarget)}
         className="my-3 cursor-pointer transition-all scale-[90%] hover:scale-[95%]"
@@ -42,7 +42,7 @@ export const Readme = ({ readme }: Props) => {
       />
     ),
     code: ({
-      node,
+      node: _node,
       inline,
       className,
       children,
@@ -59,22 +59,22 @@ export const Readme = ({ readme }: Props) => {
         </code>
       )
     },
-    pre: ({ node, ...props }: ComponentProps<'pre'> & { node?: unknown }) => (
+    pre: ({ node: _node, ...props }: ComponentProps<'pre'> & { node?: unknown }) => (
       <pre
         className="bg-muted p-4 my-4 overflow-x-auto rounded-md font-mono text-muted-foreground"
         {...props}
       />
     ),
-    p: ({ node, ...props }: ComponentProps<'p'> & { node?: unknown }) => (
+    p: ({ node: _node, ...props }: ComponentProps<'p'> & { node?: unknown }) => (
       <p className="my-2" {...props} />
     ),
-    ul: ({ node, ...props }: ComponentProps<'ul'> & { node?: unknown }) => (
+    ul: ({ node: _node, ...props }: ComponentProps<'ul'> & { node?: unknown }) => (
       <ul className="my-5 list-disc list-outside space-y-1 pl-5" {...props} />
     ),
-    ol: ({ node, ...props }: ComponentProps<'ol'> & { node?: unknown }) => (
+    ol: ({ node: _node, ...props }: ComponentProps<'ol'> & { node?: unknown }) => (
       <ol className="my-5 list-decimal list-outside space-y-1 pl-5" {...props} />
     ),
-    li: ({ node, ...props }: ComponentProps<'li'> & { node?: unknown }) => (
+    li: ({ node: _node, ...props }: ComponentProps<'li'> & { node?: unknown }) => (
       <li className="break-words" {...props} />
     ),
   }

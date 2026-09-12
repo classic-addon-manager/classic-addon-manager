@@ -34,24 +34,22 @@ export const DependenciesCombobox = ({
   const [manifests, setManifests] = useState<AddonManifest[]>([])
   const [status, setStatus] = useState<CatalogStatus>('loading')
 
-  const loadCatalog = useCallback(async () => {
-    setStatus('loading')
-    try {
-      const result = await RemoteAddonService.GetAddonManifest()
-      setManifests(result ?? [])
-      setStatus('success')
-    } catch {
-      setStatus('error')
-    }
+  const loadCatalog = useCallback(() => {
+    return RemoteAddonService.GetAddonManifest()
+      .then(result => {
+        setManifests(result ?? [])
+        setStatus('success')
+      })
+      .catch(() => setStatus('error'))
   }, [])
 
   useEffect(() => {
     void loadCatalog()
   }, [loadCatalog])
 
-  useEffect(() => {
-    if (disabled) setOpen(false)
-  }, [disabled])
+  if (disabled && open) {
+    setOpen(false)
+  }
 
   const aliasFor = (name: string) =>
     manifests.find(manifest => manifest.name === name)?.alias ?? name
@@ -77,7 +75,10 @@ export const DependenciesCombobox = ({
           variant="outline"
           size="sm"
           disabled={disabled}
-          onClick={() => void loadCatalog()}
+          onClick={() => {
+            setStatus('loading')
+            void loadCatalog()
+          }}
         >
           Retry
         </Button>

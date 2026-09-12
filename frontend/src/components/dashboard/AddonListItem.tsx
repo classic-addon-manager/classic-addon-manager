@@ -1,5 +1,5 @@
 import { BlocksIcon, Check, Download, LoaderCircle } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import { cn } from '@/lib/utils'
 import type { Addon } from '@/lib/wails'
@@ -12,21 +12,17 @@ interface AddonListItemProps {
 }
 
 export const AddonListItem = ({ addon, isSelected, onClick }: AddonListItemProps) => {
-  const [hasUpdate, setHasUpdate] = useState(false)
   const { latestReleasesMap, isCheckingForUpdates } = useAddonStore()
+  const latestRelease = latestReleasesMap.get(addon.name)
+  const hasUpdate = Boolean(
+    addon.isManaged && latestRelease && latestRelease.tag_name !== addon.version
+  )
 
   const [hasIcon, setHasIcon] = useState(true)
   const iconUrl =
     'repo' in addon && 'branch' in addon
       ? `https://raw.githubusercontent.com/${addon.repo}/${addon.branch}/icon.png`
       : null
-
-  useEffect(() => {
-    if (!addon.isManaged) return
-    const latest = latestReleasesMap.get(addon.name)
-    if (!latest) return
-    setHasUpdate(latest.tag_name !== addon.version)
-  }, [latestReleasesMap, addon.isManaged, addon.name, addon.version])
 
   return (
     <button

@@ -1,5 +1,5 @@
 import { ChevronDownIcon } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import { Readme } from '@/components/shared/Readme'
 import {
@@ -25,9 +25,11 @@ export const ChangelogSection = ({ release, changelog, isLoading }: ChangelogSec
   const isRecent = release ? daysAgo(release.published_at) < RECENT_RELEASE_DAYS : false
   const [isOpen, setIsOpen] = useState(isRecent)
 
-  useEffect(() => {
+  const [previousIsRecent, setPreviousIsRecent] = useState(isRecent)
+  if (previousIsRecent !== isRecent) {
+    setPreviousIsRecent(isRecent)
     setIsOpen(isRecent)
-  }, [isRecent])
+  }
 
   if (isLoading) {
     return (

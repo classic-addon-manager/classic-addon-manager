@@ -1,5 +1,5 @@
 import { AlertTriangleIcon, CheckIcon, ChevronsUpDown, Loader2, WrenchIcon } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import {
   Accordion,
@@ -262,59 +262,56 @@ export const Troubleshooting = () => {
     issueCount: 0,
     groupedIssues: {},
   })
-  const [isLoadingDiagnostics, setIsLoadingDiagnostics] = useState(false)
+  const [isLoadingDiagnostics, setIsLoadingDiagnostics] = useState(true)
 
-  const runDiagnostics = useCallback(async () => {
-    setIsLoadingDiagnostics(prev => {
-      if (prev) return prev // Already loading, don't start again
-      return true
-    })
+  useEffect(() => {
+    const runDiagnostics = async () => {
+      try {
+        const [issues, err] = await safeCall(LocalAddonService.DiagnoseIssues())
 
-    try {
-      const [issues, err] = await safeCall(LocalAddonService.DiagnoseIssues())
+        if (err) {
+          console.error('Failed to run diagnostics:', err)
+          toast({
+            title: 'Error',
+            description: 'Failed to run diagnostics',
+            icon: AlertTriangleIcon,
+          })
+          return
+        }
 
-      if (err) {
-        console.error('Failed to run diagnostics:', err)
+        const issuesArray: LogParseResult[] = issues || []
+        const issueCount = issuesArray.length
+
+        // Group issues by addon
+        const groupedIssues: Record<
+          string,
+          Array<{ type: string; error: string; file: string }>
+        > = {}
+        for (const issue of issuesArray) {
+          if (!groupedIssues[issue.Addon]) {
+            groupedIssues[issue.Addon] = []
+          }
+          groupedIssues[issue.Addon].push({
+            type: issue.Type,
+            error: issue.Error,
+            file: issue.File,
+          })
+        }
+
+        setDiagnosticData({ issueCount, groupedIssues })
+      } catch (error) {
+        console.error('Failed to run diagnostics:', error)
         toast({
           title: 'Error',
           description: 'Failed to run diagnostics',
           icon: AlertTriangleIcon,
         })
-        return
+      } finally {
+        setIsLoadingDiagnostics(false)
       }
-
-      const issuesArray: LogParseResult[] = issues || []
-      const issueCount = issuesArray.length
-
-      // Group issues by addon
-      const groupedIssues: Record<string, Array<{ type: string; error: string; file: string }>> = {}
-      for (const issue of issuesArray) {
-        if (!groupedIssues[issue.Addon]) {
-          groupedIssues[issue.Addon] = []
-        }
-        groupedIssues[issue.Addon].push({
-          type: issue.Type,
-          error: issue.Error,
-          file: issue.File,
-        })
-      }
-
-      setDiagnosticData({ issueCount, groupedIssues })
-    } catch (error) {
-      console.error('Failed to run diagnostics:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to run diagnostics',
-        icon: AlertTriangleIcon,
-      })
-    } finally {
-      setIsLoadingDiagnostics(false)
     }
+    void runDiagnostics()
   }, [])
-
-  useEffect(() => {
-    runDiagnostics()
-  }, [runDiagnostics])
 
   const accordionItems: AccordionItemData[] = [
     { id: 'item-1', title: 'Specific Addon Issue' },

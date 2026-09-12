@@ -78,33 +78,26 @@ export const StreamingMarkdown = ({
   parseMarkdown,
 }: StreamingMarkdownProps) => {
   const containerRef = useRef<HTMLDivElement>(null)
-  const prevContentRef = useRef('')
-  const messageIdRef = useRef(messageId)
-
-  if (messageIdRef.current !== messageId) {
-    messageIdRef.current = messageId
-    prevContentRef.current = ''
-  }
+  const renderedRef = useRef<StreamingMarkdownProps | null>(null)
 
   useLayoutEffect(() => {
     const container = containerRef.current
     if (!container) return
 
-    if (!animateLatestWord) {
-      if (content !== prevContentRef.current) {
-        container.innerHTML = parseMarkdown(content)
-        prevContentRef.current = content
-      }
-      return
-    }
+    const previous = renderedRef.current
+    const renderingChanged =
+      !previous ||
+      previous.messageId !== messageId ||
+      previous.animateLatestWord !== animateLatestWord ||
+      previous.parseMarkdown !== parseMarkdown
 
-    if (content === prevContentRef.current) return
+    if (!renderingChanged && content === previous.content) return
 
-    const prevContent = prevContentRef.current
+    const prevContent = previous?.content ?? ''
 
-    if (needsFullRender(prevContent, content)) {
+    if (!animateLatestWord || renderingChanged || needsFullRender(prevContent, content)) {
       container.innerHTML = parseMarkdown(content)
-      if (content.length > 0) {
+      if (animateLatestWord && content.length > 0) {
         wrapLatestChar(container)
       }
     } else {
@@ -114,7 +107,7 @@ export const StreamingMarkdown = ({
       }
     }
 
-    prevContentRef.current = content
+    renderedRef.current = { content, messageId, animateLatestWord, parseMarkdown }
   }, [content, messageId, animateLatestWord, parseMarkdown])
 
   return <div ref={containerRef} />
