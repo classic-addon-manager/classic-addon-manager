@@ -178,6 +178,15 @@ func RemoveManagedAddon(name string) bool {
 }
 
 func SaveManagedAddonsToDisk() {
+	// A nil map means LoadManagedAddonsFile never ran: this process holds no
+	// ownership data, so writing would replace managed_addons.json with an empty
+	// file and silently discard what another instance owns.
+	if LocalAddons == nil {
+		logger.Error("Refusing to save managed addons: managed_addons.json was never loaded",
+			errors.New("managed addons not loaded"))
+		return
+	}
+
 	managedAddons := make([]Addon, 0, len(LocalAddons))
 	for _, addon := range LocalAddons {
 		managedAddons = append(managedAddons, normalizeAddon(addon))

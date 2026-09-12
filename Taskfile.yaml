@@ -33,7 +33,33 @@ tasks:
     cmds:
       - task: "{{OS}}:run"
 
+  build:server:
+    summary: Builds the application in server mode (HTTP server, no GUI window)
+    deps:
+      - task: common:go:mod:tidy
+      - task: common:build:frontend
+        vars:
+          PRODUCTION: '{{.PRODUCTION | default "false"}}'
+    cmds:
+      - go build {{.BUILD_FLAGS}} -o {{.BIN_DIR}}/{{.APP_NAME}}-server{{.EXE_EXT}}
+    vars:
+      BUILD_FLAGS: '{{if eq .PRODUCTION "true"}}-tags server,production -trimpath -buildvcs=false -ldflags="-w -s"{{else}}-tags server -buildvcs=false -gcflags=all="-l"{{end}}'
+      EXE_EXT: '{{if eq OS "windows"}}.exe{{end}}'
+    env:
+      PRODUCTION: '{{.PRODUCTION | default "false"}}'
+
+  run:server:
+    summary: Builds and runs the application in server mode (default http://localhost:8080)
+    deps:
+      - task: build:server
+        vars:
+          PRODUCTION: '{{.PRODUCTION | default "false"}}'
+    cmds:
+      - '{{.BIN_DIR}}/{{.APP_NAME}}-server{{.EXE_EXT}}'
+    vars:
+      EXE_EXT: '{{if eq OS "windows"}}.exe{{end}}'
+
   dev:
     summary: Runs the application in development mode
     cmds:
-      - wails3 dev -config ./build/config.yml -port {{.VITE_PORT}
+      - wails3 dev -config ./build/config.yml -port {{.VITE_PORT}}

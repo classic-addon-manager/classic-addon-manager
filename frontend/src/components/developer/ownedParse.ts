@@ -1,8 +1,12 @@
 import type { SubmissionMessage } from '@/components/developer/types.ts'
 
+/** Visual family of a submission history status: drives the chip color and icon. */
+export type ReviewHistoryTone = 'review' | 'approved' | 'rejected' | 'withdrawn' | 'unknown'
+
 export type ReviewHistoryEntry = {
   number: number
   status: string
+  tone: ReviewHistoryTone
   date: string
   submissionId: number | null
   statusMocked: boolean

@@ -30,6 +30,7 @@ import { valuesToForm } from '@/components/developer/formValues.ts'
 import type { OwnedAddon } from '@/components/developer/ownedParse'
 import { ReviewStatus } from '@/components/developer/ReviewStatus'
 import { requireAddonSchema } from '@/components/developer/schema.ts'
+import { StatusChip } from '@/components/developer/StatusChip'
 import { useDevAddonValues } from '@/components/developer/useDevAddonValues.ts'
 import { type FieldErrors, submitAddon, validateAddon } from '@/components/developer/validate'
 import { getAddonValues } from '@/components/developer/values.ts'
@@ -247,12 +248,17 @@ export function AddonDetails({
                 key={entry.submissionId ?? entry.number}
                 className="flex flex-wrap items-center justify-between gap-2 py-3"
               >
-                <div>
-                  #{entry.number} · {entry.status}
-                  {entry.statusMocked && (
-                    <span className="text-xs font-normal text-muted-foreground"> · Mocked</span>
-                  )}
-                  <p className="text-xs text-muted-foreground">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs tabular-nums text-muted-foreground">
+                      #{entry.number}
+                    </span>
+                    <StatusChip tone={entry.tone} label={entry.status} />
+                    {entry.statusMocked && (
+                      <span className="text-xs text-muted-foreground">· Mocked</span>
+                    )}
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
                     {formatToLocalDate(entry.date)}
                     {entry.dateMocked && ' · Mocked'}
                   </p>

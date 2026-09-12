@@ -101,13 +101,15 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Check if required webview dependency is installed (Windows only)
-	checkWebView2Installation()
+	if !application.System.IsServer() {
+		// Check if required webview dependency is installed (Windows only)
+		checkWebView2Installation()
 
-	// Check if another instance is running
-	if checkForRunningInstance() {
-		logger.Sync()
-		os.Exit(0)
+		// Check if another instance is running
+		if checkForRunningInstance() {
+			logger.Sync()
+			os.Exit(0)
+		}
 	}
 
 	a := application.New(application.Options{
@@ -129,12 +131,19 @@ func main() {
 		a.RegisterService(service)
 	}
 
-	a.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(event *application.ApplicationEvent) {
-		_ = event.Context()
-		registerDeeplink()
-		go startIPCServer(a)
+	// Server builds map no platform events, so ApplicationStarted is never
+	// emitted there: run the startup work directly, before the HTTP server
+	// starts accepting calls, instead of waiting for an event that never fires.
+	if application.System.IsServer() {
 		startup(a)
-	})
+	} else {
+		a.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(event *application.ApplicationEvent) {
+			_ = event.Context()
+			registerDeeplink()
+			go startIPCServer(a)
+			startup(a)
+		})
+	}
 
 	mainWindow := a.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:            "Classic Addon Manager",

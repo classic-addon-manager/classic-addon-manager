@@ -5,6 +5,7 @@ import {
   type OwnedSubmission,
   type OwnedSubmissionPayload,
   type ReviewHistoryEntry,
+  type ReviewHistoryTone,
 } from '@/components/developer/ownedParse'
 import { getAddonSources } from '@/components/developer/sources.ts'
 import type { AddonSources, SourceAddon, SourceSubmission } from '@/components/developer/types.ts'
@@ -73,7 +74,8 @@ function toReviewHistory(submissions: SourceSubmission[]): ReviewHistoryEntry[] 
     // TODO(backend): Drop fallback rows once closed reviews are returned with the addon.
     return mockReviewHistory.map(entry => ({
       number: entry.number,
-      status: entry.status,
+      status: reviewStatus(entry.status).value,
+      tone: statusTone(entry.status),
       date: entry.date,
       submissionId: null,
       statusMocked: true,
@@ -89,6 +91,7 @@ function toReviewHistory(submissions: SourceSubmission[]): ReviewHistoryEntry[] 
       return {
         number: submission.id,
         status: status.value,
+        tone: statusTone(submission.status),
         date: date.value,
         submissionId: submission.id,
         statusMocked: status.mocked,
@@ -103,6 +106,24 @@ const REVIEW_STATUS_LABELS: Record<string, string> = {
   rejected: 'Rejected',
   approved: 'Approved',
   withdrawn: 'Withdrawn',
+}
+
+const REVIEW_STATUS_TONES: Record<string, ReviewHistoryTone> = {
+  open: 'review',
+  in_review: 'review',
+  rejected: 'rejected',
+  approved: 'approved',
+  withdrawn: 'withdrawn',
+}
+
+/**
+ * Tone for a submission history row. A status the backend sends that we do not
+ * map stays visibly distinct instead of passing through as an unremarkable string.
+ */
+export function statusTone(status: string | undefined): ReviewHistoryTone {
+  // A missing status renders as "In review" (mocked), so it shares that tone.
+  if (!status) return 'review'
+  return REVIEW_STATUS_TONES[status] ?? 'unknown'
 }
 
 function reviewStatus(status: string | undefined): { value: string; mocked: boolean } {

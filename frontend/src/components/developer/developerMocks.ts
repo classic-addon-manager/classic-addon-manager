@@ -25,9 +25,12 @@ export function mockCatalogReview(
   }
 }
 
+// TODO(backend): Replace this preview-only data with versioned owned-addon reviews and history.
+// Keep it visibly labeled and never persist a preview state as a real catalog operation.
+// Raw submission statuses: labels and tones both come from the shared mapping in ownedAddons.ts.
 export const mockReviewHistory = [
-  { number: 128, status: 'Approved', date: '2026-08-18' },
-  { number: 121, status: 'Withdrawn', date: '2026-08-12' },
+  { number: 128, status: 'approved', date: '2026-08-18' },
+  { number: 121, status: 'withdrawn', date: '2026-08-12' },
 ]
 
 // TODO(backend): Fetch dated download buckets for the selected addon and period.

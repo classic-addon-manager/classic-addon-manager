@@ -13,7 +13,10 @@ import { AddonDetails, AddonIcon } from '@/components/developer/AddonDetails'
 import { publishFormFromPayload, type PublishFormState } from '@/components/developer/constants'
 import { withdrawDeclaration } from '@/components/developer/declarationApi.ts'
 import { valuesToForm } from '@/components/developer/formValues.ts'
+import { statusTone } from '@/components/developer/ownedAddons'
 import type { OwnedSubmission } from '@/components/developer/ownedParse'
+import { StatusChip } from '@/components/developer/StatusChip'
+import type { SubmissionStatus } from '@/components/developer/types.ts'
 import { useDevAddonSubmission } from '@/components/developer/useDevAddonSubmission.ts'
 import { useDevAddonValues } from '@/components/developer/useDevAddonValues.ts'
 import {
@@ -32,6 +35,14 @@ import { toast } from '@/components/ui/toast'
 import { cn, formatToLocalDate, formatToLocalTime } from '@/lib/utils'
 
 import type { OwnedAddonsData } from './useOwnedAddons'
+
+/** Review-view wording per submission status, paired with the shared status tones. */
+const SUBMISSION_STATUS_LABELS: Record<SubmissionStatus, string> = {
+  open: 'In review',
+  approved: 'Approved',
+  rejected: 'Changes requested',
+  withdrawn: 'Withdrawn',
+}
 
 export function DeveloperWorkspace({
   data,
@@ -214,6 +225,7 @@ function SubmissionDetails({
   const rejected = status === 'rejected'
   const editable = open && !closed
   const hasMessages = messages.length > 0
+  const fromHistory = backTo !== undefined
 
   const handleWithdraw = async () => {
     if (busy) return
@@ -286,17 +298,14 @@ function SubmissionDetails({
             <h2 className="wrap-break-word text-xl font-semibold tracking-tight">
               {payload.alias || payload.name}
             </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {closed
-                ? 'This submission is no longer open.'
-                : open
-                  ? 'In review'
-                  : rejected
-                    ? 'Changes requested'
-                    : status === 'approved'
-                      ? 'Approved'
-                      : 'Withdrawn'}
-            </p>
+            <div className="mt-1">
+              {closed ? (
+                // The backend closed this review, its outcome is unknown here.
+                <StatusChip tone="unknown" label="No longer open" />
+              ) : (
+                <StatusChip tone={statusTone(status)} label={SUBMISSION_STATUS_LABELS[status]} />
+              )}
+            </div>
           </div>
           {backTo && (
             <Button
@@ -311,7 +320,7 @@ function SubmissionDetails({
           )}
         </div>
         <div className="flex flex-wrap gap-2">
-          {payload.repo !== '' && (
+          {payload.repo !== '' && !fromHistory && (
             <Button
               variant="outline"
               onClick={() => void Browser.OpenURL(`https://github.com/${payload.repo}`)}

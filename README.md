@@ -70,7 +70,17 @@ go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.5
 
 ### Live Development
 
-Run `wails3 dev` in the project directory. This starts a Vite development server with fast hot reload for frontend changes. You can also connect via http://localhost:34115 in your browser and call your Go methods from devtools.
+Run `wails3 dev` in the project directory. This starts a Vite development server with fast hot reload for frontend changes, plus the Wails window. Inspect the interface in the app window itself: development builds enable the WebView2 DevTools, so right-click → **Inspect** (or `F12` where the host page allows it) gives you the full app with working bindings.
+
+The Vite URL (`http://localhost:9245`) is the frontend dev server only. It does not serve the Wails runtime: `/wails/runtime` and the other `/wails/*` endpoints are answered by the app's asset server, which is reachable inside the WebView (`http://wails.localhost:<vite-port>`) and not over a TCP port. Opening the Vite URL in a normal browser therefore has no Go bindings or events, and this app renders blank because it bootstraps from them. Use it only for isolated frontend work that does not touch the backend.
+
+For a browser with working bindings and events, run the app in server mode:
+
+```
+wails3 task run:server
+```
+
+Then open http://localhost:8080. Server mode serves the same frontend and all service bindings over HTTP, with events delivered over WebSocket.
 
 ### Frontend Linting and Formatting
 
@@ -98,6 +108,14 @@ To build a production package:
 ```
 wails3 task build:prod
 ```
+
+To build the server binary (no GUI window, serves the frontend and all bindings over HTTP):
+
+```
+wails3 task build:server
+```
+
+The binary is written to `build/bin/classic-addon-manager-server` (`.exe` on Windows). It defaults to http://localhost:8080; override with `WAILS_SERVER_HOST` / `WAILS_SERVER_PORT`. Pass `PRODUCTION=true` for a stripped production build (`-tags server,production`).
 
 ### Project Structure
 
