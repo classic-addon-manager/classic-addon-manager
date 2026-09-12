@@ -53,8 +53,8 @@ export function ReviewStatus({
         {review.status === 'rejected' && (
           <div className="border-l-2 border-destructive pl-3 text-sm">
             <p className="text-xs text-muted-foreground">Reviewer feedback</p>
-            <p className="mt-1 whitespace-pre-wrap break-words">
-              {review.feedback ?? 'Feedback is not available here. Open the review for details.'}
+            <p className="mt-1 whitespace-pre-wrap wrap-break-word">
+              {review.feedback ?? 'Feedback is not available. Open the review for details.'}
             </p>
           </div>
         )}

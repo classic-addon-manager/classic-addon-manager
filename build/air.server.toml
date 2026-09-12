@@ -1,0 +1,33 @@
+# Air config for `wails3 task dev:server`, rebuilds and restarts the server-mode
+# binary when sources change.
+root = "."
+tmp_dir = "build/tmp/air-server"
+
+[build]
+# Rebuilds the frontend first so the embedded dist is fresh, then compiles with
+# the server tag. Windows PowerShell lacks `&&`, hence the `;` + exit relay.
+cmd = "pnpm --dir frontend run build --logLevel error; go build -tags server -buildvcs=false -gcflags=all=\"-l\" -o build/bin/classic-addon-manager-server.exe; exit $LASTEXITCODE"
+bin = "build/bin/classic-addon-manager-server.exe"
+full_bin = "build/bin/classic-addon-manager-server.exe"
+# Watch only real sources, dist is rewritten on every rebuild and must not
+# re-trigger itself.
+include_ext = ["go", "ts", "tsx", "css"]
+exclude_dir = ["build", "dist", "assets", "node_modules", "bindings", ".git"]
+exclude_regex = [".*dist.*", "build/tmp"]
+include_dir = ["frontend/src"]
+follow_symlink = false
+delay = 3000
+stop_on_error = true
+send_interrupt = true
+kill_delay = 2000
+pid_file = "./build/tmp/air-server/pid"
+log = "build/tmp/air-server/errors.log"
+
+[log]
+time = true
+
+[color]
+main = "magenta"
+watcher = "cyan"
+build = "yellow"
+runner = "green"

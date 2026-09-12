@@ -284,35 +284,47 @@ export function AddonDetails({
     </Tabs>
   )
 }
-function AddonEditPanel({
+export function AddonEditPanel({
   addon,
   initialCatalog,
   initialForm,
   submitLabel,
   onCancel,
+  initialSubmissionId,
+  nameLocked = true,
+  requireChanges = true,
+  introTitle = 'Edit catalog details',
+  introNote = 'Leaving this form discards unsent edits. Your published listing stays unchanged until approval.',
 }: {
   addon: OwnedAddon
-  initialCatalog: CatalogFields
+  initialCatalog?: CatalogFields
   initialForm: PublishFormState | null
   submitLabel: string
   onCancel: () => void
+  /** Pinned submission being revised, null creates a new submission. */
+  initialSubmissionId?: number | null
+  nameLocked?: boolean
+  /** Require unsaved changes before validating, off for resubmitting an unchanged declaration. */
+  requireChanges?: boolean
+  introTitle?: string
+  introNote?: string
 }) {
   const initial =
     initialForm ??
     publishFormFromPayload({
       name: addon.name,
-      alias: initialCatalog.alias,
-      description: initialCatalog.description,
+      alias: initialCatalog?.alias ?? '',
+      description: initialCatalog?.description ?? '',
       author: addon.author,
-      repo: initialCatalog.repo,
-      branch: initialCatalog.branch,
-      tags: initialCatalog.tags,
+      repo: initialCatalog?.repo ?? '',
+      branch: initialCatalog?.branch ?? '',
+      tags: initialCatalog?.tags ?? [],
       keywords: [],
       dependencies: [],
       kofi: '',
     })
   const [form, setForm] = useState<PublishFormState>(initial)
-  const [submissionId, setSubmissionId] = useState<number | null>(null)
+  const [submissionId, setSubmissionId] = useState<number | null>(initialSubmissionId ?? null)
   const [alreadyOpenId, setAlreadyOpenId] = useState<number | null>(null)
   const [validating, setValidating] = useState(false)
   const [validated, setValidated] = useState(false)
@@ -323,6 +335,7 @@ function AddonEditPanel({
   const [publishError, setPublishError] = useState<string | null>(null)
   const busy = validating || saving || !editable
   const dirty = isPublishFormDirty(form, initial)
+  const ctaDisabled = busy || (!validated && (requireChanges ? !dirty : false))
   const hasFieldErrors = FORM_FIELD_ORDER.some(key => !!fieldErrors[key]?.length)
   const failCopy = hasFieldErrors
     ? 'Fix the highlighted fields.'
@@ -470,22 +483,18 @@ function AddonEditPanel({
       setSaving(false)
     }
   }
-
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="font-medium">Edit catalog details</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Leaving this form discards unsent edits. Your published listing stays unchanged until
-          approval.
-        </p>
+        <h3 className="font-medium">{introTitle}</h3>
+        <p className="mt-1 text-sm text-muted-foreground">{introNote}</p>
       </div>
       <AddonDeclarationFields
         form={form}
         setField={setField}
         fieldErrors={fieldErrors}
         busy={busy}
-        lockedFields={['name']}
+        lockedFields={nameLocked ? ['name'] : []}
       />
       {failCopy && <p className="text-sm text-destructive">{failCopy}</p>}
       <div className="flex flex-wrap gap-2 border-t pt-4">
@@ -497,8 +506,7 @@ function AddonEditPanel({
             />
           ) : null}
           <Button
-            type="button"
-            disabled={busy || (!validated && !dirty)}
+            disabled={ctaDisabled}
             onClick={() => {
               if (validated) {
                 void handleSubmit()

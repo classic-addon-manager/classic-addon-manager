@@ -9,8 +9,8 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 
-import { AddonDetails, AddonIcon } from '@/components/developer/AddonDetails'
-import { publishFormFromPayload, type PublishFormState } from '@/components/developer/constants'
+import { AddonDetails, AddonEditPanel, AddonIcon } from '@/components/developer/AddonDetails'
+import { publishFormFromPayload } from '@/components/developer/constants'
 import { withdrawDeclaration } from '@/components/developer/declarationApi.ts'
 import { valuesToForm } from '@/components/developer/formValues.ts'
 import { statusTone } from '@/components/developer/ownedAddons'
@@ -48,17 +48,12 @@ export function DeveloperWorkspace({
   data,
   selection,
   onSelectionChange,
-  onResubmit,
   onRefresh,
   onDropSubmission,
 }: {
   data: OwnedAddonsData
   selection: string | null
   onSelectionChange: (key: string) => void
-  onResubmit: (
-    initial: PublishFormState,
-    options?: { submissionId?: number; lockedName?: boolean }
-  ) => void
   onRefresh: () => Promise<void>
   onDropSubmission: (id: number) => void
 }) {
@@ -160,7 +155,6 @@ export function DeveloperWorkspace({
                   : undefined
               }
               onSelectionChange={onSelectionChange}
-              onResubmit={onResubmit}
               onRefresh={onRefresh}
               onDropSubmission={onDropSubmission}
             />
@@ -175,17 +169,12 @@ function SubmissionDetails({
   submission,
   backTo,
   onSelectionChange,
-  onResubmit,
   onRefresh,
   onDropSubmission,
 }: {
   submission: OwnedSubmission
   backTo?: { key: string; label: string }
   onSelectionChange: (key: string) => void
-  onResubmit: (
-    initial: PublishFormState,
-    options?: { submissionId?: number; lockedName?: boolean }
-  ) => void
   onRefresh: () => Promise<void>
   onDropSubmission: (id: number) => void
 }) {
@@ -215,16 +204,21 @@ function SubmissionDetails({
       }
     : submission.payload
   const [withdrawing, setWithdrawing] = useState(false)
+  const [editing, setEditing] = useState(false)
   const [busy, setBusy] = useState(false)
   const [closed, setClosed] = useState(false)
   const status = submissionDetail?.status ?? submission.status
   const kind = submissionDetail?.kind ?? submission.kind
   const createdAt = submissionDetail?.createdAt ?? submission.createdAt
   const messages = submissionDetail?.messages ?? submission.messages
+  const round = Math.max(1, submissionDetail?.revision ?? 1)
+  const relevantMessages = messages.filter(
+    message => Math.max(1, message.revision) === round
+  )
+  const hasMessages = relevantMessages.length > 0
   const open = status === 'open'
   const rejected = status === 'rejected'
   const editable = open && !closed
-  const hasMessages = messages.length > 0
   const fromHistory = backTo !== undefined
 
   const handleWithdraw = async () => {
@@ -329,32 +323,14 @@ function SubmissionDetails({
               View code
             </Button>
           )}
-          {editable ? (
-            <Button
-              variant="outline"
-              onClick={() => {
-                onSelectionChange(`submission:${submission.id}`)
-                onResubmit(publishFormFromPayload(payload), {
-                  submissionId: submission.id,
-                  lockedName: kind === 'update',
-                })
-              }}
-            >
+          {editing ? null : editable ? (
+            <Button variant="outline" onClick={() => setEditing(true)}>
               Revise submission
             </Button>
           ) : (
             rejected &&
             !closed && (
-              <Button
-                variant="outline"
-                onClick={() => {
-                  onSelectionChange(`submission:${submission.id}`)
-                  onResubmit(publishFormFromPayload(payload), {
-                    submissionId: submission.id,
-                    lockedName: kind === 'update',
-                  })
-                }}
-              >
+              <Button variant="outline" onClick={() => setEditing(true)}>
                 Resubmit for review
               </Button>
             )
@@ -394,7 +370,7 @@ function SubmissionDetails({
                 <p className="text-xs text-muted-foreground">Reviewer feedback</p>
                 {hasMessages ? (
                   <div className="mt-1 space-y-3">
-                    {messages.map(message => (
+                    {relevantMessages.map(message => (
                       <div key={message.id}>
                         <p className="whitespace-pre-wrap wrap-break-word">{message.body}</p>
                         {message.createdAt !== null && (
@@ -407,7 +383,7 @@ function SubmissionDetails({
                   </div>
                 ) : (
                   <p className="mt-1 whitespace-pre-wrap wrap-break-word">
-                    Feedback is not available here.
+                    Feedback is not available.
                   </p>
                 )}
               </div>
@@ -428,7 +404,7 @@ function SubmissionDetails({
         {!rejected && hasMessages && (
           <section className="space-y-3">
             <h3 className="text-sm font-medium">Review</h3>
-            {messages.map(message => (
+            {relevantMessages.map(message => (
               <div key={message.id}>
                 <p className="whitespace-pre-wrap wrap-break-word text-sm">{message.body}</p>
                 {message.createdAt !== null && (
@@ -440,65 +416,90 @@ function SubmissionDetails({
             ))}
           </section>
         )}
-        <section className="space-y-3">
-          <h3 className="text-sm font-medium">Submitted declaration</h3>
-          <p className="whitespace-pre-wrap wrap-break-word text-sm text-muted-foreground">
-            {payload.description || 'No description provided.'}
-          </p>
-          <dl className="divide-y rounded-xl border bg-card/40 px-4 text-sm">
-            <DetailField label="Name" value={payload.name} />
-            <DetailField label="Alias" value={payload.alias} />
-            <DetailField label="Author" value={payload.author} />
-            <DetailField
-              label="Repository"
-              value={payload.repo}
-              href={payload.repo !== '' ? `https://github.com/${payload.repo}` : undefined}
-            />
-            <DetailField label="Branch" value={payload.branch} />
-            <DetailField label="Tags" value={payload.tags.join(', ')} />
-            <DetailField label="Keywords" value={payload.keywords.join(', ')} />
-            <DetailField label="Dependencies" value={payload.dependencies.join(', ')} />
-            <DetailField
-              label="Ko-fi"
-              value={payload.kofi}
-              href={payload.kofi !== '' ? `https://ko-fi.com/${payload.kofi}` : undefined}
-            />
-            <DetailField
-              label="Submitted"
-              value={createdAt ? formatToLocalDate(createdAt) : 'Not available'}
-            />
-          </dl>
-        </section>
+        {editing ? (
+          <AddonEditPanel
+            addon={{
+              ...submission.payload,
+              uuid: '',
+              downloads: 0,
+              likePercentage: null,
+              warning: null,
+              addedAt: null,
+              reviewHistory: [],
+            }}
+            initialForm={publishFormFromPayload(payload)}
+            initialSubmissionId={rejected ? null : submission.id}
+            nameLocked={kind === 'update'}
+            requireChanges={false}
+            introTitle={rejected ? 'Resubmit for review' : 'Update submission'}
+            introNote="Leaving this form discards unsent edits. The catalog only changes when this submission is approved."
+            submitLabel={rejected ? 'Resubmit for review' : 'Update submission'}
+            onCancel={() => {
+              setEditing(false)
+              void onRefresh()
+            }}
+          />
+        ) : (
+          <section className="space-y-3">
+            <h3 className="text-sm font-medium">Submitted declaration</h3>
+            <p className="whitespace-pre-wrap wrap-break-word text-sm text-muted-foreground">
+              {payload.description || 'No description provided.'}
+            </p>
+            <dl className="divide-y rounded-xl border bg-card/40 px-4 text-sm">
+              <DetailField label="Name" value={payload.name} />
+              <DetailField label="Alias" value={payload.alias} />
+              <DetailField label="Author" value={payload.author} />
+              <DetailField
+                label="Repository"
+                value={payload.repo}
+                href={payload.repo !== '' ? `https://github.com/${payload.repo}` : undefined}
+              />
+              <DetailField label="Branch" value={payload.branch} />
+              <DetailField label="Tags" value={payload.tags.join(', ')} />
+              <DetailField label="Keywords" value={payload.keywords.join(', ')} />
+              <DetailField label="Dependencies" value={payload.dependencies.join(', ')} />
+              <DetailField
+                label="Ko-fi"
+                value={payload.kofi}
+                href={payload.kofi !== '' ? `https://ko-fi.com/${payload.kofi}` : undefined}
+              />
+              <DetailField
+                label="Submitted"
+                value={createdAt ? formatToLocalDate(createdAt) : 'Not available'}
+              />
+            </dl>
+          </section>
+        )}
+        <AlertDialog
+          open={withdrawing}
+          onOpenChange={next => {
+            if (!busy) setWithdrawing(next)
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Withdraw this submission?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This closes the review and removes the working proposal. Submission history is
+                retained.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={busy}>Keep in review</AlertDialogCancel>
+              <AlertDialogAction
+                variant="destructive"
+                disabled={busy}
+                onClick={event => {
+                  event.preventDefault()
+                  void handleWithdraw()
+                }}
+              >
+                {busy ? 'Withdrawing...' : 'Withdraw submission'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
-      <AlertDialog
-        open={withdrawing}
-        onOpenChange={next => {
-          if (!busy) setWithdrawing(next)
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Withdraw this submission?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This closes the review and removes the working proposal. Submission history is
-              retained.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={busy}>Keep in review</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              disabled={busy}
-              onClick={event => {
-                event.preventDefault()
-                void handleWithdraw()
-              }}
-            >
-              {busy ? 'Withdrawing...' : 'Withdraw submission'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </ScrollArea>
   )
 }

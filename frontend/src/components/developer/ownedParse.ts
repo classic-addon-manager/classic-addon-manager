@@ -222,6 +222,7 @@ function parseSubmission(value: unknown): OwnedSubmission | null {
   }
 }
 
+/** Mirrors parseSubmissionMessages in parse.ts, including the revision fallback. */
 function parseMessages(value: object): OwnedSubmissionMessage[] {
   if (!('messages' in value) || !Array.isArray(value.messages)) return []
   const messages: OwnedSubmissionMessage[] = []
@@ -229,13 +230,17 @@ function parseMessages(value: object): OwnedSubmissionMessage[] {
     if (item === null || typeof item !== 'object') continue
     if (!('id' in item) || typeof item.id !== 'number' || !Number.isFinite(item.id)) continue
     if (!('body' in item) || typeof item.body !== 'string') continue
+    const revision =
+      'revision' in item && typeof item.revision === 'number' && Number.isFinite(item.revision)
+        ? item.revision
+        : 0
     const createdAt =
       'created_at' in item &&
       typeof item.created_at === 'string' &&
       isFiniteDateString(item.created_at)
         ? item.created_at
         : null
-    messages.push({ id: item.id, body: item.body, createdAt })
+    messages.push({ id: item.id, body: item.body, revision, createdAt })
   }
   return messages
 }

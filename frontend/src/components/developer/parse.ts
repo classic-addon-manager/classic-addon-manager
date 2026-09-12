@@ -255,7 +255,8 @@ export function parseSaveResponse(
   }
   if (
     statusCode === 400 &&
-    envelope !== null && !envelope.status &&
+    envelope !== null &&
+    !envelope.status &&
     envelope.message === 'invalid addon'
   ) {
     const data = envelope.data
@@ -343,7 +344,12 @@ function parseSubmissionMessages(value: Record<string, unknown>): SubmissionMess
   const messages: SubmissionMessage[] = []
   for (const item of value.messages) {
     if (!isObject(item) || !isFiniteNumber(item.id) || typeof item.body !== 'string') continue
-    messages.push({ id: item.id, body: item.body, createdAt: nonEmptyString(item.created_at) })
+    messages.push({
+      id: item.id,
+      body: item.body,
+      revision: isFiniteNumber(item.revision) ? item.revision : 0,
+      createdAt: nonEmptyString(item.created_at),
+    })
   }
   return messages
 }

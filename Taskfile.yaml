@@ -59,6 +59,13 @@ tasks:
     vars:
       EXE_EXT: '{{if eq OS "windows"}}.exe{{end}}'
 
+  dev:server:
+    summary: Runs the server-mode app with rebuild+restart on source changes (air watches Go files, vite serves live frontend)
+    deps:
+      - task: common:install:frontend:deps
+    cmds:
+      - ~/go/bin/air -c build/air.server.toml
+
   dev:
     summary: Runs the application in development mode
     cmds:

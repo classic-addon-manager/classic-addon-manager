@@ -28,8 +28,6 @@ import { cn } from '@/lib/utils'
 interface PublishAddonFormProps {
   onClose: () => void
   initial?: PublishFormState
-  submissionId?: number | null
-  lockedName?: boolean
 }
 
 const FORM_FIELD_ORDER: (keyof PublishFormState)[] = [
@@ -63,13 +61,11 @@ function scrollFirstFieldErrorIntoView(main: HTMLElement | null, errors: FieldEr
 export const PublishAddonForm = ({
   onClose,
   initial = INITIAL_PUBLISH_FORM,
-  submissionId: initialSubmissionId = null,
-  lockedName = false,
 }: PublishAddonFormProps) => {
   const mainRef = useRef<HTMLElement>(null)
   const [form, setForm] = useState<PublishFormState>(initial)
-  const [submissionId, setSubmissionId] = useState<number | null>(initialSubmissionId)
-  const [nameLocked, setNameLocked] = useState(lockedName)
+  const [submissionId, setSubmissionId] = useState<number | null>(null)
+  const [nameLocked, setNameLocked] = useState(false)
   const [editable, setEditable] = useState(true)
   const [alreadyOpenId, setAlreadyOpenId] = useState<number | null>(null)
   const [discardOpen, setDiscardOpen] = useState(false)

@@ -1,7 +1,6 @@
 import { AlertTriangleIcon, Code2, LoaderCircle, Plus } from 'lucide-react'
 import { useState } from 'react'
 
-import { INITIAL_PUBLISH_FORM, type PublishFormState } from '@/components/developer/constants'
 import { DeveloperWorkspace } from '@/components/developer/DeveloperWorkspace'
 import { PublishAddonForm } from '@/components/developer/PublishAddonForm'
 import { type OwnedAddonsData, useOwnedAddons } from '@/components/developer/useOwnedAddons'
@@ -12,9 +11,6 @@ export const Developer = () => {
   const isAuthenticated = useUserStore(s => s.user.discord_id !== '')
   const token = useUserStore(s => s.token)
   const [view, setView] = useState<'list' | 'form'>('list')
-  const [formInitial, setFormInitial] = useState<PublishFormState>(INITIAL_PUBLISH_FORM)
-  const [formSubmissionId, setFormSubmissionId] = useState<number | null>(null)
-  const [formLockedName, setFormLockedName] = useState(false)
   const [selection, setSelection] = useState<string | null>(null)
   const { data, error, retry, removeSubmission } = useOwnedAddons(
     isAuthenticated && view === 'list',
@@ -23,33 +19,18 @@ export const Developer = () => {
 
   const dropSubmission = (id: number) => {
     removeSubmission(id)
-    if (formSubmissionId === id) setFormSubmissionId(null)
     if (selection === `submission:${id}`) setSelection(null)
   }
 
-  const openForm = (
-    initial: PublishFormState = INITIAL_PUBLISH_FORM,
-    options?: { submissionId?: number; lockedName?: boolean }
-  ) => {
-    setFormInitial(initial)
-    setFormSubmissionId(options?.submissionId ?? null)
-    setFormLockedName(options?.lockedName ?? false)
-    setView('form')
-  }
+  const openForm = () => setView('form')
+  const closeForm = () => setView('list')
 
   if (!isAuthenticated) {
     return null
   }
 
   if (view === 'form') {
-    return (
-      <PublishAddonForm
-        initial={formInitial}
-        submissionId={formSubmissionId}
-        lockedName={formLockedName}
-        onClose={() => setView('list')}
-      />
-    )
+    return <PublishAddonForm onClose={closeForm} />
   }
 
   return (
@@ -81,7 +62,7 @@ function renderListBody(
   data: OwnedAddonsData | null,
   error: string | null,
   retry: () => Promise<void>,
-  openForm: (initial?: PublishFormState) => void,
+  openForm: () => void,
   sessionKey: string,
   selection: string | null,
   onSelectionChange: (key: string) => void,
@@ -131,7 +112,6 @@ function renderListBody(
       data={data}
       selection={selection}
       onSelectionChange={onSelectionChange}
-      onResubmit={openForm}
       onRefresh={retry}
       onDropSubmission={onDropSubmission}
     />
