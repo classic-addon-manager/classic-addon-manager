@@ -83,7 +83,6 @@ const REVIEW_STATUS_LABELS: Record<string, string> = {
   in_review: 'In review',
   rejected: 'Rejected',
   approved: 'Approved',
-  withdrawn: 'Withdrawn',
 }
 
 const REVIEW_STATUS_TONES: Record<string, ReviewHistoryTone> = {
@@ -91,7 +90,6 @@ const REVIEW_STATUS_TONES: Record<string, ReviewHistoryTone> = {
   in_review: 'review',
   rejected: 'rejected',
   approved: 'approved',
-  withdrawn: 'withdrawn',
 }
 
 /**

@@ -6,19 +6,21 @@ import type { SubmissionDetail } from '@/components/developer/types.ts'
 /**
  * Loads the review metadata for one submission (`GET /dev/addon/submissions/{id}`).
  * Editor values stay owned by useDevAddonValues; this hook only reports the
- * submission's status, kind, timestamps, and comment history.
+ * submission's status, kind, timestamps, and comment history. `reloadKey`
+ * re-reads the same submission, which is how a view reflects a save it just made.
  */
-export function useDevAddonSubmission(id: number) {
+export function useDevAddonSubmission(id: number, reloadKey = 0) {
   const [currentId, setCurrentId] = useState(id)
-  const [submission, setSubmission] = useState<SubmissionDetail | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [currentReloadKey, setCurrentReloadKey] = useState(reloadKey)
+  const [result, setResult] = useState<{
+    submission: SubmissionDetail | null
+    error: string | null
+  } | null>(null)
 
-  if (currentId !== id) {
+  if (currentId !== id || currentReloadKey !== reloadKey) {
     setCurrentId(id)
-    setLoading(true)
-    setSubmission(null)
-    setError(null)
+    setCurrentReloadKey(reloadKey)
+    setResult(null)
   }
 
   useEffect(() => {
@@ -26,17 +28,20 @@ export function useDevAddonSubmission(id: number) {
     void (async () => {
       const result = await getSubmissionDetail(id)
       if (cancelled) return
-      setLoading(false)
-      if (result.status === 'ok') {
-        setSubmission(result.submission)
-        return
-      }
-      setError(result.message)
+      setResult(
+        result.status === 'ok'
+          ? { submission: result.submission, error: null }
+          : { submission: null, error: result.message }
+      )
     })()
     return () => {
       cancelled = true
     }
-  }, [id])
+  }, [id, reloadKey])
 
-  return { submission, error, loading }
+  return {
+    submission: result?.submission ?? null,
+    error: result?.error ?? null,
+    loading: result === null,
+  }
 }

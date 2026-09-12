@@ -46,8 +46,20 @@ export function AddonDetails({
     : addon
   const [tab, setTab] = useState('overview')
   const [mode, setMode] = useState<'view' | 'edit'>('view')
+  const [reloadKey, setReloadKey] = useState(0)
   // The addon's current status is its latest submission, never a previewed one.
   const review = latestReview(display.reviewHistory)
+  const pendingId =
+    review !== null && (review.status === 'in_review' || review.status === 'rejected')
+      ? review.submissionId
+      : null
+  const pending = useDevAddonValues(
+    mode !== 'edit' || pendingId === null
+      ? null
+      : { type: 'submission', id: pendingId, kind: 'update', name: addon.name },
+    reloadKey
+  )
+  const pendingForm = pending.values ? valuesToForm(pending.values) : null
   const submitLabel =
     review?.status === 'in_review'
       ? 'Update submission'
@@ -114,17 +126,28 @@ export function AddonDetails({
       </div>
       <ScrollArea className="min-h-0 flex-1">
         <TabsContent value="overview" className="space-y-5 p-5">
-          {loaded.loading ? (
+          {loaded.loading || (mode === 'edit' && pending.loading) ? (
             <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
               <LoaderCircle className="size-8 animate-spin opacity-50" strokeWidth={1.5} />
               <p className="mt-3 text-sm">Loading declaration...</p>
             </div>
           ) : loaded.error ? (
             <p className="text-sm text-destructive">{loaded.error}</p>
+          ) : mode === 'edit' && pendingId !== null && pendingForm === null ? (
+            <div className="flex flex-col items-center justify-center gap-3 py-16">
+              <p className="text-center text-sm text-destructive">
+                {pending.error ?? 'This submission could not be loaded.'}
+              </p>
+              <Button variant="outline" onClick={() => setReloadKey(key => key + 1)}>
+                Retry
+              </Button>
+            </div>
           ) : mode === 'edit' ? (
             <AddonEditPanel
               addon={display}
-              initialForm={form}
+              initialForm={pendingForm ?? form}
+              initialSubmissionId={pendingId}
+              requireChanges={review?.status !== 'rejected'}
               submitLabel={submitLabel}
               onCancel={() => setMode('view')}
               onSubmitted={() => void onRefresh()}

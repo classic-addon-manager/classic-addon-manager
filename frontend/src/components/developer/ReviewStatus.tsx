@@ -39,10 +39,6 @@ export function ReviewStatus({
       'Listing edits rejected',
       'Your addon is still published. None of these changes went live.',
     ],
-    withdrawn: [
-      'Changes withdrawn',
-      'The review is closed. Future edits start from the published listing.',
-    ],
   }
 
   const handleWithdraw = async () => {

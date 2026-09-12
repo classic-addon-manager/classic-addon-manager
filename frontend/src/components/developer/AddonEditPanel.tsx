@@ -49,7 +49,7 @@ export function AddonEditPanel({
   initialForm: PublishFormState | null
   submitLabel: string
   onCancel: () => void
-  /** Invoked after a submission is created or updated, e.g. to refetch sources. */
+  /** Invoked after a submission is created or updated. */
   onSubmitted?: () => void
   /** Pinned submission being revised, null creates a new submission. */
   initialSubmissionId?: number | null
@@ -79,13 +79,14 @@ export function AddonEditPanel({
   const [validating, setValidating] = useState(false)
   const [validated, setValidated] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [resuming, setResuming] = useState(false)
   const [editable, setEditable] = useState(true)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [validationError, setValidationError] = useState(false)
   const [publishError, setPublishError] = useState<string | null>(null)
-  const busy = validating || saving || !editable
-  const dirty = isPublishFormDirty(form, initial)
-  const ctaDisabled = busy || (!validated && (requireChanges ? !dirty : false))
+  const busy = validating || saving || resuming || !editable
+  const dirty = submissionId !== (initialSubmissionId ?? null) || isPublishFormDirty(form, initial)
+  const ctaDisabled = busy || (!validated && requireChanges && !dirty)
   const hasFieldErrors = FORM_FIELD_ORDER.some(key => !!fieldErrors[key]?.length)
   const failCopy = hasFieldErrors
     ? 'Fix the highlighted fields.'
@@ -129,34 +130,32 @@ export function AddonEditPanel({
   }
 
   const resumeExisting = async (id: number) => {
-    const schema = await requireAddonSchema()
-    if (!schema) {
-      toast({ title: submitLabel, description: 'This source is unavailable.' })
-      return
+    if (busy) return
+    setResuming(true)
+    try {
+      const schema = await requireAddonSchema()
+      if (!schema) {
+        setPublishError('This source is unavailable.')
+        return
+      }
+      const result = await getAddonValues(
+        { type: 'submission', id, kind: 'update', name: addon.name },
+        schema
+      )
+      if (result.status !== 'ok') {
+        setPublishError(result.message)
+        return
+      }
+      setSubmissionId(id)
+      setForm(valuesToForm(result.values))
+      setValidated(false)
+      setValidationError(false)
+      setFieldErrors({})
+      setPublishError(null)
+      setEditable(true)
+    } finally {
+      setResuming(false)
     }
-    const result = await getAddonValues(
-      { type: 'submission', id, kind: 'update', name: addon.name },
-      schema
-    )
-    if (result.status !== 'ok') {
-      toast({
-        title: submitLabel,
-        description:
-          result.status === 'unauthorized' ||
-          result.status === 'error' ||
-          result.status === 'not_found'
-            ? result.message
-            : 'This source is unavailable.',
-      })
-      return
-    }
-    setSubmissionId(id)
-    setForm(valuesToForm(result.values))
-    setValidated(false)
-    setValidationError(false)
-    setFieldErrors({})
-    setPublishError(null)
-    setEditable(true)
   }
 
   const handleValidate = async () => {
@@ -227,7 +226,7 @@ export function AddonEditPanel({
         setPublishError('This submission is no longer open.')
         return
       }
-      setPublishError('message' in result ? result.message : "Couldn't publish this addon.")
+      setPublishError(result.message)
     } catch {
       setPublishError("Couldn't publish this addon.")
     } finally {
@@ -302,9 +301,9 @@ export function AddonEditPanel({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Submission already open</AlertDialogTitle>
+            <AlertDialogTitle>Submission already exists</AlertDialogTitle>
             <AlertDialogDescription>
-              You already have an open submission for this name.
+              You already have an open or rejected submission for this name.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

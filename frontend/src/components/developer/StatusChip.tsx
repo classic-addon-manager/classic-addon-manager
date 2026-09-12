@@ -1,4 +1,4 @@
-import { CircleCheck, CircleDashed, CircleX, Clock, type LucideIcon, Undo2 } from 'lucide-react'
+import { CircleCheck, CircleDashed, CircleX, Clock, type LucideIcon } from 'lucide-react'
 
 import type { ReviewHistoryTone } from '@/components/developer/ownedParse'
 import { Badge } from '@/components/ui/badge'
@@ -21,10 +21,6 @@ const TONES: Record<ReviewHistoryTone, { className: string; icon: LucideIcon }> 
   rejected: {
     className: 'border-destructive/40 bg-destructive/10 text-destructive',
     icon: CircleX,
-  },
-  withdrawn: {
-    className: 'border-border bg-muted text-muted-foreground dark:border-white/15',
-    icon: Undo2,
   },
   unknown: {
     // The outline *is* the signal here, so it is stronger than a filled chip's border.

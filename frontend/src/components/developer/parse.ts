@@ -67,7 +67,6 @@ const SUBMISSION_STATUSES: Record<string, true> = {
   open: true,
   approved: true,
   rejected: true,
-  withdrawn: true,
 }
 
 const WIDGETS: Record<string, true> = {

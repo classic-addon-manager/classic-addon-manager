@@ -44,7 +44,6 @@ const SUBMISSION_STATUS_LABELS: Record<SubmissionStatus, string> = {
   open: 'In review',
   approved: 'Approved',
   rejected: 'Changes requested',
-  withdrawn: 'Withdrawn',
 }
 
 export function DeveloperWorkspace({
@@ -186,31 +185,24 @@ function SubmissionDetails({
   onRefresh: () => Promise<void>
   onDropSubmission: (id: number) => void
 }) {
-  const loaded = useDevAddonValues({
-    type: 'submission',
-    id: submission.id,
-    kind: 'new',
-    name: submission.title,
-  })
+  // A save rewrites the row this view renders, so the reload key re-reads it.
+  const [reloadKey, setReloadKey] = useState(0)
+  const loaded = useDevAddonValues(
+    {
+      type: 'submission',
+      id: submission.id,
+      kind: 'new',
+      name: submission.title,
+    },
+    reloadKey
+  )
   // Review metadata comes from the submission endpoint; the list payload only
   // seeds the sidebar and is not authoritative for status, kind, or comments.
-  const detail = useDevAddonSubmission(submission.id)
+  const detail = useDevAddonSubmission(submission.id, reloadKey)
   const submissionDetail = detail.submission
-  const form = loaded.values ? valuesToForm(loaded.values) : null
-  const payload = form
-    ? {
-        name: form.name,
-        alias: form.alias,
-        description: form.description,
-        author: form.author,
-        repo: form.repo,
-        branch: form.branch,
-        tags: [...form.tags],
-        keywords: [...form.keywords],
-        dependencies: [...form.dependencies],
-        kofi: form.kofi,
-      }
-    : submission.payload
+  const form = loaded.values
+    ? valuesToForm(loaded.values)
+    : publishFormFromPayload(submission.payload)
   const [withdrawing, setWithdrawing] = useState(false)
   const [editing, setEditing] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -220,12 +212,21 @@ function SubmissionDetails({
   const createdAt = submissionDetail?.createdAt ?? submission.createdAt
   const messages = submissionDetail?.messages ?? submission.messages
   const round = Math.max(1, submissionDetail?.revision ?? 1)
-  const relevantMessages = messages.filter(
-    message => Math.max(1, message.revision) === round
-  )
+  // Comments stay with the revision the reviewer saw, even after resubmission.
+  const messagesByRound = new Map<number, typeof messages>()
+  for (const message of messages) {
+    const revision = Math.max(1, message.revision)
+    const thread = messagesByRound.get(revision)
+    if (thread) thread.push(message)
+    else messagesByRound.set(revision, [message])
+  }
+  const relevantMessages = messagesByRound.get(round) ?? []
   const hasMessages = relevantMessages.length > 0
   const open = status === 'open'
   const rejected = status === 'rejected'
+  const reviewThreads = [...messagesByRound]
+    .filter(([revision]) => !rejected || revision !== round)
+    .sort(([a], [b]) => b - a)
   const editable = open && !closed
   const fromHistory = backTo !== undefined
 
@@ -298,7 +299,7 @@ function SubmissionDetails({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 className="wrap-break-word text-xl font-semibold tracking-tight">
-              {payload.alias || payload.name}
+              {form.alias || form.name}
             </h2>
             <div className="mt-1">
               {closed ? (
@@ -322,10 +323,10 @@ function SubmissionDetails({
           )}
         </div>
         <div className="flex flex-wrap gap-2">
-          {payload.repo !== '' && !fromHistory && (
+          {form.repo !== '' && !fromHistory && (
             <Button
               variant="outline"
-              onClick={() => void Browser.OpenURL(`https://github.com/${payload.repo}`)}
+              onClick={() => void Browser.OpenURL(`https://github.com/${form.repo}`)}
             >
               <GithubIcon />
               View code
@@ -398,28 +399,34 @@ function SubmissionDetails({
             </>
           ) : (
             <>
-              <h3 className="text-sm font-medium">
-                {status === 'approved' ? 'Approved' : 'Withdrawn'}
-              </h3>
+              <h3 className="text-sm font-medium">Approved</h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                {status === 'approved'
-                  ? 'This submission was approved and is now live in the app.'
-                  : 'This review is closed and no longer actionable.'}
+                This submission was approved and is now live in the app.
               </p>
             </>
           )}
         </section>
-        {!rejected && hasMessages && (
-          <section className="space-y-3">
-            <h3 className="text-sm font-medium">Review</h3>
-            {relevantMessages.map(message => (
-              <div key={message.id}>
-                <p className="whitespace-pre-wrap wrap-break-word text-sm">{message.body}</p>
-                {message.createdAt !== null && (
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {formatToLocalTime(message.createdAt)}
-                  </p>
-                )}
+        {reviewThreads.length > 0 && (
+          <section className="space-y-6">
+            {reviewThreads.map(([revision, thread]) => (
+              <div key={revision} className="space-y-3">
+                <h3 className="text-sm font-medium">
+                  {revision === round
+                    ? 'Review'
+                    : thread.length > 1
+                      ? 'Previous review comments'
+                      : 'Previous review comment'}
+                </h3>
+                {thread.map(message => (
+                  <div key={message.id}>
+                    <p className="whitespace-pre-wrap wrap-break-word text-sm">{message.body}</p>
+                    {message.createdAt !== null && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {formatToLocalTime(message.createdAt)}
+                      </p>
+                    )}
+                  </div>
+                ))}
               </div>
             ))}
           </section>
@@ -435,15 +442,16 @@ function SubmissionDetails({
               addedAt: null,
               reviewHistory: [],
             }}
-            initialForm={publishFormFromPayload(payload)}
-            initialSubmissionId={rejected ? null : submission.id}
+            initialForm={form}
+            initialSubmissionId={submission.id}
             nameLocked={kind === 'update'}
             requireChanges={false}
             introTitle={rejected ? 'Resubmit for review' : 'Update submission'}
             introNote="Leaving this form discards unsent edits. Nothing goes live until this submission is approved."
             submitLabel={rejected ? 'Resubmit for review' : 'Update submission'}
-            onCancel={() => {
-              setEditing(false)
+            onCancel={() => setEditing(false)}
+            onSubmitted={() => {
+              setReloadKey(key => key + 1)
               void onRefresh()
             }}
           />
@@ -451,25 +459,25 @@ function SubmissionDetails({
           <section className="space-y-3">
             <h3 className="text-sm font-medium">Submitted declaration</h3>
             <p className="whitespace-pre-wrap wrap-break-word text-sm text-muted-foreground">
-              {payload.description || 'No description provided.'}
+              {form.description || 'No description provided.'}
             </p>
             <dl className="divide-y rounded-xl border bg-card/40 px-4 text-sm">
-              <DetailField label="Name" value={payload.name} />
-              <DetailField label="Alias" value={payload.alias} />
-              <DetailField label="Author" value={payload.author} />
+              <DetailField label="Name" value={form.name} />
+              <DetailField label="Alias" value={form.alias} />
+              <DetailField label="Author" value={form.author} />
               <DetailField
                 label="Repository"
-                value={payload.repo}
-                href={payload.repo !== '' ? `https://github.com/${payload.repo}` : undefined}
+                value={form.repo}
+                href={form.repo !== '' ? `https://github.com/${form.repo}` : undefined}
               />
-              <DetailField label="Branch" value={payload.branch} />
-              <DetailField label="Tags" value={payload.tags.join(', ')} />
-              <DetailField label="Keywords" value={payload.keywords.join(', ')} />
-              <DetailField label="Dependencies" value={payload.dependencies.join(', ')} />
+              <DetailField label="Branch" value={form.branch} />
+              <DetailField label="Tags" value={form.tags.join(', ')} />
+              <DetailField label="Keywords" value={form.keywords.join(', ')} />
+              <DetailField label="Dependencies" value={form.dependencies.join(', ')} />
               <DetailField
                 label="Ko-fi"
-                value={payload.kofi}
-                href={payload.kofi !== '' ? `https://ko-fi.com/${payload.kofi}` : undefined}
+                value={form.kofi}
+                href={form.kofi !== '' ? `https://ko-fi.com/${form.kofi}` : undefined}
               />
               <DetailField
                 label="Submitted"

@@ -1,7 +1,7 @@
 import type { PublishFormState } from '@/components/developer/constants'
 import { saveDeclaration, validateDeclaration } from '@/components/developer/declarationApi.ts'
 import { formToValues } from '@/components/developer/formValues.ts'
-import { getAddonSources } from '@/components/developer/sources.ts'
+import { findActionableSubmission } from '@/components/developer/sources.ts'
 import type { FieldErrors as WireFieldErrors } from '@/components/developer/types.ts'
 
 export type FieldErrors = Partial<Record<keyof PublishFormState, string[]>>
@@ -22,11 +22,7 @@ export type SubmitAddonResult =
 
 const NAME_ALREADY_TAKEN = 'name is already taken'
 
-export function publishFormToValidatePayload(form: PublishFormState) {
-  return formToValues(form)
-}
-
-export function isNameAlreadyTaken(
+function isNameAlreadyTaken(
   submissionId: number | null,
   fields: { name?: string[] },
   other: string[]
@@ -45,8 +41,9 @@ export async function validateAddon(
   if (result.status === 'valid') return { status: 'valid' }
   if (result.status === 'invalid') {
     if (isNameAlreadyTaken(submissionId, result.fields, result.other)) {
-      const id = await openSubmissionIdForName(form.name)
-      if (id !== null) return { status: 'already_open', id }
+      const existing = await findActionableSubmission(form.name)
+      if (existing.status === 'found') return { status: 'already_open', id: existing.id }
+      if (existing.status === 'error') return existing
     }
     return { status: 'invalid', fields: toFormFieldErrors(result.fields), other: result.other }
   }
@@ -58,6 +55,11 @@ export async function submitAddon(
   form: PublishFormState,
   submissionId: number | null = null
 ): Promise<SubmitAddonResult> {
+  if (submissionId === null) {
+    const existing = await findActionableSubmission(form.name)
+    if (existing.status === 'found') return { status: 'already_open', id: existing.id }
+    if (existing.status === 'error') return existing
+  }
   const result = await saveDeclaration(formToValues(form), submissionId)
   if (result.status === 'saved') return { status: 'submitted', id: result.id }
   if (result.status === 'already_open') return { status: 'already_open', id: result.id }
@@ -66,13 +68,6 @@ export async function submitAddon(
   }
   if (result.status === 'not_open') return { status: 'not_open', id: result.id }
   return { status: 'error', message: result.message }
-}
-
-async function openSubmissionIdForName(name: string): Promise<number | null> {
-  const result = await getAddonSources()
-  if (result.status !== 'ok') return null
-  const match = result.sources.submissions.find(submission => submission.name === name)
-  return match?.id ?? null
 }
 
 function toFormFieldErrors(fields: WireFieldErrors): FieldErrors {

@@ -8,26 +8,36 @@ import type {
 } from '@/components/developer/types.ts'
 import { getAddonValues } from '@/components/developer/values.ts'
 
-export function sourceCacheKey(source: EditorSource): string {
+/** Cache key for a source; an absent source (null) is its own key and never fetches. */
+function sourceCacheKey(source: EditorSource | null): string {
+  if (source === null) return 'none'
   if (source.type === 'new') return 'new'
   if (source.type === 'addon') return `addon:${source.uuid}`
   return `submission:${source.id}`
 }
 
-export function useDevAddonValues(source: EditorSource) {
+/**
+ * Loads the editor values for one source. `reloadKey` re-reads the same source,
+ * which is how a view reflects a save it just made. A null source (a submission
+ * the view may not have) loads nothing and reports no values.
+ */
+export function useDevAddonValues(source: EditorSource | null, reloadKey = 0) {
   const [currentSource, setCurrentSource] = useState(source)
+  const [currentReloadKey, setCurrentReloadKey] = useState(reloadKey)
   const [result, setResult] = useState<{
     values: DeclarationValues | null
     kind: DeclarationKind | null
     error: string | null
   } | null>(null)
 
-  if (sourceCacheKey(currentSource) !== sourceCacheKey(source)) {
+  if (sourceCacheKey(currentSource) !== sourceCacheKey(source) || currentReloadKey !== reloadKey) {
     setCurrentSource(source)
+    setCurrentReloadKey(reloadKey)
     setResult(null)
   }
 
   useEffect(() => {
+    if (currentSource === null) return
     let cancelled = false
     void (async () => {
       const schema = await requireAddonSchema()
@@ -64,7 +74,11 @@ export function useDevAddonValues(source: EditorSource) {
     return () => {
       cancelled = true
     }
-  }, [currentSource])
+  }, [currentSource, currentReloadKey])
+
+  if (currentSource === null) {
+    return { values: null, kind: null, error: null, loading: false }
+  }
 
   if (result === null) {
     return { values: null, kind: null, error: null, loading: true }

@@ -35,7 +35,7 @@ export type SourceSubmission = {
 }
 export type AddonSources = { addons: SourceAddon[]; submissions: SourceSubmission[] }
 
-export type SubmissionStatus = 'open' | 'approved' | 'rejected' | 'withdrawn'
+export type SubmissionStatus = 'open' | 'approved' | 'rejected'
 export type SubmissionMessage = {
   id: number
   body: string

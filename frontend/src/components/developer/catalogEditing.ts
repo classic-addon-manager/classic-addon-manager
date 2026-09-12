@@ -4,9 +4,9 @@ import type { ReviewHistoryEntry, ReviewHistoryTone } from '@/components/develop
 import { toast } from '@/components/ui/toast'
 
 /** Catalog-review outcome the addon's latest submission can be in. */
-export type ReviewOutcome = 'in_review' | 'approved' | 'rejected' | 'withdrawn'
+type ReviewOutcome = 'in_review' | 'approved' | 'rejected'
 
- // The addon's current catalog-review status, derived from its newest submission.
+// The addon's current catalog-review status, derived from its newest submission.
 export type AddonReview = {
   /** Submission whose detail shows the real proposed declaration and feedback. */
   submissionId: number
@@ -18,7 +18,6 @@ const REVIEW_OUTCOMES: Record<ReviewHistoryTone, ReviewOutcome | null> = {
   review: 'in_review',
   approved: 'approved',
   rejected: 'rejected',
-  withdrawn: 'withdrawn',
   // An unmapped backend status must never be presented as a known outcome.
   unknown: null,
 }

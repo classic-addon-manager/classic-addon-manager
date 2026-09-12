@@ -7,6 +7,10 @@ import {
   isPublishFormDirty,
   type PublishFormState,
 } from '@/components/developer/constants'
+import {
+  FORM_FIELD_ORDER,
+  scrollFirstFieldErrorIntoView,
+} from '@/components/developer/declarationFields'
 import { valuesToForm } from '@/components/developer/formValues.ts'
 import { requireAddonSchema } from '@/components/developer/schema.ts'
 import { type FieldErrors, submitAddon, validateAddon } from '@/components/developer/validate'
@@ -30,34 +34,6 @@ interface PublishAddonFormProps {
   initial?: PublishFormState
 }
 
-const FORM_FIELD_ORDER: (keyof PublishFormState)[] = [
-  'name',
-  'alias',
-  'description',
-  'author',
-  'repo',
-  'branch',
-  'tags',
-  'keywords',
-  'dependencies',
-  'kofi',
-]
-
-function scrollFirstFieldErrorIntoView(main: HTMLElement | null, errors: FieldErrors) {
-  if (!main) return
-  const firstKey = FORM_FIELD_ORDER.find(key => !!errors[key]?.length)
-  if (!firstKey) return
-  const target = document.getElementById(`addon-${firstKey}`)
-  if (!target) return
-
-  const mainRect = main.getBoundingClientRect()
-  const targetRect = target.getBoundingClientRect()
-  const fullyVisible = targetRect.top >= mainRect.top && targetRect.bottom <= mainRect.bottom
-  if (fullyVisible) return
-
-  target.scrollIntoView({ behavior: 'smooth', block: 'center' })
-}
-
 export const PublishAddonForm = ({
   onClose,
   initial = INITIAL_PUBLISH_FORM,
@@ -74,8 +50,9 @@ export const PublishAddonForm = ({
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [validationError, setValidationError] = useState(false)
   const [publishing, setPublishing] = useState(false)
+  const [resuming, setResuming] = useState(false)
   const [publishError, setPublishError] = useState<string | null>(null)
-  const busy = validating || publishing || !editable
+  const busy = validating || publishing || resuming || !editable
 
   const setField = <K extends keyof PublishFormState>(
     key: K,
@@ -90,6 +67,7 @@ export const PublishAddonForm = ({
       return { ...prev, [key]: nextValue }
     })
     setValidated(false)
+    setValidationError(false)
     setFieldErrors(prev => {
       if (!prev[key]) return prev
       const next = { ...prev }
@@ -112,7 +90,7 @@ export const PublishAddonForm = ({
     if (hasFields) {
       setFieldErrors(fields)
       requestAnimationFrame(() => {
-        scrollFirstFieldErrorIntoView(mainRef.current, fields)
+        scrollFirstFieldErrorIntoView(fields, mainRef.current)
       })
       return
     }
@@ -120,32 +98,33 @@ export const PublishAddonForm = ({
   }
 
   const resumeSubmission = async (id: number) => {
-    const schema = await requireAddonSchema()
-    if (!schema) {
-      setPublishError('This source is unavailable.')
-      return
+    if (busy) return
+    setResuming(true)
+    try {
+      const schema = await requireAddonSchema()
+      if (!schema) {
+        setPublishError('This source is unavailable.')
+        return
+      }
+      const result = await getAddonValues({ type: 'submission', id, kind: 'new', name: '' }, schema)
+      if (result.status !== 'ok') {
+        setPublishError(result.message)
+        return
+      }
+      setSubmissionId(id)
+      setNameLocked(result.kind === 'update')
+      setForm(valuesToForm(result.values))
+      setValidated(false)
+      setValidationError(false)
+      setFieldErrors({})
+      setPublishError(null)
+    } finally {
+      setResuming(false)
     }
-    const result = await getAddonValues({ type: 'submission', id, kind: 'new', name: '' }, schema)
-    if (result.status !== 'ok') {
-      setPublishError(
-        result.status === 'error' ||
-          result.status === 'unauthorized' ||
-          result.status === 'not_found'
-          ? result.message
-          : 'This source is unavailable.'
-      )
-      return
-    }
-    setSubmissionId(id)
-    setNameLocked(result.kind === 'update')
-    setForm(valuesToForm(result.values))
-    setValidated(false)
-    setFieldErrors({})
-    setPublishError(null)
   }
 
   const handleValidate = async () => {
-    if (validating) return
+    if (busy) return
     setValidating(true)
     setPublishError(null)
     setFieldErrors({})
@@ -379,9 +358,9 @@ export const PublishAddonForm = ({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Submission already open</AlertDialogTitle>
+            <AlertDialogTitle>Submission already exists</AlertDialogTitle>
             <AlertDialogDescription>
-              You already have an open submission for this name.
+              You already have an open or rejected submission for this name.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
