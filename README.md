@@ -55,7 +55,7 @@ If you find this project useful, consider supporting development:
 ### Requirements
 
 - Go 1.25+
-- Node.js 22+
+- Node.js 22.12+
 - PNPM
 
 Install PNPM by following [pnpm.io/installation](https://pnpm.io/installation).
@@ -71,6 +71,25 @@ go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.5
 ### Live Development
 
 Run `wails3 dev` in the project directory. This starts a Vite development server with fast hot reload for frontend changes. You can also connect via http://localhost:34115 in your browser and call your Go methods from devtools.
+
+### Frontend Linting and Formatting
+
+Run these commands from `frontend/` after `pnpm install`:
+
+| Command             | Purpose                                 |
+|---------------------|-----------------------------------------|
+| `pnpm lint`         | Run oxlint and apply safe fixes         |
+| `pnpm lint:check`   | Run oxlint without changing files       |
+| `pnpm format`       | Format TypeScript/TSX with Prettier     |
+| `pnpm format:check` | Check formatting without changing files |
+
+Oxlint is configured in `frontend/.oxlintrc.json`. It uses native core, TypeScript,
+React Hooks, Fast Refresh, and React Compiler rules.
+
+Formatting is separate from linting and retains `frontend/.prettierrc`. Generated
+Wails bindings and build output are excluded from both checks. Run `pnpm lint`
+before `pnpm format`, overlapping type-import and import-sorting fixes can require
+a second lint run.
 
 ### Building
 

@@ -1,3 +1,6 @@
 allowBuilds:
   esbuild: true
 minimumReleaseAge: 4320
+overrides:
+  # Oxlint hosts this plugin, its ESLint peer is not needed.
+  eslint-plugin-simple-import-sort>eslint: '-'
