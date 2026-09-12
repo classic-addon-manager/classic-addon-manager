@@ -140,7 +140,12 @@ export function DeveloperWorkspace({
       </ScrollArea>
       <section className="min-h-0 min-w-0" aria-label="Selected addon details">
         {selected.addon ? (
-          <AddonDetails key={selected.key} addon={selected.addon} onSelect={onSelectionChange} />
+          <AddonDetails
+            key={selected.key}
+            addon={selected.addon}
+            onSelect={onSelectionChange}
+            onRefresh={onRefresh}
+          />
         ) : (
           selected.submission && (
             <SubmissionDetails

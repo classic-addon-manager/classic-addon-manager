@@ -53,9 +53,11 @@ import { cn, formatToLocalDate } from '@/lib/utils'
 export function AddonDetails({
   addon,
   onSelect,
+  onRefresh,
 }: {
   addon: OwnedAddon
   onSelect: (key: string) => void
+  onRefresh: () => Promise<void>
 }) {
   const loaded = useDevAddonValues({
     type: 'addon',
@@ -187,6 +189,7 @@ export function AddonDetails({
               initialForm={form}
               submitLabel={submitLabel}
               onCancel={() => setMode('view')}
+              onSubmitted={() => void onRefresh()}
             />
           ) : mode === 'compare' && review ? (
             <>
@@ -290,6 +293,7 @@ export function AddonEditPanel({
   initialForm,
   submitLabel,
   onCancel,
+  onSubmitted,
   initialSubmissionId,
   nameLocked = true,
   requireChanges = true,
@@ -301,6 +305,8 @@ export function AddonEditPanel({
   initialForm: PublishFormState | null
   submitLabel: string
   onCancel: () => void
+  /** Invoked after a submission is created or updated, e.g. to refetch sources. */
+  onSubmitted?: () => void
   /** Pinned submission being revised, null creates a new submission. */
   initialSubmissionId?: number | null
   nameLocked?: boolean
@@ -459,6 +465,7 @@ export function AddonEditPanel({
           description: created ? "It's now in review." : 'Your changes were saved.',
         })
         onCancel()
+        onSubmitted?.()
         return
       }
       if (result.status === 'already_open') {
