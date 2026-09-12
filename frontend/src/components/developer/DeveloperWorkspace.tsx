@@ -9,9 +9,12 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 
-import { AddonDetails, AddonEditPanel, AddonIcon } from '@/components/developer/AddonDetails'
+import { AddonDetails } from '@/components/developer/AddonDetails'
+import { AddonEditPanel } from '@/components/developer/AddonEditPanel'
+import { AddonIcon } from '@/components/developer/AddonIcon'
 import { publishFormFromPayload } from '@/components/developer/constants'
 import { withdrawDeclaration } from '@/components/developer/declarationApi.ts'
+import { DetailField } from '@/components/developer/DetailField'
 import { valuesToForm } from '@/components/developer/formValues.ts'
 import { statusTone } from '@/components/developer/ownedAddons'
 import type { OwnedSubmission } from '@/components/developer/ownedParse'
@@ -506,26 +509,5 @@ function SubmissionDetails({
         </AlertDialog>
       </div>
     </ScrollArea>
-  )
-}
-
-function DetailField({ label, value, href }: { label: string; value: string; href?: string }) {
-  return (
-    <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 py-3">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="min-w-0 wrap-break-word">
-        {value && href ? (
-          <button
-            type="button"
-            className="cursor-pointer text-left wrap-break-word text-primary underline-offset-4 hover:underline"
-            onClick={() => void Browser.OpenURL(href)}
-          >
-            {value}
-          </button>
-        ) : (
-          value || 'None'
-        )}
-      </dd>
-    </div>
   )
 }
