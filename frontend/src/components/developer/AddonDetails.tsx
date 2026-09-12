@@ -1,5 +1,5 @@
 import { Browser } from '@wailsio/runtime'
-import { GithubIcon, LoaderCircle } from 'lucide-react'
+import { BarChart3, GithubIcon, History, LayoutList, LoaderCircle } from 'lucide-react'
 import { useState } from 'react'
 
 import { AddonEditPanel } from '@/components/developer/AddonEditPanel'
@@ -16,6 +16,9 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { formatToLocalDate } from '@/lib/utils'
+
+const tabChip =
+  'flex-none rounded-full border border-border px-3 py-1.5 text-muted-foreground hover:border-foreground/20 hover:text-foreground data-[state=active]:border-primary/40 data-[state=active]:bg-primary/15 data-[state=active]:text-primary-foreground dark:data-[state=active]:text-primary'
 
 export function AddonDetails({
   addon,
@@ -60,6 +63,7 @@ export function AddonDetails({
     reloadKey
   )
   const pendingForm = pending.values ? valuesToForm(pending.values) : null
+  const submissionCount = display.reviewHistory.length
   const submitLabel =
     review?.status === 'in_review'
       ? 'Update submission'
@@ -112,15 +116,24 @@ export function AddonDetails({
             </Button>
           )}
         </div>
-        <TabsList className="h-auto rounded-none border-b bg-transparent p-0">
-          <TabsTrigger value="overview" className="rounded-none px-3 py-2">
+        <TabsList className="flex-wrap gap-2">
+          <TabsTrigger value="overview" className={tabChip}>
+            <LayoutList aria-hidden />
             Overview
           </TabsTrigger>
-          <TabsTrigger value="statistics" className="rounded-none px-3 py-2">
+          <TabsTrigger value="statistics" className={tabChip}>
+            <BarChart3 aria-hidden />
             Statistics
           </TabsTrigger>
-          <TabsTrigger value="history" className="rounded-none px-3 py-2">
-            Submission history
+          <TabsTrigger value="history" className={tabChip}>
+            <History aria-hidden />
+            History
+            {submissionCount > 0 && (
+              <span className="rounded-full bg-muted px-1.5 text-xs tabular-nums">
+                {submissionCount}
+                <span className="sr-only">{` submission${submissionCount === 1 ? '' : 's'}`}</span>
+              </span>
+            )}
           </TabsTrigger>
         </TabsList>
       </div>
@@ -193,7 +206,7 @@ export function AddonDetails({
           <AddonStatistics addon={display} />
         </TabsContent>
         <TabsContent value="history" className="p-5">
-          {display.reviewHistory.length === 0 ? (
+          {submissionCount === 0 ? (
             <p className="text-sm text-muted-foreground">No submissions yet.</p>
           ) : (
             <div className="divide-y">
