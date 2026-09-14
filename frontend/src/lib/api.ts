@@ -50,13 +50,13 @@ class ApiClient {
     })
   }
 
-  async post(url: string, data: unknown): Promise<Response> {
+  async post(url: string, data?: unknown): Promise<Response> {
     await this.initPromise
 
     return fetch(API_URL + url, {
       method: 'POST',
       headers: createHeaders(this.version!, this.getToken()),
-      body: JSON.stringify(data),
+      ...(data === undefined ? {} : { body: JSON.stringify(data) }),
     })
   }
 
