@@ -33,6 +33,13 @@ tasks:
     cmds:
       - task: "{{OS}}:run"
 
+  version:
+    summary: Sets the application version with SET=x.y.z or bumps it with BUMP=major|minor|patch
+    vars:
+      MODE_ARGS: '{{if .SET}}-set {{.SET}}{{else}}-bump {{.BUMP | default "patch"}}{{end}}'
+    cmds:
+      - go run ./tools/setversion {{.MODE_ARGS}}
+
   build:server:
     summary: Builds the application in server mode (HTTP server, no GUI window)
     deps:

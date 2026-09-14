@@ -14,7 +14,7 @@
     !define INFO_PRODUCTNAME "Classic Addon Manager"
 !endif
 !ifndef INFO_PRODUCTVERSION
-    !define INFO_PRODUCTVERSION "3.1.3"
+    !define INFO_PRODUCTVERSION "3.2.0"
 !endif
 !ifndef INFO_COPYRIGHT
     !define INFO_COPYRIGHT "(c) 2026, Sami"

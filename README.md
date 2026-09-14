@@ -117,6 +117,26 @@ wails3 task build:server
 
 The binary is written to `build/bin/classic-addon-manager-server` (`.exe` on Windows). It defaults to http://localhost:8080; override with `WAILS_SERVER_HOST` / `WAILS_SERVER_PORT`. Pass `PRODUCTION=true` for a stripped production build (`-tags server,production`).
 
+### Version Management
+
+Use the `version` task instead of editing version numbers by hand. It keeps `build/config.yml`, the Windows resource, manifest and NSIS files, the Linux package config, and `backend/shared/types.go` in sync.
+
+```
+# Set an explicit version
+wails3 task version SET=3.3.0
+
+# Bump to the next version (defaults to patch)
+wails3 task version BUMP=major
+wails3 task version BUMP=minor
+wails3 task version BUMP=patch
+```
+
+With no arguments, the task bumps the patch version. It changes only version fields and leaves other build settings alone.
+
+- `BUMP` requires all version fields to match. If they differ or contain an invalid version, the task stops without writing any files.
+- `SET` accepts `X.Y.Z` or `vX.Y.Z` and updates all version fields, even if their current values differ or are invalid.
+- Run the task from the project root. You can also run the tool directly with `go run ./tools/setversion -set 3.3.0` or `go run ./tools/setversion -bump patch`.
+
 ### Project Structure
 
 | Directory   | Description                                                 |
