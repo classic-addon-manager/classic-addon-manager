@@ -60,6 +60,54 @@ export type EditorSource =
   | { type: 'addon'; uuid: string; name: string; alias: string }
   | { type: 'submission'; id: number; kind: DeclarationKind; name: string }
 
+export type VersionLagBucket = 'latest' | 'one_behind' | 'two_behind' | 'unavailable'
+
+export type SnapshotPoint = {
+  takenOn: string
+  downloads: number
+  subscribers: number
+  dailyDownloads: number | null
+  dailySubscriberChange: number | null
+}
+
+export type AddonDownloadStats = {
+  total: number
+  series: SnapshotPoint[]
+}
+
+export type AddonRatingStats = {
+  likes: number
+  dislikes: number
+  totalVotes: number
+  likePercentage: number | null
+  deletedAccounts: number
+}
+
+export type AddonSubscriberStats = {
+  current: number
+  series: SnapshotPoint[]
+}
+
+export type AddonVersionUsage = {
+  releaseId: number
+  tagName: string
+  subscribers: number
+  share: number
+  lagBucket: VersionLagBucket
+}
+
+export type AddonVersionStats = {
+  buckets: Record<VersionLagBucket, number>
+  share: AddonVersionUsage[]
+}
+
+export type AddonDeveloperStats = {
+  downloads: AddonDownloadStats
+  ratings: AddonRatingStats
+  subscribers: AddonSubscriberStats
+  versions: AddonVersionStats
+}
+
 export const V1_FIELD_KEYS = [
   'name',
   'alias',

@@ -1,7 +1,4 @@
-import { InfoIcon } from 'lucide-react'
-
 import type { ReviewHistoryEntry, ReviewHistoryTone } from '@/components/developer/ownedParse'
-import { toast } from '@/components/ui/toast'
 
 /** Catalog-review outcome the addon's latest submission can be in. */
 type ReviewOutcome = 'in_review' | 'approved' | 'rejected'
@@ -35,12 +32,4 @@ export function latestReview(history: ReviewHistoryEntry[]): AddonReview | null 
     submissionId: latest.submissionId,
     status,
   }
-}
-
-export function backendUnavailable(action: string) {
-  toast({
-    title: action,
-    description: 'Not implemented in the backend yet.',
-    icon: InfoIcon,
-  })
 }

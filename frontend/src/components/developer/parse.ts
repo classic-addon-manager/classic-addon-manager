@@ -1,15 +1,23 @@
 import type {
+  AddonDeveloperStats,
+  AddonDownloadStats,
+  AddonRatingStats,
   AddonSchema,
   AddonSources,
+  AddonSubscriberStats,
+  AddonVersionStats,
+  AddonVersionUsage,
   DeclarationKind,
   DeclarationValues,
   FieldErrors,
   SchemaField,
+  SnapshotPoint,
   SourceAddon,
   SourceSubmission,
   SubmissionDetail,
   SubmissionMessage,
   SubmissionStatus,
+  VersionLagBucket,
   Widget,
   WireValue,
 } from './types.ts'
@@ -63,6 +71,12 @@ export type ParseSubmissionDetailResult =
   | { status: 'unauthorized'; message: string }
   | { status: 'error'; message: string }
 
+export type ParseAddonStatsResult =
+  | { status: 'ok'; stats: AddonDeveloperStats }
+  | { status: 'not_found'; message: string }
+  | { status: 'unauthorized'; message: string }
+  | { status: 'error'; message: string }
+
 const SUBMISSION_STATUSES: Record<string, true> = {
   open: true,
   approved: true,
@@ -87,6 +101,10 @@ function isObject(value: unknown): value is Record<string, unknown> {
 
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value)
+}
+
+function isInteger(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value)
 }
 
 function isStringArray(value: unknown): value is string[] {
@@ -336,6 +354,150 @@ export function parseSubmissionDetail(
       messages: parseSubmissionMessages(data),
     },
   }
+}
+
+const LAG_BUCKETS: Record<VersionLagBucket, true> = {
+  latest: true,
+  one_behind: true,
+  two_behind: true,
+  unavailable: true,
+}
+const TAKEN_ON = /^\d{4}-\d{2}-\d{2}$/
+const STATS_UNAVAILABLE = 'These statistics are unavailable.'
+const STATS_UNAUTHORIZED = 'Sign in to view addon statistics.'
+const STATS_UNEXPECTED = 'Unexpected statistics response.'
+
+export function parseAddonStats(statusCode: number, body: unknown): ParseAddonStatsResult {
+  const envelope = parseEnvelope(body)
+  if (statusCode === 401) {
+    return { status: 'unauthorized', message: STATS_UNAUTHORIZED }
+  }
+  if (statusCode === 400 && envelope?.message === 'invalid addon uuid') {
+    return { status: 'not_found', message: STATS_UNAVAILABLE }
+  }
+  if (statusCode === 404 && envelope?.message === 'not found') {
+    return { status: 'not_found', message: STATS_UNAVAILABLE }
+  }
+  if (statusCode !== 200 || !envelope?.status) {
+    return { status: 'error', message: envelope?.message || STATS_UNEXPECTED }
+  }
+  const data = envelope.data
+  if (!isObject(data)) return { status: 'error', message: STATS_UNEXPECTED }
+  const downloads = parseDownloadStats(data.downloads)
+  const ratings = parseRatingStats(data.ratings)
+  const subscribers = parseSubscriberStats(data.subscribers)
+  const versions = parseVersionStats(data.versions)
+  if (!downloads || !ratings || !subscribers || !versions) {
+    return { status: 'error', message: STATS_UNEXPECTED }
+  }
+  return { status: 'ok', stats: { downloads, ratings, subscribers, versions } }
+}
+
+function parseDownloadStats(value: unknown): AddonDownloadStats | null {
+  if (!isObject(value) || !isInteger(value.total)) return null
+  const series = parseSeries(value.series)
+  return series ? { total: value.total, series } : null
+}
+
+function parseSubscriberStats(value: unknown): AddonSubscriberStats | null {
+  if (!isObject(value) || !isInteger(value.current)) return null
+  const series = parseSeries(value.series)
+  return series ? { current: value.current, series } : null
+}
+
+function parseRatingStats(value: unknown): AddonRatingStats | null {
+  if (!isObject(value)) return null
+  if (
+    !isInteger(value.likes) ||
+    !isInteger(value.dislikes) ||
+    !isInteger(value.total_votes) ||
+    !isInteger(value.deleted_accounts)
+  ) {
+    return null
+  }
+  const likePercentage = value.like_percentage
+  if (likePercentage === null) {
+    if (value.total_votes !== 0) return null
+  } else if (value.total_votes === 0 || !isFiniteNumber(likePercentage)) {
+    return null
+  }
+  return {
+    likes: value.likes,
+    dislikes: value.dislikes,
+    totalVotes: value.total_votes,
+    likePercentage,
+    deletedAccounts: value.deleted_accounts,
+  }
+}
+
+function parseVersionStats(value: unknown): AddonVersionStats | null {
+  if (!isObject(value)) return null
+  const buckets = parseBuckets(value.buckets)
+  if (!buckets || !Array.isArray(value.share)) return null
+  const share: AddonVersionUsage[] = []
+  for (const item of value.share) {
+    const usage = parseVersionUsage(item)
+    if (!usage) return null
+    share.push(usage)
+  }
+  return { buckets, share }
+}
+
+function parseBuckets(value: unknown): Record<VersionLagBucket, number> | null {
+  if (!isObject(value)) return null
+  const buckets = {} as Record<VersionLagBucket, number>
+  for (const key of Object.keys(LAG_BUCKETS) as VersionLagBucket[]) {
+    if (!isInteger(value[key])) return null
+    buckets[key] = value[key]
+  }
+  return buckets
+}
+
+function parseVersionUsage(value: unknown): AddonVersionUsage | null {
+  if (!isObject(value)) return null
+  if (!isInteger(value.release_id) || typeof value.tag_name !== 'string') return null
+  if (!isInteger(value.subscribers) || !isFiniteNumber(value.share)) return null
+  if (typeof value.lag_bucket !== 'string' || !isLagBucket(value.lag_bucket)) return null
+  return {
+    releaseId: value.release_id,
+    tagName: value.tag_name,
+    subscribers: value.subscribers,
+    share: value.share,
+    lagBucket: value.lag_bucket,
+  }
+}
+
+function parseSeries(value: unknown): SnapshotPoint[] | null {
+  if (!Array.isArray(value)) return null
+  const series: SnapshotPoint[] = []
+  for (const item of value) {
+    const point = parseSnapshotPoint(item)
+    if (!point) return null
+    series.push(point)
+  }
+  return series
+}
+
+function parseSnapshotPoint(value: unknown): SnapshotPoint | null {
+  if (!isObject(value) || typeof value.taken_on !== 'string' || !TAKEN_ON.test(value.taken_on)) {
+    return null
+  }
+  if (!isInteger(value.downloads) || !isInteger(value.subscribers)) return null
+  const dailyDownloads = value.daily_downloads
+  const dailySubscriberChange = value.daily_subscriber_change
+  if (dailyDownloads !== null && !isInteger(dailyDownloads)) return null
+  if (dailySubscriberChange !== null && !isInteger(dailySubscriberChange)) return null
+  return {
+    takenOn: value.taken_on,
+    downloads: value.downloads,
+    subscribers: value.subscribers,
+    dailyDownloads,
+    dailySubscriberChange,
+  }
+}
+
+function isLagBucket(value: string): value is VersionLagBucket {
+  return Object.hasOwn(LAG_BUCKETS, value)
 }
 
 function parseSubmissionMessages(value: Record<string, unknown>): SubmissionMessage[] {

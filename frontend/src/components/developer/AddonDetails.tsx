@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { AddonEditPanel } from '@/components/developer/AddonEditPanel'
 import { AddonIcon } from '@/components/developer/AddonIcon'
 import { AddonStatistics } from '@/components/developer/AddonStatistics'
-import { backendUnavailable, latestReview } from '@/components/developer/catalogEditing'
+import { latestReview } from '@/components/developer/catalogEditing'
 import { DetailField } from '@/components/developer/DetailField'
 import { valuesToForm } from '@/components/developer/formValues.ts'
 import type { OwnedAddon } from '@/components/developer/ownedParse'
@@ -81,8 +81,6 @@ export function AddonDetails({
       onValueChange={value => {
         setMode('view')
         setTab(value)
-        // TODO(backend): Load statistics on selection, including keyboard tab navigation.
-        if (value === 'statistics') backendUnavailable('Addon statistics')
       }}
       className="h-full min-h-0 gap-0"
     >
