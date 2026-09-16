@@ -15,6 +15,7 @@ import { AddonIcon } from '@/components/developer/AddonIcon'
 import { publishFormFromPayload } from '@/components/developer/constants'
 import { withdrawDeclaration } from '@/components/developer/declarationApi.ts'
 import { DetailField } from '@/components/developer/DetailField'
+import type { DeveloperScope } from '@/components/developer/DeveloperToolbar'
 import { valuesToForm } from '@/components/developer/formValues.ts'
 import { statusTone } from '@/components/developer/ownedAddons'
 import type { OwnedSubmission } from '@/components/developer/ownedParse'
@@ -52,24 +53,39 @@ export function DeveloperWorkspace({
   onSelectionChange,
   onRefresh,
   onDropSubmission,
+  scope,
 }: {
   data: OwnedAddonsData
   selection: string | null
   onSelectionChange: (key: string) => void
   onRefresh: () => Promise<void>
   onDropSubmission: (id: number) => void
+  scope: DeveloperScope
 }) {
   const publishedNames = new Set(data.addons.map(addon => addon.name))
-  const entries = [
-    ...data.addons.map(addon => ({ key: `addon:${addon.name}`, addon, submission: null })),
-    ...data.submissions.map(submission => ({
-      key: `submission:${submission.id}`,
-      addon: null,
-      submission,
-    })),
-  ]
-  // Polling may remove a submission after publication; fall back without retaining an old form.
-  const selected = entries.find(entry => entry.key === selection) ?? entries[0]
+  const addonEntries = data.addons.map(addon => ({
+    key: `addon:${addon.name}`,
+    addon,
+    submission: null,
+  }))
+  const submissionEntries = data.submissions.map(submission => ({
+    key: `submission:${submission.id}`,
+    addon: null,
+    submission,
+  }))
+  const visibleSubmissionEntries = submissionEntries.filter(
+    entry =>
+      !(entry.submission.kind === 'update' && publishedNames.has(entry.submission.payload.name))
+  )
+  const entries = [...addonEntries, ...submissionEntries]
+  const fallbackEntry =
+    scope === 'addons'
+      ? addonEntries[0]
+      : scope === 'submissions'
+        ? visibleSubmissionEntries[0]
+        : (visibleSubmissionEntries[0] ?? addonEntries[0])
+  // Polling may remove a submission after publication, fall back without retaining an old form.
+  const selected = entries.find(entry => entry.key === selection) ?? fallbackEntry
   if (!selected) return null
   // A submission reached from an addon's review history returns to that addon.
   const backToAddon = selected.submission
@@ -79,17 +95,10 @@ export function DeveloperWorkspace({
     <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,180px)_minmax(0,1fr)] md:grid-cols-[220px_minmax(0,1fr)] md:grid-rows-1">
       <ScrollArea className="min-h-0 border-b md:border-r md:border-b-0">
         <nav className="space-y-6 p-3" aria-label="Your published addons and submissions">
-          {(['Published', 'Submissions'] as const).map(group => {
-            const matching = entries.filter(entry => {
-              if (group === 'Published') return entry.addon
-              return (
-                entry.submission &&
-                !(
-                  entry.submission.kind === 'update' &&
-                  publishedNames.has(entry.submission.payload.name)
-                )
-              )
-            })
+          {(['Submissions', 'Published'] as const).map(group => {
+            if (scope === 'addons' && group === 'Submissions') return null
+            if (scope === 'submissions' && group === 'Published') return null
+            const matching = group === 'Published' ? addonEntries : visibleSubmissionEntries
             if (!matching.length) return null
             return (
               <section key={group}>

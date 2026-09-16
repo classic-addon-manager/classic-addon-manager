@@ -1,6 +1,7 @@
 import { AlertTriangleIcon, Code2, LoaderCircle, Plus } from 'lucide-react'
 import { useState } from 'react'
 
+import { type DeveloperScope, DeveloperToolbar } from '@/components/developer/DeveloperToolbar'
 import { DeveloperWorkspace } from '@/components/developer/DeveloperWorkspace'
 import { PublishAddonForm } from '@/components/developer/PublishAddonForm'
 import { type OwnedAddonsData, useOwnedAddons } from '@/components/developer/useOwnedAddons'
@@ -12,7 +13,8 @@ export const Developer = () => {
   const token = useUserStore(s => s.token)
   const [view, setView] = useState<'list' | 'form'>('list')
   const [selection, setSelection] = useState<string | null>(null)
-  const { data, error, retry, removeSubmission } = useOwnedAddons(
+  const [scope, setScope] = useState<DeveloperScope>('all')
+  const { data, error, retry, removeSubmission, lastAttemptFailed } = useOwnedAddons(
     isAuthenticated && view === 'list',
     token
   )
@@ -20,6 +22,11 @@ export const Developer = () => {
   const dropSubmission = (id: number) => {
     removeSubmission(id)
     if (selection === `submission:${id}`) setSelection(null)
+  }
+
+  const changeScope = (nextScope: DeveloperScope) => {
+    setScope(nextScope)
+    setSelection(null)
   }
 
   const openForm = () => setView('form')
@@ -35,25 +42,28 @@ export const Developer = () => {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
-        <div className="container flex h-16 items-center justify-between gap-4 px-4">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-primary/10 p-2">
-              <Code2 className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-xl font-semibold tracking-tight">Developer</h1>
-              <p className="text-sm text-muted-foreground">Your addons and submissions</p>
-            </div>
-          </div>
-          <Button type="button" className="w-32" onClick={() => openForm()}>
-            <Plus />
-            New addon
-          </Button>
-        </div>
-      </header>
+      {data !== null && (
+        <DeveloperToolbar
+          data={data}
+          lastAttemptFailed={lastAttemptFailed}
+          onRefresh={retry}
+          onNewAddon={openForm}
+          scope={scope}
+          onScopeChange={changeScope}
+        />
+      )}
 
-      {renderListBody(data, error, retry, openForm, token, selection, setSelection, dropSubmission)}
+      {renderListBody(
+        data,
+        error,
+        retry,
+        openForm,
+        token,
+        selection,
+        setSelection,
+        dropSubmission,
+        scope
+      )}
     </div>
   )
 }
@@ -66,7 +76,8 @@ function renderListBody(
   sessionKey: string,
   selection: string | null,
   onSelectionChange: (key: string) => void,
-  onDropSubmission: (id: number) => void
+  onDropSubmission: (id: number) => void,
+  scope: DeveloperScope
 ) {
   if (data === null) {
     if (error === null) {
@@ -114,6 +125,7 @@ function renderListBody(
       onSelectionChange={onSelectionChange}
       onRefresh={retry}
       onDropSubmission={onDropSubmission}
+      scope={scope}
     />
   )
 }

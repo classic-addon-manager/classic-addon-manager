@@ -18,10 +18,12 @@ export function useOwnedAddons(
   error: string | null
   retry: () => Promise<void>
   removeSubmission: (id: number) => void
+  lastAttemptFailed: boolean
 } {
   const [currentSessionKey, setCurrentSessionKey] = useState(sessionKey)
   const [data, setData] = useState<OwnedAddonsData | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [lastAttemptFailed, setLastAttemptFailed] = useState(false)
   const dataRef = useRef<OwnedAddonsData | null>(null)
   const generationRef = useRef(0)
   const inFlightRef = useRef(false)
@@ -43,12 +45,10 @@ export function useOwnedAddons(
     try {
       const result = await getOwnedAddons()
       if (my !== generationRef.current) return
-      inFlightRef.current = false
+      setLastAttemptFailed(result.status !== 'ok')
       applyResult(kind, result, dataRef.current, setData, setError)
     } finally {
-      if (my === generationRef.current) {
-        inFlightRef.current = false
-      }
+      if (my === generationRef.current) inFlightRef.current = false
     }
   }, [])
 
@@ -85,7 +85,7 @@ export function useOwnedAddons(
     )
   }
 
-  return { data, error, retry, removeSubmission }
+  return { data, error, retry, removeSubmission, lastAttemptFailed }
 }
 
 function applyResult(
