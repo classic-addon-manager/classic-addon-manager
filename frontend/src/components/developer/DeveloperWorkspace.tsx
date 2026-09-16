@@ -105,7 +105,7 @@ export function DeveloperWorkspace({
                       aria-pressed={selected.key === entry.key}
                       onClick={() => onSelectionChange(entry.key)}
                       className={cn(
-                        'flex w-full items-center gap-3 rounded-lg border border-transparent px-2 py-3 text-left transition-colors hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-ring',
+                        'flex w-full cursor-pointer items-center gap-3 rounded-lg border border-transparent px-2 py-3 text-left transition-colors hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-ring',
                         selected.key === entry.key && 'border-primary/20 bg-primary/10'
                       )}
                     >
