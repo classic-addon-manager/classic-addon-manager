@@ -569,6 +569,9 @@ function parseSourceAddon(value: unknown): SourceAddon | null {
     uuid: value.uuid,
     name: value.name,
     alias: value.alias === '' ? value.name : value.alias,
+    // Downloads is newer than the rest of the payload; a missing or invalid
+    // value falls back to 0 instead of dropping the addon from the list.
+    downloads: isInteger(value.downloads) ? value.downloads : 0,
   }
 }
 

@@ -57,7 +57,7 @@ function toOwnedAddon(addon: SourceAddon, submissions: SourceSubmission[]): Owne
     author: '',
     description: '',
     tags: [],
-    downloads: 0,
+    downloads: addon.downloads,
     likePercentage: null,
     warning: null,
     addedAt: null,
