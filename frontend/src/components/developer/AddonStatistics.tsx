@@ -154,8 +154,7 @@ export function AddonStatistics({ addon }: { addon: OwnedAddon }) {
         </div>
         <DailyDownloadChart points={downloadSeries} name={addon.alias} />
         <p className="text-xs text-muted-foreground">
-          Daily downloads. A missing adjacent snapshot is a gap, not a zero. The current UTC day
-          updates hourly and is partial.
+          Daily downloads. A missing day means no data was recorded, not zero downloads.
         </p>
       </div>
 
@@ -164,7 +163,8 @@ export function AddonStatistics({ addon }: { addon: OwnedAddon }) {
         <SubscriberChart points={subscriberSeries} name={addon.alias} />
         <SignedChangeChart points={subscriberSeries} name={addon.alias} />
         <p className="text-xs text-muted-foreground">
-          Active subscribers and signed net change between adjacent days. Negative bars are churn.
+          Subscriber count over time, with daily gains and losses below. Bars below zero mean more
+          people unsubscribed than subscribed that day.
         </p>
       </div>
 
