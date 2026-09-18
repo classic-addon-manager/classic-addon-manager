@@ -1,6 +1,8 @@
+import { useAtomValue } from 'jotai'
 import { BlocksIcon, Check, Download, LoaderCircle } from 'lucide-react'
 import { useState } from 'react'
 
+import { catalogIconMapAtom } from '@/components/dashboard/iconMap'
 import { cn } from '@/lib/utils'
 import type { Addon } from '@/lib/wails'
 import { useAddonStore } from '@/stores/addonStore'
@@ -18,11 +20,9 @@ export const AddonListItem = ({ addon, isSelected, onClick }: AddonListItemProps
     addon.isManaged && latestRelease && latestRelease.tag_name !== addon.version
   )
 
-  const [hasIcon, setHasIcon] = useState(true)
-  const iconUrl =
-    'repo' in addon && 'branch' in addon
-      ? `https://raw.githubusercontent.com/${addon.repo}/${addon.branch}/icon.png`
-      : null
+  const [failedIconUrl, setFailedIconUrl] = useState<string | null>(null)
+  const iconUrl = useAtomValue(catalogIconMapAtom).get(addon.name) ?? null
+  const hasIcon = iconUrl !== null && failedIconUrl !== iconUrl
 
   return (
     <button
@@ -42,7 +42,7 @@ export const AddonListItem = ({ addon, isSelected, onClick }: AddonListItemProps
             src={iconUrl}
             alt={`${addon.alias} icon`}
             loading="lazy"
-            onError={() => setHasIcon(false)}
+            onError={() => setFailedIconUrl(iconUrl)}
           />
         ) : (
           <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-background border border-border/50 shadow-xs">

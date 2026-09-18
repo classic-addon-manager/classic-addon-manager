@@ -4,7 +4,7 @@ import type { AddonManifest } from '@/lib/wails'
 
 interface IconProps {
   manifest: AddonManifest
-  iconUrl: string
+  iconUrl: string | null
   hasIcon: boolean
   onIconError: () => void
   prominent?: boolean
@@ -17,7 +17,7 @@ export const Icon = ({ manifest, iconUrl, hasIcon, onIconError, prominent = fals
     ? `flex items-center justify-center ${sizeClass} bg-background border border-border/50 shadow-sm`
     : `flex items-center justify-center ${sizeClass} bg-background border border-border/50 shadow-xs`
 
-  if (hasIcon) {
+  if (hasIcon && iconUrl) {
     return (
       <img
         className={`${sizeClass} object-cover border border-border/50 ${prominent ? 'shadow-sm' : 'shadow-xs'}`}

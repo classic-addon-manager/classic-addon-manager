@@ -1,4 +1,5 @@
 import { Browser } from '@wailsio/runtime'
+import { useAtomValue } from 'jotai'
 import {
   AlertTriangleIcon,
   BlocksIcon,
@@ -20,6 +21,7 @@ import { Suspense, useEffect, useState } from 'react'
 
 import { AddonRatingButtons } from '@/components/dashboard/AddonRatingButtons'
 import { AddonRepositoryMatch } from '@/components/dashboard/AddonRepositoryMatch'
+import { catalogIconMapAtom } from '@/components/dashboard/iconMap'
 import { Readme } from '@/components/shared/Readme'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -75,12 +77,9 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
 
   const latestRelease = latestReleasesMap.get(addon.name)
   const hasUpdate = addon.isManaged && latestRelease && latestRelease.published_at > addon.updatedAt
-
-  const [hasIcon, setHasIcon] = useState(true)
-  const iconUrl =
-    'repo' in addon && 'branch' in addon
-      ? `https://raw.githubusercontent.com/${addon.repo}/${addon.branch}/icon.png`
-      : null
+  const [failedIconUrl, setFailedIconUrl] = useState<string | null>(null)
+  const iconUrl = useAtomValue(catalogIconMapAtom).get(addon.name) ?? null
+  const hasIcon = iconUrl !== null && failedIconUrl !== iconUrl
 
   useEffect(() => {
     if (!addon.repo) return
@@ -206,7 +205,7 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
                 src={iconUrl}
                 alt={`${addon.alias} icon`}
                 loading="lazy"
-                onError={() => setHasIcon(false)}
+                onError={() => setFailedIconUrl(iconUrl)}
               />
             ) : (
               <div className="flex items-center justify-center h-14 w-14 rounded-xl bg-muted border border-border/50">

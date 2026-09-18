@@ -23,6 +23,7 @@ type AddonManifest struct {
 	Author       string    `json:"author"`
 	Repo         string    `json:"repo"`
 	Branch       string    `json:"branch"`
+	Icon         *string   `json:"icon,omitempty"`
 	Tags         []string  `json:"tags"`
 	Downloads    int       `json:"downloads"`
 	LikePercent  *int8     `json:"like_percentage"`

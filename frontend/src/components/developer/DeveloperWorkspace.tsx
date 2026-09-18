@@ -445,6 +445,7 @@ function SubmissionDetails({
             addon={{
               ...submission.payload,
               uuid: '',
+              icon: null,
               downloads: 0,
               likePercentage: null,
               warning: null,

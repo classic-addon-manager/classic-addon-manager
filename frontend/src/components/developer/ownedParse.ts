@@ -17,6 +17,7 @@ export type OwnedAddon = {
   alias: string
   repo: string
   branch: string | null
+  icon: string | null
   author: string
   description: string
   tags: string[]

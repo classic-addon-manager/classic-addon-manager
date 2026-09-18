@@ -10,11 +10,13 @@ import {
   selectedAddonAtom,
   versionSelectAtom,
 } from '@/components/dashboard/atoms'
+import { loadCatalogIconMapAtom } from '@/components/dashboard/iconMap'
 import { toast } from '@/components/ui/toast.tsx'
 import { LocalAddonService } from '@/lib/wails'
 import { useAddonStore } from '@/stores/addonStore'
 
 export function useDashboardController() {
+  const loadCatalogIcons = useSetAtom(loadCatalogIconMapAtom)
   const { installedAddons, isCheckingForUpdates, performBulkUpdateCheck, updateInstalledAddons } =
     useAddonStore()
   const [isLoading, setIsLoading] = useState(true)
@@ -41,7 +43,8 @@ export function useDashboardController() {
     loadAddons().then(() => {
       performBulkUpdateCheck()
     })
-  }, [updateInstalledAddons, performBulkUpdateCheck])
+    loadCatalogIcons()
+  }, [updateInstalledAddons, performBulkUpdateCheck, loadCatalogIcons])
 
   const handleInstallZip = async () => {
     try {

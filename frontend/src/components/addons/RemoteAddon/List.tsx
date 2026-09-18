@@ -8,7 +8,7 @@ import { useRemoteAddonItem } from './useRemoteAddonItem'
 import { WarningIcon } from './WarningIcon'
 
 export const List = ({ manifest, installed }: RemoteAddonItemProps) => {
-  const { hasIcon, setIcon, isNew, iconUrl, openDialog } = useRemoteAddonItem({
+  const { hasIcon, isNew, iconUrl, openDialog, onIconError } = useRemoteAddonItem({
     manifest,
     installed,
   })
@@ -24,7 +24,7 @@ export const List = ({ manifest, installed }: RemoteAddonItemProps) => {
             manifest={manifest}
             iconUrl={iconUrl}
             hasIcon={hasIcon}
-            onIconError={() => setIcon(false)}
+            onIconError={onIconError}
           />
           <NewBadge isNew={isNew} />
         </div>

@@ -11,6 +11,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip.tsx'
+import { addonIconUrl } from '@/lib/icon'
 import { cn } from '@/lib/utils.ts'
 import type { AddonManifest, Release } from '@/lib/wails'
 
@@ -21,13 +22,13 @@ interface HeaderProps {
 
 export const Header = ({ manifest, release }: HeaderProps) => {
   const bannerUrl = `https://raw.githubusercontent.com/${manifest.repo}/${manifest.branch}/banner.png`
-  const iconUrl = `https://raw.githubusercontent.com/${manifest.repo}/${manifest.branch}/icon.png`
+  const iconUrl = addonIconUrl(manifest)
 
   // Tracked by URL rather than as booleans so viewing a dependency resets both without an effect.
   const [loadedBannerUrl, setLoadedBannerUrl] = useState<string | null>(null)
   const [failedIconUrl, setFailedIconUrl] = useState<string | null>(null)
+  const hasIcon = iconUrl !== null && failedIconUrl !== iconUrl
   const hasBanner = loadedBannerUrl === bannerUrl
-  const hasIcon = failedIconUrl !== iconUrl
 
   return (
     <div className="shrink-0">
