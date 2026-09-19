@@ -29,6 +29,10 @@ export interface PublishFormState {
   keywords: string[]
   dependencies: string[]
   kofi: string
+  /** Opaque temporary asset ID from upload; null means preserve current icon. */
+  iconAssetId: string | null
+  /** Server-projected preview URL; display only, never submitted or reconstructed. */
+  iconUrl: string | null
 }
 
 export const INITIAL_PUBLISH_FORM: PublishFormState = {
@@ -42,6 +46,8 @@ export const INITIAL_PUBLISH_FORM: PublishFormState = {
   keywords: [],
   dependencies: [],
   kofi: '',
+  iconAssetId: null,
+  iconUrl: null,
 }
 
 export function isPublishFormDirty(
@@ -61,7 +67,8 @@ export function isPublishFormDirty(
     form.tags.length !== baseline.tags.length ||
     form.tags.some((tag, index) => tag !== baseline.tags[index]) ||
     form.dependencies.length !== baseline.dependencies.length ||
-    form.dependencies.some((dep, index) => dep !== baseline.dependencies[index])
+    form.dependencies.some((dep, index) => dep !== baseline.dependencies[index]) ||
+    form.iconAssetId !== baseline.iconAssetId
   )
 }
 
@@ -76,6 +83,8 @@ export function publishFormFromPayload(payload: {
   keywords: string[]
   dependencies: string[]
   kofi: string
+  iconAssetId?: string | null
+  iconUrl?: string | null
 }): PublishFormState {
   return {
     name: payload.name,
@@ -90,5 +99,7 @@ export function publishFormFromPayload(payload: {
     keywords: [...payload.keywords],
     dependencies: [...payload.dependencies],
     kofi: payload.kofi,
+    iconAssetId: payload.iconAssetId ?? null,
+    iconUrl: payload.iconUrl ?? null,
   }
 }

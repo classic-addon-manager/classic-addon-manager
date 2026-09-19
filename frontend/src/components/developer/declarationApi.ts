@@ -12,6 +12,50 @@ import { apiClient } from '@/lib/api'
 
 export type { ParseSaveResult, ParseValidateResult, ParseWithdrawResult }
 
+export type UploadIconResult =
+  | { status: 'uploaded'; assetId: string; url: string }
+  | { status: 'error'; message: string }
+
+export async function uploadIcon(file: File): Promise<UploadIconResult> {
+  const form = new FormData()
+  form.append('icon', file)
+  try {
+    const response = await apiClient.postForm('/dev/addon/icon', form)
+    const body: unknown = await response.json()
+    if (
+      response.ok &&
+      typeof body === 'object' &&
+      body !== null &&
+      'data' in body &&
+      typeof body.data === 'object' &&
+      body.data !== null &&
+      'asset_id' in body.data &&
+      typeof body.data.asset_id === 'string' &&
+      body.data.asset_id !== '' &&
+      'url' in body.data &&
+      typeof body.data.url === 'string'
+    ) {
+      return { status: 'uploaded', assetId: body.data.asset_id, url: body.data.url }
+    }
+    if (typeof body === 'object' && body !== null && 'data' in body) {
+      const data = body.data
+      if (
+        typeof data === 'object' &&
+        data !== null &&
+        'field' in data &&
+        data.field === 'icon' &&
+        'message' in data &&
+        typeof data.message === 'string'
+      ) {
+        return { status: 'error', message: data.message }
+      }
+    }
+    return { status: 'error', message: 'Icon upload failed.' }
+  } catch {
+    return { status: 'error', message: 'Icon upload failed.' }
+  }
+}
+
 export function editorValidatePath(submissionId: number | null): string {
   return submissionId === null
     ? '/dev/addon/validate'
@@ -31,6 +75,12 @@ export function editorWithdrawPath(submissionId: number): string {
   return `/dev/addon/submissions/${submissionId}/withdraw`
 }
 
+function declarationErrorKeys(): Set<string> {
+  const keys = v1SchemaKeys()
+  keys.add('icon')
+  return keys
+}
+
 export async function validateDeclaration(
   values: DeclarationValues,
   submissionId: number | null
@@ -47,7 +97,7 @@ export async function validateDeclaration(
       }
       return { status: 'error', message: 'Unexpected validation response.' }
     }
-    return parseValidateResponse(response.status, body, v1SchemaKeys())
+    return parseValidateResponse(response.status, body, declarationErrorKeys())
   } catch {
     return { status: 'error', message: 'Unexpected validation response.' }
   }
@@ -72,7 +122,7 @@ export async function saveDeclaration(
       }
       return { status: 'error', message: 'Unexpected save response.' }
     }
-    return parseSaveResponse(response.status, body, v1SchemaKeys())
+    return parseSaveResponse(response.status, body, declarationErrorKeys())
   } catch {
     return { status: 'error', message: 'Unexpected save response.' }
   }

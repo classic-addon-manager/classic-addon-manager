@@ -35,6 +35,7 @@
     "cmdk": "^1.1.1",
     "dompurify": "^3.2.6",
     "framer-motion": "^12.23.12",
+    "image-size": "^2.0.4",
     "jotai": "^2.12.5",
     "jotai-zustand": "^0.6.0",
     "lucide-react": "^0.534.0",

@@ -12,6 +12,14 @@ function createHeaders(version: string, token: string): Record<string, string> {
   }
 }
 
+function createFormHeaders(version: string, token: string): Record<string, string> {
+  return {
+    Accept: 'application/json',
+    'X-Client': version,
+    'X-Token': token,
+  }
+}
+
 class ApiClient {
   private static instance: ApiClient | null = null
   private version: string | null = null
@@ -57,6 +65,16 @@ class ApiClient {
       method: 'POST',
       headers: createHeaders(this.version!, this.getToken()),
       ...(data === undefined ? {} : { body: JSON.stringify(data) }),
+    })
+  }
+
+  async postForm(url: string, data: FormData): Promise<Response> {
+    await this.initPromise
+
+    return fetch(API_URL + url, {
+      method: 'POST',
+      headers: createFormHeaders(this.version!, this.getToken()),
+      body: data,
     })
   }
 

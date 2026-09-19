@@ -224,6 +224,11 @@ export function parseAddonValues(
     if (mapped === 'error') return { status: 'error', message: 'Unexpected values response.' }
     values[field.key] = mapped
   }
+  const iconUrl = data.icon_url
+  if (iconUrl !== undefined && iconUrl !== null && typeof iconUrl !== 'string') {
+    return { status: 'error', message: 'Unexpected values response.' }
+  }
+  values.icon_url = typeof iconUrl === 'string' ? iconUrl : ''
   return { status: 'ok', kind: data.kind, values }
 }
 

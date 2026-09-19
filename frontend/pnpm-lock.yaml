@@ -74,6 +74,9 @@ importers:
       framer-motion:
         specifier: ^12.23.12
         version: 12.38.0(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      image-size:
+        specifier: ^2.0.4
+        version: 2.0.4
       jotai:
         specifier: ^2.12.5
         version: 2.20.0(@babel/core@7.29.0)(@babel/template@7.28.6)(@types/react@19.2.14)(react@19.2.6)
@@ -1845,6 +1848,11 @@ packages:
   ignore@7.0.9:
     resolution: {integrity: sha512-brTTsvFRt5C1gGHtPst/281UjPD5t9fBqbgoMPlVWy11ZLTPfu7HxK4ZYqO9H7o/yC9rSTCI85EaQ4OoY12qYw==}
     engines: {node: '>= 4'}
+
+  image-size@2.0.4:
+    resolution: {integrity: sha512-QRUkFFsRV/6fuESxb9Vkq+a0LkSrgKXuc2NEqfikiXxxN/G3tjWt5EVUlMaImRBZRZK/jRBEbYvpPYZL8t08Zw==}
+    engines: {node: '>=18'}
+    hasBin: true
 
   immer@10.2.0:
     resolution: {integrity: sha512-d/+XTN3zfODyjr89gM3mPq1WNX2B8pYsu7eORitdwyA2sBubnTl3laYlBk4sXY5FUa5qTZGBDPJICVbvqzjlbw==}
@@ -4147,6 +4155,8 @@ snapshots:
   html-url-attributes@3.0.1: {}
 
   ignore@7.0.9: {}
+
+  image-size@2.0.4: {}
 
   immer@10.2.0: {}
 

@@ -1,10 +1,52 @@
+import { imageSize } from 'image-size'
+
 import type { PublishFormState } from '@/components/developer/constants'
 import { saveDeclaration, validateDeclaration } from '@/components/developer/declarationApi.ts'
 import { formToValues } from '@/components/developer/formValues.ts'
 import { findActionableSubmission } from '@/components/developer/sources.ts'
 import type { FieldErrors as WireFieldErrors } from '@/components/developer/types.ts'
 
-export type FieldErrors = Partial<Record<keyof PublishFormState, string[]>>
+export type FieldErrors = Partial<Record<keyof PublishFormState | 'icon', string[]>>
+
+// Client-side icon rules. UX only: the server re-checks everything once icon
+// transport exists: keep both in sync when that lands.
+const ICON_MAX_BYTES = 3 * 1024 * 1024
+const ICON_MIN_DIMENSION = 50
+
+export async function validateIconFile(file: File): Promise<string[]> {
+  const errors: string[] = []
+  const claimsPng = file.type === 'image/png' && file.name.toLowerCase().endsWith('.png')
+  if (!claimsPng) {
+    errors.push('Icon must be a PNG file.')
+  }
+  if (file.size > ICON_MAX_BYTES) {
+    errors.push('Icon must be 3 MB or smaller.')
+  }
+  const dimensions = await readImageDimensions(file)
+  if (dimensions === null) {
+    if (claimsPng) errors.push('Icon must be a valid PNG file.')
+  } else {
+    const { width, height } = dimensions
+    if (width !== height) errors.push('Icon must be square (1:1).')
+    if (width < ICON_MIN_DIMENSION || height < ICON_MIN_DIMENSION) {
+      errors.push(`Icon must be at least ${ICON_MIN_DIMENSION}×${ICON_MIN_DIMENSION} pixels.`)
+    }
+  }
+  return errors
+}
+
+async function readImageDimensions(file: File): Promise<{ width: number; height: number } | null> {
+  try {
+    // image-size detects the type from the file signature, so a file renamed
+    // to .png but holding JPEG/WebP data is rejected here.
+    const bytes = new Uint8Array(await file.slice(0, 512 * 1024).arrayBuffer())
+    const { width, height, type } = imageSize(bytes)
+    if (type !== 'png') return null
+    return { width, height }
+  } catch {
+    return null
+  }
+}
 
 export type ValidateResult =
   | { status: 'valid' }
@@ -73,7 +115,7 @@ export async function submitAddon(
 function toFormFieldErrors(fields: WireFieldErrors): FieldErrors {
   const next: FieldErrors = {}
   for (const [key, messages] of Object.entries(fields)) {
-    next[key as keyof PublishFormState] = messages
+    next[key as keyof FieldErrors] = messages
   }
   return next
 }

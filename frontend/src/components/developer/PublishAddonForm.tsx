@@ -69,9 +69,10 @@ export const PublishAddonForm = ({
     setValidated(false)
     setValidationError(false)
     setFieldErrors(prev => {
-      if (!prev[key]) return prev
+      const errorKey = key === 'iconAssetId' || key === 'iconUrl' ? 'icon' : key
+      if (!prev[errorKey]) return prev
       const next = { ...prev }
-      delete next[key]
+      delete next[errorKey]
       return next
     })
     setPublishError(null)

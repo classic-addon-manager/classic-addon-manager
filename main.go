@@ -156,6 +156,7 @@ func main() {
 		Frameless:        true,
 		BackgroundColour: application.NewRGBA(10, 10, 10, 1),
 		BackgroundType:   application.BackgroundTypeSolid,
+		EnableFileDrop:   true,
 	})
 	// Re-apply after restore/unmaximise: some platforms drop MinWidth/MinHeight.
 	// Do not call SetMinSize before a.Run() — beta.5 panics when app.impl is nil.

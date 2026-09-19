@@ -1,11 +1,14 @@
 import { Browser } from '@wailsio/runtime'
-import { CircleAlert, GithubIcon } from 'lucide-react'
+import { CircleAlert, GithubIcon, ImageIcon } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
 
 import { APPROVED_TAGS, type PublishFormState } from '@/components/developer/constants'
+import { uploadIcon } from '@/components/developer/declarationApi'
 import { DependenciesCombobox } from '@/components/developer/DependenciesCombobox'
+import { IconPickerDialog } from '@/components/developer/IconPickerDialog'
 import { KeywordsInput } from '@/components/developer/KeywordsInput'
 import type { FieldErrors } from '@/components/developer/validate'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
@@ -125,6 +128,63 @@ const Field = ({
   )
 }
 
+function IconFieldRow({
+  iconUrl,
+  error,
+  busy,
+  onChange,
+}: {
+  iconUrl: string | null
+  error?: string[]
+  busy: boolean
+  onChange: (assetId: string | null, url: string | null) => void
+}) {
+  const [pickerOpen, setPickerOpen] = useState(false)
+
+  return (
+    <Field
+      label="Icon"
+      hint="PNG only · 1:1 · min 50×50 · max 3 MB"
+      error={error}
+      errorMode="label"
+    >
+      <div id="addon-icon" className="flex items-center gap-3">
+        {iconUrl ? (
+          <img alt="" className="size-12 rounded-md border object-cover" src={iconUrl} />
+        ) : (
+          <div className="flex size-12 items-center justify-center rounded-md border bg-card text-muted-foreground">
+            <ImageIcon className="size-5" />
+          </div>
+        )}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={busy}
+          onClick={() => setPickerOpen(true)}
+        >
+          Change icon
+        </Button>
+      </div>
+      <IconPickerDialog
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        currentIconUrl={iconUrl}
+        onSave={async selected => {
+          if (selected === null) {
+            onChange('', null)
+            return null
+          }
+          const result = await uploadIcon(selected)
+          if (result.status === 'error') return result.message
+          onChange(result.assetId, result.url)
+          return null
+        }}
+      />
+    </Field>
+  )
+}
+
 export function AddonDeclarationFields({
   form,
   setField,
@@ -171,6 +231,15 @@ export function AddonDeclarationFields({
               />
             </Field>
           </div>
+          <IconFieldRow
+            iconUrl={form.iconUrl}
+            error={fieldErrors.icon}
+            busy={busy}
+            onChange={(assetId, url) => {
+              setField('iconAssetId', assetId)
+              setField('iconUrl', url)
+            }}
+          />
           <Field id="addon-description" label="Description" error={fieldErrors.description}>
             <Textarea
               id="addon-description"

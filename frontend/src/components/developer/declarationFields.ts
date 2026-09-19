@@ -1,9 +1,9 @@
-import type { PublishFormState } from '@/components/developer/constants'
 import type { FieldErrors } from '@/components/developer/validate'
 
-export const FORM_FIELD_ORDER: (keyof PublishFormState)[] = [
+export const FORM_FIELD_ORDER: (keyof FieldErrors)[] = [
   'name',
   'alias',
+  'icon',
   'description',
   'author',
   'repo',

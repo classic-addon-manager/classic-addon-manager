@@ -13,6 +13,8 @@ export function formToValues(form: PublishFormState): DeclarationValues {
     keywords: [...form.keywords],
     dependencies: [...form.dependencies],
     kofi: form.kofi,
+    // Absent preserves the server's current icon state, '' removes, a UUID replaces.
+    ...(form.iconAssetId === null ? {} : { icon_asset_id: form.iconAssetId }),
   }
 }
 
@@ -29,5 +31,7 @@ export function valuesToForm(values: DeclarationValues): PublishFormState {
     keywords: Array.isArray(keywords) ? keywords : [],
     dependencies: Array.isArray(values.dependencies) ? values.dependencies : [],
     kofi: typeof values.kofi === 'string' ? values.kofi : '',
+    iconAssetId: null,
+    iconUrl: typeof values.icon_url === 'string' && values.icon_url !== '' ? values.icon_url : null,
   })
 }
