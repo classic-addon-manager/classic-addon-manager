@@ -84,7 +84,7 @@ export function AddonDetails({
       }}
       className="h-full min-h-0 gap-0"
     >
-      <div className="shrink-0 space-y-4 px-5 pt-5">
+      <div className="shrink-0 space-y-4 border-b px-5 pt-5 pb-3">
         <div className="flex items-start gap-3">
           <AddonIcon addon={display} />
           <div className="min-w-0">
@@ -136,7 +136,7 @@ export function AddonDetails({
         </TabsList>
       </div>
       <ScrollArea className="min-h-0 flex-1">
-        <TabsContent value="overview" className="space-y-5 p-5">
+        <TabsContent value="overview" className="space-y-5 px-5 pt-4 pb-5">
           {loaded.loading || (mode === 'edit' && pending.loading) ? (
             <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
               <LoaderCircle className="size-8 animate-spin opacity-50" strokeWidth={1.5} />
@@ -200,10 +200,10 @@ export function AddonDetails({
             </>
           )}
         </TabsContent>
-        <TabsContent value="statistics" className="p-5">
+        <TabsContent value="statistics" className="px-5 pt-4 pb-5">
           <AddonStatistics addon={display} />
         </TabsContent>
-        <TabsContent value="history" className="p-5">
+        <TabsContent value="history" className="px-5 pt-4 pb-5">
           {submissionCount === 0 ? (
             <p className="text-sm text-muted-foreground">No submissions yet.</p>
           ) : (
