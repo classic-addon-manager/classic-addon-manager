@@ -1,3 +1,4 @@
+import { useAtom } from 'jotai'
 import {
   AlertTriangleIcon,
   ArrowRight,
@@ -8,6 +9,7 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 
+import { localUpdateDialogOpenAtom } from '@/components/dashboard/atoms'
 import { Readme } from '@/components/shared/Readme'
 import { Button } from '@/components/ui/button'
 import {
@@ -25,7 +27,6 @@ import { repoGetManifest } from '@/lib/repo.ts'
 import { formatToLocalTime, safeCall } from '@/lib/utils'
 import type { Addon, Release } from '@/lib/wails'
 import { useAddonStore } from '@/stores/addonStore'
-import { useUpdateDialogStore } from '@/stores/updateDialogStore'
 
 interface Props {
   addon: Addon
@@ -34,7 +35,7 @@ interface Props {
 
 export const LocalAddonUpdateDialog = ({ addon, release }: Props) => {
   const [isUpdating, setIsUpdating] = useState(false)
-  const { open, setOpen } = useUpdateDialogStore()
+  const [open, setOpen] = useAtom(localUpdateDialogOpenAtom)
   const { update } = useAddonStore()
 
   const changelog = release?.body?.trim() ?? ''

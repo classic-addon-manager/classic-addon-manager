@@ -1,5 +1,5 @@
 import { Browser } from '@wailsio/runtime'
-import { useAtomValue } from 'jotai'
+import { useAtom, useAtomValue } from 'jotai'
 import {
   AlertTriangleIcon,
   BlocksIcon,
@@ -21,6 +21,7 @@ import { Suspense, useState } from 'react'
 
 import { AddonRatingButtons } from '@/components/dashboard/AddonRatingButtons'
 import { AddonRepositoryMatch } from '@/components/dashboard/AddonRepositoryMatch'
+import { localUpdateDialogOpenAtom } from '@/components/dashboard/atoms'
 import { catalogIconMapAtom } from '@/components/dashboard/iconMap'
 import { Readme } from '@/components/shared/Readme'
 import { Badge } from '@/components/ui/badge'
@@ -40,7 +41,6 @@ import { formatToLocalTime, safeCall } from '@/lib/utils'
 import type { Addon, AddonManifest } from '@/lib/wails'
 import { LocalAddonService } from '@/lib/wails'
 import { useAddonStore } from '@/stores/addonStore'
-import { useUpdateDialogStore } from '@/stores/updateDialogStore'
 
 interface AddonDetailsPaneProps {
   addon: Addon
@@ -69,7 +69,7 @@ const DetailsLoading = () => (
 const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPaneProps) => {
   const { installWithDependencies, uninstall, unmanage, latestReleasesMap, isCheckingForUpdates } =
     useAddonStore()
-  const { open: updateDialogOpen, setOpen: setUpdateDialogOpen } = useUpdateDialogStore()
+  const [updateDialogOpen, setUpdateDialogOpen] = useAtom(localUpdateDialogOpenAtom)
   const readmeQuery = useAddonReadme(addon.repo, addon.branch)
   const fallbackReadme = addon.description || 'No description provided'
   const readme =

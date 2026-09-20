@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { useAtom } from 'jotai'
+import { useSetAtom } from 'jotai'
 import { AlertTriangleIcon, ArrowUpCircle, CheckIcon, CloudOffIcon } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -11,7 +11,7 @@ import { safeCall } from '@/lib/utils.ts'
 import type { AddonManifest } from '@/lib/wails'
 import { useAddonStore } from '@/stores/addonStore'
 
-import { isAddonDialogOpenAtom, selectedAddonAtom } from './atoms'
+import { selectedAddonAtom } from './atoms'
 
 export const AddonRepositoryMatch = ({ name }: { name: string }) => {
   const { data } = useQuery({
@@ -19,8 +19,7 @@ export const AddonRepositoryMatch = ({ name }: { name: string }) => {
     select: manifests => manifests.find(m => m.name === name) ?? null,
   })
   const { installWithDependencies } = useAddonStore()
-  const [, setDialogOpen] = useAtom(isAddonDialogOpenAtom)
-  const [, setSelectedAddon] = useAtom(selectedAddonAtom)
+  const setSelectedAddon = useSetAtom(selectedAddonAtom)
 
   if (!data) {
     return null
@@ -51,7 +50,6 @@ export const AddonRepositoryMatch = ({ name }: { name: string }) => {
         description: `"${manifest.alias}" is now managed by Classic Addon Manager.`,
       })
 
-      setDialogOpen(false)
       setSelectedAddon(null)
     } catch (err: unknown) {
       const errorString = err instanceof Error ? err.message : String(err)
