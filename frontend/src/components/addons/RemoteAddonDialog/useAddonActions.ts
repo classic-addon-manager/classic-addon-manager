@@ -4,6 +4,7 @@ import { useState } from 'react'
 
 import { toast } from '@/components/ui/toast.tsx'
 import { notifyDependencyResult } from '@/lib/notifyDependencyResult'
+import { useAddonReadme } from '@/lib/repo'
 import { safeCall } from '@/lib/utils.ts'
 import type { AddonManifest } from '@/lib/wails'
 import { LocalAddonService, RemoteAddonService } from '@/lib/wails'
@@ -58,26 +59,7 @@ export const useAddonActions = ({
     },
   })
 
-  const readmeQuery = useQuery({
-    queryKey: ['addon-readme', manifest.repo, manifest.branch],
-    enabled: open,
-    retry: false,
-    queryFn: async () => {
-      const [r, err] = await safeCall<Response>(
-        fetch(
-          `https://raw.githubusercontent.com/${manifest.repo}/refs/heads/${manifest.branch}/README.md`
-        )
-      )
-      if (err) {
-        console.error('Error fetching README: ', err)
-        return manifest.description || 'Error loading description.'
-      }
-      if (!r || !r.ok) {
-        return manifest.description || 'No description provided.'
-      }
-      return r.text()
-    },
-  })
+  const readmeQuery = useAddonReadme(manifest.repo, manifest.branch, open)
 
   const dependenciesQuery = useQuery({
     queryKey: ['addon-deps', manifest.name],
@@ -122,6 +104,10 @@ export const useAddonActions = ({
     },
   })
 
+  const readme =
+    (readmeQuery.isError ? null : readmeQuery.data) ||
+    manifest.description ||
+    'No description provided.'
   const release = releaseQuery.data ?? null
   const isInstalled = installedQuery.data ?? false
   const changelog = releaseQuery.isPending
@@ -230,13 +216,13 @@ export const useAddonActions = ({
 
   return {
     release,
-    readme: readmeQuery.data ?? '',
+    readme,
     changelog,
     dependencies: dependenciesQuery.data ?? [],
     isInstalled,
     isProcessing,
     isLoadingRelease: open && releaseQuery.isPending,
-    isLoadingReadme: open && readmeQuery.isPending,
+    isLoadingReadme: readmeQuery.isLoading,
     handleInstall,
     handleUninstall,
     handleDependencyClick,

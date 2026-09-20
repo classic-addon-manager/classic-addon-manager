@@ -17,7 +17,7 @@ import {
   Trash2Icon,
   User,
 } from 'lucide-react'
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useState } from 'react'
 
 import { AddonRatingButtons } from '@/components/dashboard/AddonRatingButtons'
 import { AddonRepositoryMatch } from '@/components/dashboard/AddonRepositoryMatch'
@@ -35,7 +35,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { toast } from '@/components/ui/toast'
 import { notifyDependencyResult } from '@/lib/notifyDependencyResult'
-import { repoGetManifest } from '@/lib/repo'
+import { repoGetManifest, useAddonReadme } from '@/lib/repo'
 import { formatToLocalTime, safeCall } from '@/lib/utils'
 import type { Addon, AddonManifest } from '@/lib/wails'
 import { LocalAddonService } from '@/lib/wails'
@@ -70,35 +70,18 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
   const { installWithDependencies, uninstall, unmanage, latestReleasesMap, isCheckingForUpdates } =
     useAddonStore()
   const { open: updateDialogOpen, setOpen: setUpdateDialogOpen } = useUpdateDialogStore()
-  const [fetchedReadme, setFetchedReadme] = useState<string | null>()
+  const readmeQuery = useAddonReadme(addon.repo, addon.branch)
   const fallbackReadme = addon.description || 'No description provided'
   const readme =
-    !addon.repo || fetchedReadme === null ? fallbackReadme : (fetchedReadme ?? 'loading')
+    !addon.repo || readmeQuery.isError || readmeQuery.data === null
+      ? fallbackReadme
+      : (readmeQuery.data ?? 'loading')
 
   const latestRelease = latestReleasesMap.get(addon.name)
   const hasUpdate = addon.isManaged && latestRelease && latestRelease.published_at > addon.updatedAt
   const [failedIconUrl, setFailedIconUrl] = useState<string | null>(null)
   const iconUrl = useAtomValue(catalogIconMapAtom).get(addon.name) ?? null
   const hasIcon = iconUrl !== null && failedIconUrl !== iconUrl
-
-  useEffect(() => {
-    if (!addon.repo) return
-
-    let active = true
-    const getReadme = async () => {
-      const branch = addon.branch || 'main'
-      const response = await fetch(
-        `https://raw.githubusercontent.com/${addon.repo}/${branch}/README.md`
-      )
-      const text = response.ok ? await response.text() : null
-      if (active) setFetchedReadme(text)
-    }
-
-    getReadme().catch(e => console.error('Failed to fetch readme: ', e))
-    return () => {
-      active = false
-    }
-  }, [addon.repo, addon.branch])
 
   const handleReinstall = async () => {
     const [manifest, manifestError] = await safeCall<AddonManifest>(repoGetManifest(addon.name))
