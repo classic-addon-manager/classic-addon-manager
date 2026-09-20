@@ -72,6 +72,8 @@ go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.5
 
 Run `wails3 dev` in the project directory. This starts a Vite development server with fast hot reload for frontend changes, plus the Wails window. Inspect the interface in the app window itself: development builds enable the WebView2 DevTools, so right-click → **Inspect** (or `F12` where the host page allows it) gives you the full app with working bindings.
 
+Press **Ctrl+Alt+Q** while the app is focused to open or close **TanStack Query Devtools** and inspect cached queries and mutations. This shortcut is available only in frontend development mode.
+
 The Vite URL (`http://localhost:9245`) is the frontend dev server only. It does not serve the Wails runtime: `/wails/runtime` and the other `/wails/*` endpoints are answered by the app's asset server, which is reachable inside the WebView (`http://wails.localhost:<vite-port>`) and not over a TCP port. Opening the Vite URL in a normal browser therefore has no Go bindings or events, and this app renders blank because it bootstraps from them. Use it only for isolated frontend work that does not touch the backend.
 
 For a browser with working bindings and events, run the app in server mode:

@@ -6,6 +6,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import App from '@/App'
+import { QueryDevtools } from '@/components/QueryDevtools'
 import { queryClient } from '@/lib/queryClient'
 
 // Load react-scan only in development mode
@@ -23,6 +24,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <App />
+      {import.meta.env.DEV && <QueryDevtools />}
     </QueryClientProvider>
   </StrictMode>
 )
