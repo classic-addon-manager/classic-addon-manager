@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useRef } from 'react'
 
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { useAddonRating } from '@/lib/addon'
@@ -48,43 +48,18 @@ export const RemoteAddonDialog = ({
     isProcessing,
     isLoadingRelease,
     isLoadingReadme,
-    checkInstalledStatus,
     handleInstall,
     handleUninstall,
-    getRelease,
-    getReadme,
-    getDependencies,
     handleDependencyClick,
   } = useAddonActions({
     manifest,
+    open,
     onViewDependency,
     onOpenChange,
     onAddonInstalled,
     onAddonUninstalled,
   })
 
-  useEffect(() => {
-    if (!open) return
-    checkInstalledStatus().catch(e => {
-      console.error('Failed to check installed status:', e)
-    })
-  }, [open, checkInstalledStatus])
-
-  useEffect(() => {
-    if (!open) {
-      return
-    }
-
-    getReadme().catch(e => {
-      console.error('Failed to fetch readme: ', e)
-    })
-    getRelease().catch(e => {
-      console.error('Failed to fetch release: ', e)
-    })
-    getDependencies().catch(e => {
-      console.error('Failed to fetch dependencies: ', e)
-    })
-  }, [open, getReadme, getRelease, getDependencies])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

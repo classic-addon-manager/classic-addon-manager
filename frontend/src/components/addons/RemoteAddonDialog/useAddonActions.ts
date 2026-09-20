@@ -1,15 +1,17 @@
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangleIcon } from 'lucide-react'
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 
 import { toast } from '@/components/ui/toast.tsx'
 import { notifyDependencyResult } from '@/lib/notifyDependencyResult'
 import { safeCall } from '@/lib/utils.ts'
-import type { AddonManifest, DependencyInfo, Release } from '@/lib/wails'
+import type { AddonManifest } from '@/lib/wails'
 import { LocalAddonService, RemoteAddonService } from '@/lib/wails'
 import { useAddonStore } from '@/stores/addonStore.ts'
 
 interface UseAddonActionsProps {
   manifest: AddonManifest
+  open: boolean
   onViewDependency: (manifest: AddonManifest) => void
   onOpenChange: (open: boolean) => void
   onAddonInstalled?: () => void
@@ -18,24 +20,115 @@ interface UseAddonActionsProps {
 
 export const useAddonActions = ({
   manifest,
+  open,
   onViewDependency,
   onOpenChange,
   onAddonInstalled,
   onAddonUninstalled,
 }: UseAddonActionsProps) => {
-  const [release, setRelease] = useState<Release | null>(null)
-  const [readme, setReadme] = useState<string>('')
-  const [changelog, setChangelog] = useState<string>('')
-  const [dependencies, setDependencies] = useState<DependencyInfo[]>([])
-  const [isInstalled, setIsInstalled] = useState<boolean>(false)
+  const queryClient = useQueryClient()
   const [isProcessing, setIsProcessing] = useState<boolean>(false)
-  const [isLoadingRelease, setIsLoadingRelease] = useState<boolean>(true)
-  const [isLoadingReadme, setIsLoadingReadme] = useState<boolean>(true)
+  const installedQueryKey = ['addon-installed', manifest.name] as const
 
-  const checkInstalledStatus = useCallback(async () => {
-    const [installed] = await safeCall(LocalAddonService.IsInstalled(manifest.name))
-    setIsInstalled(!!installed)
-  }, [manifest.name])
+  const installedQuery = useQuery({
+    queryKey: installedQueryKey,
+    enabled: open,
+    queryFn: async () => {
+      const [installed] = await safeCall(LocalAddonService.IsInstalled(manifest.name))
+      return !!installed
+    },
+  })
+
+  const releaseQuery = useQuery({
+    queryKey: ['addon-release', manifest.name],
+    enabled: open,
+    retry: false,
+    queryFn: async () => {
+      const [r, err] = await safeCall(RemoteAddonService.GetLatestRelease(manifest.name))
+      if (err) {
+        toast({
+          title: 'Error',
+          description: `Failed to fetch release information for ${manifest.name}`,
+          icon: AlertTriangleIcon,
+        })
+        console.error('Fetch release error: ', err)
+        throw err
+      }
+      return r
+    },
+  })
+
+  const readmeQuery = useQuery({
+    queryKey: ['addon-readme', manifest.repo, manifest.branch],
+    enabled: open,
+    retry: false,
+    queryFn: async () => {
+      const [r, err] = await safeCall<Response>(
+        fetch(
+          `https://raw.githubusercontent.com/${manifest.repo}/refs/heads/${manifest.branch}/README.md`
+        )
+      )
+      if (err) {
+        console.error('Error fetching README: ', err)
+        return manifest.description || 'Error loading description.'
+      }
+      if (!r || !r.ok) {
+        return manifest.description || 'No description provided.'
+      }
+      return r.text()
+    },
+  })
+
+  const dependenciesQuery = useQuery({
+    queryKey: ['addon-deps', manifest.name],
+    enabled: open && manifest.dependencies.length > 0,
+    retry: false,
+    queryFn: async () => {
+      const [result, err] = await safeCall(RemoteAddonService.ResolveDependencies(manifest))
+      if (err || !result) {
+        toast({
+          title: 'Error',
+          description: `Failed to resolve dependencies for ${manifest.name}`,
+          icon: AlertTriangleIcon,
+        })
+        return []
+      }
+
+      if (result.errors.length > 0) {
+        console.warn('Dependency resolution errors:', result.errors)
+        // Show first error to user, log all errors
+        toast({
+          title: 'Dependency resolution warning',
+          description: result.errors[0],
+          icon: AlertTriangleIcon,
+        })
+      }
+
+      console.log(
+        `Found ${result.dependencies.length} total dependencies (including transitive) for ${manifest.alias}`
+      )
+
+      // Log dependency tree for debugging
+      if (result.dependencies.length > 0) {
+        console.log('Dependency tree:')
+        result.dependencies.forEach(dep => {
+          console.log(
+            `  ${'  '.repeat(dep.depth)}${dep.manifest.alias} (${dep.isInstalled ? 'installed' : 'not installed'})`
+          )
+        })
+      }
+
+      return result.dependencies
+    },
+  })
+
+  const release = releaseQuery.data ?? null
+  const isInstalled = installedQuery.data ?? false
+  const changelog = releaseQuery.isPending
+    ? ''
+    : releaseQuery.isError
+      ? 'Error loading change log'
+      : release?.body || 'No change log was provided'
 
   const handleInstall = async () => {
     if (isProcessing) return
@@ -102,7 +195,7 @@ export const useAddonActions = ({
         title: 'Addon installed',
         description: `${manifest.alias} was installed successfully.`,
       })
-      setIsInstalled(true)
+      await queryClient.invalidateQueries({ queryKey: installedQueryKey })
       onAddonInstalled?.()
       onOpenChange(false)
     }
@@ -121,7 +214,7 @@ export const useAddonActions = ({
       })
       return
     }
-    setIsInstalled(false)
+    await queryClient.invalidateQueries({ queryKey: installedQueryKey })
     onAddonUninstalled?.()
     toast({
       title: 'Uninstalled',
@@ -130,101 +223,6 @@ export const useAddonActions = ({
     onOpenChange(false)
   }
 
-  const getRelease = useCallback(async () => {
-    setIsLoadingRelease(true)
-    try {
-      const [r, err] = await safeCall<Release | null>(
-        RemoteAddonService.GetLatestRelease(manifest.name)
-      )
-      if (err) {
-        toast({
-          title: 'Error',
-          description: `Failed to fetch release information for ${manifest.name}`,
-          icon: AlertTriangleIcon,
-        })
-        console.error('Fetch release error: ', err)
-        setChangelog('Error loading change log')
-        return
-      }
-      setRelease(r)
-      if (r?.body) {
-        setChangelog(r.body)
-      } else {
-        setChangelog('No change log was provided')
-      }
-    } finally {
-      setIsLoadingRelease(false)
-    }
-  }, [manifest.name])
-
-  const getReadme = useCallback(async () => {
-    setIsLoadingReadme(true)
-    try {
-      const [r, err] = await safeCall<Response>(
-        fetch(
-          `https://raw.githubusercontent.com/${manifest.repo}/refs/heads/${manifest.branch}/README.md`
-        )
-      )
-      if (err) {
-        console.error('Error fetching README: ', err)
-        setReadme(manifest.description || 'Error loading description.')
-        return
-      }
-      if (!r || !r.ok) {
-        setReadme(manifest.description || 'No description provided.')
-        return
-      }
-
-      const text = await r.text()
-      setReadme(text)
-    } finally {
-      setIsLoadingReadme(false)
-    }
-  }, [manifest.repo, manifest.branch, manifest.description])
-
-  const getDependencies = useCallback(async () => {
-    if (!manifest.dependencies || manifest.dependencies.length === 0) {
-      setDependencies([])
-      return
-    }
-
-    const [result, err] = await safeCall(RemoteAddonService.ResolveDependencies(manifest))
-    if (err || !result) {
-      toast({
-        title: 'Error',
-        description: `Failed to resolve dependencies for ${manifest.name}`,
-        icon: AlertTriangleIcon,
-      })
-      setDependencies([])
-      return
-    }
-
-    if (result.errors.length > 0) {
-      console.warn('Dependency resolution errors:', result.errors)
-      // Show first error to user, log all errors
-      toast({
-        title: 'Dependency resolution warning',
-        description: result.errors[0],
-        icon: AlertTriangleIcon,
-      })
-    }
-
-    setDependencies(result.dependencies)
-    console.log(
-      `Found ${result.dependencies.length} total dependencies (including transitive) for ${manifest.alias}`
-    )
-
-    // Log dependency tree for debugging
-    if (result.dependencies.length > 0) {
-      console.log('Dependency tree:')
-      result.dependencies.forEach(dep => {
-        console.log(
-          `  ${'  '.repeat(dep.depth)}${dep.manifest.alias} (${dep.isInstalled ? 'installed' : 'not installed'})`
-        )
-      })
-    }
-  }, [manifest])
-
   const handleDependencyClick = (depManifest: AddonManifest) => {
     console.log('Clicked dependency:', depManifest.alias)
     onViewDependency(depManifest)
@@ -232,19 +230,15 @@ export const useAddonActions = ({
 
   return {
     release,
-    readme,
+    readme: readmeQuery.data ?? '',
     changelog,
-    dependencies,
+    dependencies: dependenciesQuery.data ?? [],
     isInstalled,
     isProcessing,
-    isLoadingRelease,
-    isLoadingReadme,
-    checkInstalledStatus,
+    isLoadingRelease: open && releaseQuery.isPending,
+    isLoadingReadme: open && readmeQuery.isPending,
     handleInstall,
     handleUninstall,
-    getRelease,
-    getReadme,
-    getDependencies,
     handleDependencyClick,
   }
 }
