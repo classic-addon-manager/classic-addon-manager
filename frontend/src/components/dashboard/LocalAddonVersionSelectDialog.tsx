@@ -1,7 +1,7 @@
+import { useQuery } from '@tanstack/react-query'
 import { useSetAtom } from 'jotai'
 import { AlertCircle, CalendarDays, CheckCircle2Icon, LoaderCircle, TagIcon } from 'lucide-react'
-import { Suspense, useEffect, useState } from 'react'
-import usePromise from 'react-promise-suspense'
+import { useState } from 'react'
 
 import { versionSelectAtom } from '@/components/dashboard/atoms.ts'
 import { Button } from '@/components/ui/button.tsx'
@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { toast } from '@/components/ui/toast.tsx'
+import { apiClient } from '@/lib/api.ts'
 import { notifyDependencyResult } from '@/lib/notifyDependencyResult'
 import { repoGetManifest } from '@/lib/repo'
 import { cn } from '@/lib/utils'
@@ -133,105 +134,36 @@ const ReleasesContent = ({
   )
 }
 
-const releaseCache = new Map<string, Promise<Release[]>>()
-
 const fetchReleases = async (addon: Addon): Promise<Release[]> => {
-  if (!addon) return []
+  try {
+    const response = await apiClient.get(`/addon/${addon.name}/releases`)
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    const result: ApiResponse = await response.json()
 
-  const cacheKey = addon.name
-  if (releaseCache.has(cacheKey)) {
-    return releaseCache.get(cacheKey)!
-  }
-
-  const promise = (async () => {
-    try {
-      const response = await fetch(`https://aac.gaijin.dev/addon/${addon.name}/releases`)
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      const result: ApiResponse = await response.json()
-
-      if (result.status && result.data) {
-        // Filter out duplicates based on tag_name
-        const uniqueReleasesMap = new Map<string, Release>()
-        for (const release of result.data) {
-          if (!uniqueReleasesMap.has(release.tag_name)) {
-            uniqueReleasesMap.set(release.tag_name, release)
-          }
+    if (result.status && result.data) {
+      // Filter out duplicates based on tag_name
+      const uniqueReleasesMap = new Map<string, Release>()
+      for (const release of result.data) {
+        if (!uniqueReleasesMap.has(release.tag_name)) {
+          uniqueReleasesMap.set(release.tag_name, release)
         }
-
-        return Array.from(uniqueReleasesMap.values())
-      } else {
-        throw new Error(result.message || 'Failed to fetch releases: Invalid API response')
       }
-    } catch (e: unknown) {
-      console.error(`Failed to fetch releases for ${addon.name}:`, e)
-      const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.'
-      toast({
-        title: 'Error',
-        description: `Failed to load versions: ${errorMessage}`,
-      })
-      throw e
+
+      return Array.from(uniqueReleasesMap.values())
+    } else {
+      throw new Error(result.message || 'Failed to fetch releases: Invalid API response')
     }
-  })()
-
-  releaseCache.set(cacheKey, promise)
-  return promise
-}
-
-interface ReleasesProps {
-  addon: Addon
-  selectedVersion: string | null
-  onVersionChange: (version: string) => void
-  onReleasesLoaded: (releases: Release[]) => void
-}
-
-const Releases = ({ addon, selectedVersion, onVersionChange, onReleasesLoaded }: ReleasesProps) => {
-  const releases = usePromise(fetchReleases, [addon])
-
-  useEffect(() => {
-    if (releases.length > 0) {
-      onReleasesLoaded(releases)
-    }
-  }, [releases, onReleasesLoaded])
-
-  if (releases.length === 0) {
-    return <EmptyState />
+  } catch (e: unknown) {
+    console.error(`Failed to fetch releases for ${addon.name}:`, e)
+    const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.'
+    toast({
+      title: 'Error',
+      description: `Failed to load versions: ${errorMessage}`,
+    })
+    throw e
   }
-
-  return (
-    <ReleasesContent
-      addon={addon}
-      releases={releases}
-      selectedVersion={selectedVersion}
-      onVersionChange={onVersionChange}
-    />
-  )
-}
-
-interface VersionSelectSuspenseProps {
-  addon: Addon
-  selectedVersion: string | null
-  onReleasesLoaded: (releases: Release[]) => void
-  onVersionChange: (version: string) => void
-}
-
-const VersionSelectSuspense = ({
-  addon,
-  selectedVersion,
-  onReleasesLoaded,
-  onVersionChange,
-}: VersionSelectSuspenseProps) => {
-  return (
-    <Suspense fallback={<LoadingState />}>
-      <Releases
-        addon={addon}
-        selectedVersion={selectedVersion}
-        onVersionChange={onVersionChange}
-        onReleasesLoaded={onReleasesLoaded}
-      />
-    </Suspense>
-  )
 }
 
 export const LocalAddonVersionSelectDialog = ({ addon }: Props) => {
@@ -239,7 +171,12 @@ export const LocalAddonVersionSelectDialog = ({ addon }: Props) => {
   const [selectedVersion, setSelectedVersion] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [releases, setReleases] = useState<Release[]>([])
+  const releasesQuery = useQuery({
+    queryKey: ['addon-releases', addon.name],
+    retry: false,
+    queryFn: () => fetchReleases(addon),
+  })
+  const releases = releasesQuery.data ?? []
   const { update } = useAddonStore()
 
   const handleInstall = async () => {
@@ -295,12 +232,24 @@ export const LocalAddonVersionSelectDialog = ({ addon }: Props) => {
             </span>
           </div>
         </DialogHeader>
-        <VersionSelectSuspense
-          addon={addon}
-          selectedVersion={selectedVersion}
-          onReleasesLoaded={setReleases}
-          onVersionChange={setSelectedVersion}
-        />
+        {releasesQuery.isPending && <LoadingState />}
+        {releasesQuery.isError && (
+          <div className="flex items-center gap-2 p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+            <AlertCircle size={16} />
+            <span>{releasesQuery.error.message}</span>
+          </div>
+        )}
+        {releasesQuery.isSuccess &&
+          (releases.length === 0 ? (
+            <EmptyState />
+          ) : (
+            <ReleasesContent
+              addon={addon}
+              releases={releases}
+              selectedVersion={selectedVersion}
+              onVersionChange={setSelectedVersion}
+            />
+          ))}
 
         {error && (
           <div className="flex items-center gap-2 p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-sm">

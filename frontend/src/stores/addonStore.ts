@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 
+import { queryClient } from '@/lib/queryClient'
 import { safeCall } from '@/lib/utils.ts'
 import type { Addon, AddonManifest, InstallWithDependenciesResult, Release } from '@/lib/wails'
 import { LocalAddonService, RemoteAddonService } from '@/lib/wails'
@@ -30,6 +31,8 @@ interface AddonState {
 
 export const useAddonStore = create<AddonState>((set, get) => {
   const refreshAfterAddonChange = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['installed-addons'] })
+    await queryClient.invalidateQueries({ queryKey: ['addon-updates-bulk'] })
     try {
       await get().updateInstalledAddons()
     } catch (err) {
@@ -79,7 +82,12 @@ export const useAddonStore = create<AddonState>((set, get) => {
         }
 
         // Get updates and handle potential errors
-        const [releases, err] = await safeCall(RemoteAddonService.CheckAddonUpdatesBulk(addonNames))
+        const [releases, err] = await safeCall(
+          queryClient.fetchQuery({
+            queryKey: ['addon-updates-bulk', addonNames],
+            queryFn: () => RemoteAddonService.CheckAddonUpdatesBulk(addonNames),
+          })
+        )
 
         if (err || !releases) {
           console.error('[AddonStore] Failed to perform bulk update check:', err)
@@ -118,7 +126,10 @@ export const useAddonStore = create<AddonState>((set, get) => {
     },
 
     updateInstalledAddons: async () => {
-      const installed = await LocalAddonService.GetAddOns()
+      const installed = await queryClient.fetchQuery({
+        queryKey: ['installed-addons'],
+        queryFn: () => LocalAddonService.GetAddOns(),
+      })
       set({ installedAddons: installed })
     },
 

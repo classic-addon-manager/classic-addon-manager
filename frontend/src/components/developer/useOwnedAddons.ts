@@ -1,88 +1,54 @@
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangleIcon } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { getOwnedAddons, type GetOwnedAddonsResult } from '@/components/developer/ownedAddons'
+import { getOwnedAddons } from '@/components/developer/ownedAddons'
 import type { OwnedAddon, OwnedSubmission } from '@/components/developer/ownedParse'
 import { toast } from '@/components/ui/toast'
-import { queryClient } from '@/lib/queryClient'
+import { useUserStore } from '@/stores/userStore'
 
 export type OwnedAddonsData = {
   addons: OwnedAddon[]
   submissions: OwnedSubmission[]
 }
 
-export function useOwnedAddons(
-  enabled: boolean,
-  sessionKey: string
-): {
+export function useOwnedAddons(enabled: boolean): {
   data: OwnedAddonsData | null
   error: string | null
   retry: () => Promise<void>
   removeSubmission: (id: number) => void
   lastAttemptFailed: boolean
 } {
-  const [currentSessionKey, setCurrentSessionKey] = useState(sessionKey)
-  const [data, setData] = useState<OwnedAddonsData | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [lastAttemptFailed, setLastAttemptFailed] = useState(false)
-  const dataRef = useRef<OwnedAddonsData | null>(null)
-  const generationRef = useRef(0)
-  const inFlightRef = useRef(false)
-
-  if (currentSessionKey !== sessionKey) {
-    setCurrentSessionKey(sessionKey)
-    setData(null)
-    setError(null)
-  }
-
-  useEffect(() => {
-    dataRef.current = data
-  }, [data])
-
-  const load = useCallback(async (kind: 'user' | 'poll') => {
-    if (kind === 'poll' && inFlightRef.current) return
-    const my = ++generationRef.current
-    inFlightRef.current = true
-    try {
+  const queryClient = useQueryClient()
+  const discordId = useUserStore(state => state.user.discord_id)
+  const queryKey = ['owned-addons', discordId] as const
+  const query = useQuery({
+    queryKey,
+    enabled,
+    refetchInterval: 60_000,
+    retry: false,
+    queryFn: async (): Promise<OwnedAddonsData> => {
       const result = await getOwnedAddons()
-      if (my !== generationRef.current) return
-      setLastAttemptFailed(result.status !== 'ok')
-      applyResult(kind, result, dataRef.current, setData, setError)
-    } finally {
-      if (my === generationRef.current) inFlightRef.current = false
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!enabled) {
-      generationRef.current += 1
-      return
-    }
-
-    void load('user')
-    const id = window.setInterval(() => {
-      void load('poll')
-    }, 60_000)
-
-    return () => {
-      window.clearInterval(id)
-      generationRef.current += 1
-    }
-  }, [enabled, sessionKey, load])
+      if (result.status !== 'ok') throw new Error(result.message)
+      return { addons: result.addons, submissions: result.submissions }
+    },
+  })
 
   const retry = async () => {
-    setError(null)
     // Refresh covers the open detail panes too, not just the list.
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['dev-addon-stats'] }),
       queryClient.invalidateQueries({ queryKey: ['dev-addon-submission'] }),
       queryClient.invalidateQueries({ queryKey: ['dev-addon-values'] }),
     ])
-    return load('user')
+    const result = await query.refetch()
+    // Poll failures stay silent, a user-triggered retry surfaces the error.
+    if (result.isError && result.data) {
+      toast({ title: 'Error', description: result.error.message, icon: AlertTriangleIcon })
+    }
   }
 
   const removeSubmission = (id: number) => {
-    setData(current =>
+    queryClient.setQueryData<OwnedAddonsData>(queryKey, current =>
       current
         ? {
             addons: current.addons,
@@ -92,28 +58,13 @@ export function useOwnedAddons(
     )
   }
 
-  return { data, error, retry, removeSubmission, lastAttemptFailed }
-}
-
-function applyResult(
-  kind: 'user' | 'poll',
-  result: GetOwnedAddonsResult,
-  current: OwnedAddonsData | null,
-  setData: (data: OwnedAddonsData | null) => void,
-  setError: (error: string | null) => void
-) {
-  if (result.status === 'ok') {
-    setData({ addons: result.addons, submissions: result.submissions })
-    setError(null)
-    return
+  return {
+    data: query.data ?? null,
+    // Poll failures keep the last data and stay silent, the error only shows
+    // when there is nothing to display.
+    error: query.data === undefined && query.isError ? query.error.message : null,
+    retry,
+    removeSubmission,
+    lastAttemptFailed: query.isError,
   }
-
-  if (kind === 'poll') return
-
-  if (current === null) {
-    setError(result.message)
-    return
-  }
-
-  toast({ title: 'Error', description: result.message, icon: AlertTriangleIcon })
 }

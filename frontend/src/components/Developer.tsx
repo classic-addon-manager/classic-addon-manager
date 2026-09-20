@@ -9,14 +9,13 @@ import { Button } from '@/components/ui/button'
 import { useUserStore } from '@/stores/userStore.ts'
 
 export const Developer = () => {
-  const isAuthenticated = useUserStore(s => s.user.discord_id !== '')
-  const token = useUserStore(s => s.token)
+  const discordId = useUserStore(s => s.user.discord_id)
+  const isAuthenticated = discordId !== ''
   const [view, setView] = useState<'list' | 'form'>('list')
   const [selection, setSelection] = useState<string | null>(null)
   const [scope, setScope] = useState<DeveloperScope>('all')
   const { data, error, retry, removeSubmission, lastAttemptFailed } = useOwnedAddons(
-    isAuthenticated && view === 'list',
-    token
+    isAuthenticated && view === 'list'
   )
 
   const dropSubmission = (id: number) => {
@@ -58,7 +57,7 @@ export const Developer = () => {
         error,
         retry,
         openForm,
-        token,
+        discordId,
         selection,
         setSelection,
         dropSubmission,
@@ -73,7 +72,7 @@ function renderListBody(
   error: string | null,
   retry: () => Promise<void>,
   openForm: () => void,
-  sessionKey: string,
+  accountKey: string,
   selection: string | null,
   onSelectionChange: (key: string) => void,
   onDropSubmission: (id: number) => void,
@@ -119,7 +118,7 @@ function renderListBody(
 
   return (
     <DeveloperWorkspace
-      key={sessionKey}
+      key={accountKey}
       data={data}
       selection={selection}
       onSelectionChange={onSelectionChange}
