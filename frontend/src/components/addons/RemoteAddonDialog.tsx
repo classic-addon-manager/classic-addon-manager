@@ -45,7 +45,6 @@ export const RemoteAddonDialog = ({
     changelog,
     dependencies,
     isInstalled,
-    isProcessing,
     isLoadingRelease,
     isLoadingReadme,
     handleInstall,
@@ -101,7 +100,6 @@ export const RemoteAddonDialog = ({
               rating={rating}
               isRatingDisabled={isLoadingRating || isSaving}
               isInstalled={isInstalled}
-              isProcessing={isProcessing}
               isLoadingRelease={isLoadingRelease}
               onRate={rateAddon}
               onInstall={handleInstall}

@@ -1,8 +1,11 @@
 import { useIsMutating, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Dialogs } from '@wailsio/runtime'
 import { AlertTriangleIcon, ThumbsDownIcon, ThumbsUpIcon } from 'lucide-react'
 
 import { toast } from '@/components/ui/toast.tsx'
 import { apiClient } from '@/lib/api.ts'
+import { LocalAddonService } from '@/lib/wails'
+import { useAddonStore } from '@/stores/addonStore.ts'
 import { useUserStore } from '@/stores/userStore'
 
 type Rating = -1 | 0 | 1
@@ -83,4 +86,46 @@ export function useAddonRating(addonName: string, addonAlias: string, enabled = 
   }
 
   return { rating: query.data ?? 0, isLoading: query.isLoading, isSaving, rateAddon }
+}
+
+export function useInstallZipAddon() {
+  const mutation = useMutation({
+    mutationKey: ['install-zip-addon'],
+    mutationFn: async (): Promise<string | null> => {
+      const selectedFile = await Dialogs.OpenFile({
+        Title: 'Select Addon ZIP File',
+        Message: 'Choose a ZIP file containing the addon to install',
+        ButtonText: 'Install',
+        CanChooseFiles: true,
+        CanChooseDirectories: false,
+        AllowsMultipleSelection: false,
+        Filters: [{ DisplayName: 'ZIP Files', Pattern: '*.zip' }],
+      })
+      if (!selectedFile) return null
+      return LocalAddonService.InstallZipAddon(selectedFile)
+    },
+    onSuccess: async name => {
+      if (!name) return
+      toast({
+        title: 'Addon Installed',
+        description: `${name} installed successfully!`,
+      })
+      await useAddonStore.getState().updateInstalledAddons()
+    },
+    onError: (error: unknown) => {
+      if (error instanceof Error) {
+        if (error.message.includes('shellItem is nil')) return
+        toast({ title: 'Error', description: error.message, icon: AlertTriangleIcon })
+      } else {
+        toast({
+          title: 'Error',
+          description: 'An unknown error occurred: ' + error,
+          icon: AlertTriangleIcon,
+        })
+        console.error('Error selecting ZIP file:', error)
+      }
+    },
+  })
+
+  return { installZip: () => mutation.mutate(), isInstalling: mutation.isPending }
 }

@@ -1,3 +1,4 @@
+import { useIsMutating } from '@tanstack/react-query'
 import { DownloadIcon, LoaderCircle, ThumbsDownIcon, ThumbsUpIcon, Trash2Icon } from 'lucide-react'
 
 import { Button } from '@/components/ui/button.tsx'
@@ -11,13 +12,14 @@ import { cn } from '@/lib/utils.ts'
 import type { AddonManifest, Release } from '@/lib/wails'
 import { useUserStore } from '@/stores/userStore.ts'
 
+import { addonActionMutationKey } from './useAddonActions.ts'
+
 interface ActionBarProps {
   manifest: AddonManifest
   release: Release | null
   rating: number
   isRatingDisabled: boolean
   isInstalled: boolean
-  isProcessing: boolean
   isLoadingRelease: boolean
   onRate: (rating: number) => void
   onInstall: () => void
@@ -114,7 +116,7 @@ const InstallLabel = ({
   release,
   isProcessing,
   isLoadingRelease,
-}: Pick<ActionBarProps, 'release' | 'isProcessing' | 'isLoadingRelease'>) => {
+}: Pick<ActionBarProps, 'release' | 'isLoadingRelease'> & { isProcessing: boolean }) => {
   if (isLoadingRelease) {
     return (
       <>
@@ -151,42 +153,45 @@ export const ActionBar = ({
   rating,
   isRatingDisabled,
   isInstalled,
-  isProcessing,
   isLoadingRelease,
   onRate,
   onInstall,
   onUninstall,
-}: ActionBarProps) => (
-  <div className="sticky bottom-0 z-20 flex items-center justify-between gap-4 border-t bg-background/80 p-4 backdrop-blur-md">
-    <div className="flex items-center gap-1">
-      <RatingButtons rating={rating} onRate={onRate} disabled={isRatingDisabled} />
-    </div>
+}: ActionBarProps) => {
+  const isProcessing = useIsMutating({ mutationKey: addonActionMutationKey(manifest.name) }) > 0
 
-    <Button
-      variant={isInstalled ? 'destructive' : 'default'}
-      onClick={isInstalled ? onUninstall : onInstall}
-      disabled={(!isInstalled && (!release || isLoadingRelease)) || isProcessing}
-      className="min-w-[120px]"
-      aria-label={
-        isInstalled
-          ? `Uninstall ${manifest.alias}`
-          : !release
-            ? 'Addon not available for installation'
-            : `Install ${manifest.alias}`
-      }
-    >
-      {isInstalled ? (
-        <>
-          <Trash2Icon className="mr-2 h-4 w-4" />
-          Uninstall
-        </>
-      ) : (
-        <InstallLabel
-          release={release}
-          isProcessing={isProcessing}
-          isLoadingRelease={isLoadingRelease}
-        />
-      )}
-    </Button>
-  </div>
-)
+  return (
+    <div className="sticky bottom-0 z-20 flex items-center justify-between gap-4 border-t bg-background/80 p-4 backdrop-blur-md">
+      <div className="flex items-center gap-1">
+        <RatingButtons rating={rating} onRate={onRate} disabled={isRatingDisabled} />
+      </div>
+
+      <Button
+        variant={isInstalled ? 'destructive' : 'default'}
+        onClick={isInstalled ? onUninstall : onInstall}
+        disabled={(!isInstalled && (!release || isLoadingRelease)) || isProcessing}
+        className="min-w-[120px]"
+        aria-label={
+          isInstalled
+            ? `Uninstall ${manifest.alias}`
+            : !release
+              ? 'Addon not available for installation'
+              : `Install ${manifest.alias}`
+        }
+      >
+        {isInstalled ? (
+          <>
+            <Trash2Icon className="mr-2 h-4 w-4" />
+            Uninstall
+          </>
+        ) : (
+          <InstallLabel
+            release={release}
+            isProcessing={isProcessing}
+            isLoadingRelease={isLoadingRelease}
+          />
+        )}
+      </Button>
+    </div>
+  )
+}

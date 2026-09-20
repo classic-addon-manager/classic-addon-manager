@@ -1,3 +1,4 @@
+import { useIsMutating, useMutation } from '@tanstack/react-query'
 import { ImagePlusIcon, Trash2 } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
 
@@ -12,6 +13,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
+
+const iconSaveMutationKey = ['icon-picker-save'] as const
 
 function BlobImg({ file, className }: { file: File; className?: string }) {
   const setRef = useCallback(
@@ -71,7 +74,7 @@ export function IconPickerDialog({
   /** Commits the staged pick, null removes the icon. */
   onSave: (icon: File | null) => Promise<string | null>
 }) {
-  const [saving, setSaving] = useState(false)
+  const saving = useIsMutating({ mutationKey: iconSaveMutationKey }) > 0
 
   return (
     <Dialog
@@ -86,8 +89,6 @@ export function IconPickerDialog({
           onSave={onSave}
           onSaved={() => onOpenChange(false)}
           onCancel={() => onOpenChange(false)}
-          saving={saving}
-          setSaving={setSaving}
         />
       </DialogContent>
     </Dialog>
@@ -99,15 +100,11 @@ function IconPickerForm({
   onSave,
   onSaved,
   onCancel,
-  saving,
-  setSaving,
 }: {
   currentIconUrl: string | null
   onSave: (icon: File | null) => Promise<string | null>
   onSaved: () => void
   onCancel: () => void
-  saving: boolean
-  setSaving: (saving: boolean) => void
 }) {
   const [staged, setStaged] = useState<File | null>(null)
   const [remove, setRemove] = useState(false)
@@ -116,6 +113,20 @@ function IconPickerForm({
   const [validating, setValidating] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const sessionRef = useRef(0)
+
+  const saveMutation = useMutation({
+    mutationKey: iconSaveMutationKey,
+    mutationFn: (icon: File | null) => onSave(icon),
+    onSuccess: error => {
+      if (error) {
+        setErrors([error])
+        return
+      }
+      onSaved()
+    },
+    onError: () => setErrors(['Icon upload failed.']),
+  })
+  const saving = saveMutation.isPending
 
   const busy = validating || saving
   const hasPendingChange = staged !== null || remove
@@ -138,17 +149,10 @@ function IconPickerForm({
     setStaged(file)
   }
 
-  const handleSave = async () => {
+
+  const handleSave = () => {
     if (!hasPendingChange || busy) return
-    const selected = remove ? null : staged
-    setSaving(true)
-    const error = await onSave(selected)
-    setSaving(false)
-    if (error) {
-      setErrors([error])
-      return
-    }
-    onSaved()
+    saveMutation.mutate(remove ? null : staged)
   }
 
   return (

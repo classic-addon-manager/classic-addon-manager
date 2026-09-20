@@ -1,6 +1,4 @@
-import { Dialogs } from '@wailsio/runtime'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
-import { AlertTriangleIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 
@@ -11,8 +9,7 @@ import {
   versionSelectAtom,
 } from '@/components/dashboard/atoms'
 import { loadCatalogIconMapAtom } from '@/components/dashboard/iconMap'
-import { toast } from '@/components/ui/toast.tsx'
-import { LocalAddonService } from '@/lib/wails'
+import { useInstallZipAddon } from '@/lib/addon'
 import { useAddonStore } from '@/stores/addonStore'
 
 export function useDashboardController() {
@@ -46,52 +43,7 @@ export function useDashboardController() {
     loadCatalogIcons()
   }, [updateInstalledAddons, performBulkUpdateCheck, loadCatalogIcons])
 
-  const handleInstallZip = async () => {
-    try {
-      const selectedFile = await Dialogs.OpenFile({
-        Title: 'Select Addon ZIP File',
-        Message: 'Choose a ZIP file containing the addon to install',
-        ButtonText: 'Install',
-        CanChooseFiles: true,
-        CanChooseDirectories: false,
-        AllowsMultipleSelection: false,
-        Filters: [
-          {
-            DisplayName: 'ZIP Files',
-            Pattern: '*.zip',
-          },
-        ],
-      })
-
-      if (selectedFile) {
-        const name = await LocalAddonService.InstallZipAddon(selectedFile)
-        toast({
-          title: 'Addon Installed',
-          description: `${name} installed successfully!`,
-        })
-        await updateInstalledAddons()
-      }
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        if (error.message.includes('shellItem is nil')) {
-          return
-        }
-        toast({
-          title: 'Error',
-          description: error.message,
-          icon: AlertTriangleIcon,
-        })
-        return
-      } else {
-        toast({
-          title: 'Error',
-          description: 'An unknown error occurred: ' + error,
-          icon: AlertTriangleIcon,
-        })
-        console.error('Error selecting ZIP file:', error)
-      }
-    }
-  }
+  const { installZip } = useInstallZipAddon()
 
   return {
     isLoading,
@@ -102,6 +54,6 @@ export function useDashboardController() {
     versionSelectAddon,
     debouncedSetSearch,
     performBulkUpdateCheck,
-    handleInstallZip,
+    handleInstallZip: installZip,
   }
 }

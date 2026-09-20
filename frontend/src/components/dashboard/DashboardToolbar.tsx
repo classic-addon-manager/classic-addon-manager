@@ -1,4 +1,3 @@
-import { Dialogs } from '@wailsio/runtime'
 import { useSetAtom } from 'jotai'
 import { AlertTriangleIcon, LoaderCircle, Package, RefreshCw, Search, Upload } from 'lucide-react'
 import { useDebouncedCallback } from 'use-debounce'
@@ -7,65 +6,22 @@ import { searchQueryAtom } from '@/components/dashboard/atoms'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { toast } from '@/components/ui/toast'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useTitleBarSlot } from '@/hooks/useTitleBarSlot'
-import { LocalAddonService } from '@/lib/wails'
+import { useInstallZipAddon } from '@/lib/addon'
 import { useAddonStore } from '@/stores/addonStore'
 
 export const DashboardToolbar = () => {
   const setSearchQuery = useSetAtom(searchQueryAtom)
 
-  const {
-    installedAddons,
-    updatesAvailableCount,
-    isCheckingForUpdates,
-    performBulkUpdateCheck,
-    updateInstalledAddons,
-  } = useAddonStore()
+  const { installedAddons, updatesAvailableCount, isCheckingForUpdates, performBulkUpdateCheck } =
+    useAddonStore()
 
   const debouncedSetSearch = useDebouncedCallback((value: string) => {
     setSearchQuery(value)
   }, 300)
 
-  const handleInstallZip = async () => {
-    try {
-      const selectedFile = await Dialogs.OpenFile({
-        Title: 'Select Addon ZIP File',
-        Message: 'Choose a ZIP file containing the addon to install',
-        ButtonText: 'Install',
-        CanChooseFiles: true,
-        CanChooseDirectories: false,
-        AllowsMultipleSelection: false,
-        Filters: [{ DisplayName: 'ZIP Files', Pattern: '*.zip' }],
-      })
-
-      if (selectedFile) {
-        const name = await LocalAddonService.InstallZipAddon(selectedFile)
-        toast({
-          title: 'Addon Installed',
-          description: `${name} installed successfully!`,
-        })
-        await updateInstalledAddons()
-      }
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        if (error.message.includes('shellItem is nil')) return
-        toast({
-          title: 'Error',
-          description: error.message,
-          icon: AlertTriangleIcon,
-        })
-      } else {
-        toast({
-          title: 'Error',
-          description: 'An unknown error occurred: ' + error,
-          icon: AlertTriangleIcon,
-        })
-        console.error('Error selecting ZIP file:', error)
-      }
-    }
-  }
+  const { installZip, isInstalling } = useInstallZipAddon()
 
   const addonCount = installedAddons.length
 
@@ -110,10 +66,15 @@ export const DashboardToolbar = () => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={handleInstallZip}
+                  onClick={installZip}
+                  disabled={isInstalling}
                   className="flex items-center gap-1.5 transition-all duration-200 hover:shadow-md h-8"
                 >
-                  <Upload className="size-3.5" />
+                  {isInstalling ? (
+                    <LoaderCircle className="size-3.5 animate-spin" />
+                  ) : (
+                    <Upload className="size-3.5" />
+                  )}
                   Install ZIP
                 </Button>
               </TooltipTrigger>

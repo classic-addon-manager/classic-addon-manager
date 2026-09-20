@@ -1,6 +1,5 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangleIcon } from 'lucide-react'
-import { useState } from 'react'
 
 import { toast } from '@/components/ui/toast.tsx'
 import { notifyDependencyResult } from '@/lib/notifyDependencyResult'
@@ -9,6 +8,8 @@ import { safeCall } from '@/lib/utils.ts'
 import type { AddonManifest } from '@/lib/wails'
 import { LocalAddonService, RemoteAddonService } from '@/lib/wails'
 import { useAddonStore } from '@/stores/addonStore.ts'
+
+export const addonActionMutationKey = (name: string) => ['addon-action', name] as const
 
 interface UseAddonActionsProps {
   manifest: AddonManifest
@@ -28,7 +29,7 @@ export const useAddonActions = ({
   onAddonUninstalled,
 }: UseAddonActionsProps) => {
   const queryClient = useQueryClient()
-  const [isProcessing, setIsProcessing] = useState<boolean>(false)
+  const mutationKey = addonActionMutationKey(manifest.name)
   const installedQueryKey = ['addon-installed', manifest.name] as const
 
   const installedQuery = useQuery({
@@ -116,8 +117,78 @@ export const useAddonActions = ({
       ? 'Error loading change log'
       : release?.body || 'No change log was provided'
 
-  const handleInstall = async () => {
-    if (isProcessing) return
+  const installMutation = useMutation({
+    mutationKey,
+    mutationFn: async () => {
+      const [installResult, installErr] = await safeCall(
+        RemoteAddonService.InstallAddonWithDependencies(manifest, 'latest')
+      )
+      if (installErr || !installResult) {
+        throw installErr ?? new Error('Install failed')
+      }
+      return installResult
+    },
+    onSuccess: async installResult => {
+      if (!notifyDependencyResult(installResult, `Failed to install ${manifest.alias}`)) {
+        await useAddonStore.getState().refreshAfterAddonChange()
+        return
+      }
+      await useAddonStore.getState().refreshAfterAddonChange()
+      toast({
+        title: 'Addon installed',
+        description: `${manifest.alias} was installed successfully.`,
+      })
+      await queryClient.invalidateQueries({ queryKey: installedQueryKey })
+      onAddonInstalled?.()
+      onOpenChange(false)
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : String(err)
+
+      if (message.includes('no release found')) {
+        toast({
+          title: 'Error',
+          description: `No release found for ${manifest.name}`,
+          icon: AlertTriangleIcon,
+        })
+      } else {
+        toast({
+          title: 'Error',
+          description: `Failed to install ${manifest.alias}: ${message}`,
+          icon: AlertTriangleIcon,
+        })
+      }
+
+      console.error('Install error:', err)
+    },
+  })
+
+  const uninstallMutation = useMutation({
+    mutationKey,
+    mutationFn: async () => {
+      const [result, err] = await safeCall(LocalAddonService.UninstallAddon(manifest.name))
+      if (err || !result) throw err ?? new Error('Uninstall failed')
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: installedQueryKey })
+      onAddonUninstalled?.()
+      toast({
+        title: 'Uninstalled',
+        description: `${manifest.alias} uninstalled successfully`,
+      })
+      onOpenChange(false)
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: `Failed to uninstall ${manifest.alias}`,
+        icon: AlertTriangleIcon,
+      })
+    },
+  })
+
+  const handleInstall = () => {
+    if (installMutation.isPending || uninstallMutation.isPending) return
 
     if (isInstalled) {
       toast({
@@ -136,78 +207,14 @@ export const useAddonActions = ({
       return
     }
 
-    setIsProcessing(true)
-    let didInstall = false
-
-    try {
-      const [installResult, installErr] = await safeCall(
-        RemoteAddonService.InstallAddonWithDependencies(manifest, 'latest')
-      )
-      if (installErr || !installResult) {
-        throw installErr ?? new Error('Install failed')
-      }
-
-      if (!notifyDependencyResult(installResult, `Failed to install ${manifest.alias}`)) {
-        await useAddonStore.getState().refreshAfterAddonChange()
-        return
-      }
-
-      didInstall = true
-      await useAddonStore.getState().refreshAfterAddonChange()
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err)
-
-      if (message.includes('no release found')) {
-        toast({
-          title: 'Error',
-          description: `No release found for ${manifest.name}`,
-          icon: AlertTriangleIcon,
-        })
-      } else {
-        toast({
-          title: 'Error',
-          description: `Failed to install ${manifest.alias}: ${message}`,
-          icon: AlertTriangleIcon,
-        })
-      }
-
-      console.error('Install error:', err)
-    } finally {
-      setIsProcessing(false)
-    }
-
-    if (didInstall) {
-      toast({
-        title: 'Addon installed',
-        description: `${manifest.alias} was installed successfully.`,
-      })
-      await queryClient.invalidateQueries({ queryKey: installedQueryKey })
-      onAddonInstalled?.()
-      onOpenChange(false)
-    }
+    installMutation.mutate()
   }
 
-  const handleUninstall = async () => {
-    if (isProcessing) return
-    setIsProcessing(true)
-    const [result, err] = await safeCall(LocalAddonService.UninstallAddon(manifest.name))
-    setIsProcessing(false)
-    if (err || !result) {
-      toast({
-        title: 'Error',
-        description: `Failed to uninstall ${manifest.alias}`,
-        icon: AlertTriangleIcon,
-      })
-      return
-    }
-    await queryClient.invalidateQueries({ queryKey: installedQueryKey })
-    onAddonUninstalled?.()
-    toast({
-      title: 'Uninstalled',
-      description: `${manifest.alias} uninstalled successfully`,
-    })
-    onOpenChange(false)
+  const handleUninstall = () => {
+    if (installMutation.isPending || uninstallMutation.isPending) return
+    uninstallMutation.mutate()
   }
+
 
   const handleDependencyClick = (depManifest: AddonManifest) => {
     console.log('Clicked dependency:', depManifest.alias)
@@ -220,7 +227,6 @@ export const useAddonActions = ({
     changelog,
     dependencies: dependenciesQuery.data ?? [],
     isInstalled,
-    isProcessing,
     isLoadingRelease: open && releaseQuery.isPending,
     isLoadingReadme: readmeQuery.isLoading,
     handleInstall,
