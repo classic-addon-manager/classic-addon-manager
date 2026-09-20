@@ -15,6 +15,7 @@ interface ActionBarProps {
   manifest: AddonManifest
   release: Release | null
   rating: number
+  isRatingDisabled: boolean
   isInstalled: boolean
   isProcessing: boolean
   isLoadingRelease: boolean
@@ -26,9 +27,11 @@ interface ActionBarProps {
 const RatingButtons = ({
   rating,
   onRate,
+  disabled,
 }: {
   rating: number
   onRate: (rating: number) => void
+  disabled: boolean
 }) => {
   const { isAuthenticated } = useUserStore()
 
@@ -64,6 +67,7 @@ const RatingButtons = ({
               )}
               onClick={() => onRate(1)}
               aria-label="Like addon"
+              disabled={disabled}
             >
               <ThumbsUpIcon
                 className={cn('h-5 w-5', rating === 1 ? 'text-primary' : 'text-muted-foreground')}
@@ -87,6 +91,7 @@ const RatingButtons = ({
               )}
               onClick={() => onRate(-1)}
               aria-label="Dislike addon"
+              disabled={disabled}
             >
               <ThumbsDownIcon
                 className={cn(
@@ -144,6 +149,7 @@ export const ActionBar = ({
   manifest,
   release,
   rating,
+  isRatingDisabled,
   isInstalled,
   isProcessing,
   isLoadingRelease,
@@ -153,7 +159,7 @@ export const ActionBar = ({
 }: ActionBarProps) => (
   <div className="sticky bottom-0 z-20 flex items-center justify-between gap-4 border-t bg-background/80 p-4 backdrop-blur-md">
     <div className="flex items-center gap-1">
-      <RatingButtons rating={rating} onRate={onRate} />
+      <RatingButtons rating={rating} onRate={onRate} disabled={isRatingDisabled} />
     </div>
 
     <Button

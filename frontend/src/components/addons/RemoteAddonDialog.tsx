@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 
 import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { useAddonRating } from '@/lib/addon'
 import type { AddonManifest } from '@/lib/wails'
 
 import { ActionBar } from './RemoteAddonDialog/ActionBar.tsx'
@@ -33,10 +34,15 @@ export const RemoteAddonDialog = ({
 }: RemoteAddonDialogProps) => {
   const scrollRef = useRef<HTMLDivElement>(null)
   const {
+    rating,
+    isLoading: isLoadingRating,
+    isSaving,
+    rateAddon,
+  } = useAddonRating(manifest.name, manifest.alias, open)
+  const {
     release,
     readme,
     changelog,
-    rating,
     dependencies,
     isInstalled,
     isProcessing,
@@ -47,10 +53,8 @@ export const RemoteAddonDialog = ({
     handleUninstall,
     getRelease,
     getReadme,
-    getMyRating,
     getDependencies,
     handleDependencyClick,
-    rateAddon,
   } = useAddonActions({
     manifest,
     onViewDependency,
@@ -71,9 +75,6 @@ export const RemoteAddonDialog = ({
       return
     }
 
-    getMyRating().catch(e => {
-      console.error('Failed to fetch rating: ', e)
-    })
     getReadme().catch(e => {
       console.error('Failed to fetch readme: ', e)
     })
@@ -83,7 +84,7 @@ export const RemoteAddonDialog = ({
     getDependencies().catch(e => {
       console.error('Failed to fetch dependencies: ', e)
     })
-  }, [open, getMyRating, getReadme, getRelease, getDependencies])
+  }, [open, getReadme, getRelease, getDependencies])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -123,6 +124,7 @@ export const RemoteAddonDialog = ({
               manifest={manifest}
               release={release}
               rating={rating}
+              isRatingDisabled={isLoadingRating || isSaving}
               isInstalled={isInstalled}
               isProcessing={isProcessing}
               isLoadingRelease={isLoadingRelease}

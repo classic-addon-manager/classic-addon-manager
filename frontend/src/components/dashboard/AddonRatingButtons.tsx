@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { getMyRating, rateAddon } from '@/lib/addon'
+import { useAddonRating } from '@/lib/addon'
 import { useUserStore } from '@/stores/userStore'
 
 const HAPPY_EMOJIS = ['🎉', '✨', '🥳', '😊', '💖']
@@ -69,23 +69,18 @@ const AddonRatingButtonsContent = ({
 }: AddonRatingButtonsProps) => {
   const { isAuthenticated } = useUserStore()
   const authenticated = isAuthenticated()
-  const [rating, setRating] = useState(0)
+  const { rating, isLoading, isSaving, rateAddon } = useAddonRating(
+    addonName,
+    addonAlias,
+    isManaged
+  )
   const [burst, setBurst] = useState<RatingBurst | null>(null)
   const nextBurstKey = useRef(0)
-
-  useEffect(() => {
-    let active = true
-    getMyRating(addonName, authenticated, value => {
-      if (active) setRating(value)
-    }).catch(e => console.error('Failed to fetch rating: ', e))
-    return () => {
-      active = false
-    }
-  }, [addonName, authenticated])
 
   if (!isManaged) return null
 
   const handleRateAddon = async (newRating: number) => {
+    if (!(await rateAddon(newRating))) return
     const key = ++nextBurstKey.current
     const type = newRating === 1 ? 'happy' : 'sad'
     const emojis = type === 'happy' ? HAPPY_EMOJIS : SAD_EMOJIS
@@ -101,7 +96,6 @@ const AddonRatingButtonsContent = ({
       }
     })
     setBurst({ key, type, particles })
-    await rateAddon(addonName, addonAlias, newRating, rating, setRating)
   }
 
   if (!authenticated) {
@@ -137,6 +131,7 @@ const AddonRatingButtonsContent = ({
           )}
           onClick={() => handleRateAddon(1)}
           aria-label="Like addon"
+          disabled={isLoading || isSaving}
         >
           <ThumbsUpIcon
             className={clsx('w-4 h-4', {
@@ -163,6 +158,7 @@ const AddonRatingButtonsContent = ({
           )}
           onClick={() => handleRateAddon(-1)}
           aria-label="Dislike addon"
+          disabled={isLoading || isSaving}
         >
           <ThumbsDownIcon
             className={clsx('w-4 h-4', {

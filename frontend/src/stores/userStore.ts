@@ -3,6 +3,7 @@ import { create } from 'zustand'
 
 import { toast } from '@/components/ui/toast'
 import { apiClient } from '@/lib/api'
+import { queryClient } from '@/lib/queryClient'
 import type { AddonManifest } from '@/lib/wails'
 import { ApplicationService, LocalAddonService, RemoteAddonService } from '@/lib/wails'
 import { useAddonStore } from '@/stores/addonStore'
@@ -195,3 +196,9 @@ export const useUserStore = create<UserState>((set, get) => ({
     set({ token: '', user: { ...emptyUser } })
   },
 }))
+
+useUserStore.subscribe((state, previous) => {
+  if (state.user.discord_id !== previous.user.discord_id) {
+    queryClient.clear()
+  }
+})

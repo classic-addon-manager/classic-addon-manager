@@ -2,13 +2,11 @@ import { AlertTriangleIcon } from 'lucide-react'
 import { useCallback, useState } from 'react'
 
 import { toast } from '@/components/ui/toast.tsx'
-import { getMyRating, rateAddon } from '@/lib/addon.ts'
 import { notifyDependencyResult } from '@/lib/notifyDependencyResult'
 import { safeCall } from '@/lib/utils.ts'
 import type { AddonManifest, DependencyInfo, Release } from '@/lib/wails'
 import { LocalAddonService, RemoteAddonService } from '@/lib/wails'
 import { useAddonStore } from '@/stores/addonStore.ts'
-import { useUserStore } from '@/stores/userStore.ts'
 
 interface UseAddonActionsProps {
   manifest: AddonManifest
@@ -28,9 +26,7 @@ export const useAddonActions = ({
   const [release, setRelease] = useState<Release | null>(null)
   const [readme, setReadme] = useState<string>('')
   const [changelog, setChangelog] = useState<string>('')
-  const [rating, setRating] = useState(0)
   const [dependencies, setDependencies] = useState<DependencyInfo[]>([])
-  const { isAuthenticated } = useUserStore()
   const [isInstalled, setIsInstalled] = useState<boolean>(false)
   const [isProcessing, setIsProcessing] = useState<boolean>(false)
   const [isLoadingRelease, setIsLoadingRelease] = useState<boolean>(true)
@@ -186,10 +182,6 @@ export const useAddonActions = ({
     }
   }, [manifest.repo, manifest.branch, manifest.description])
 
-  const handleGetMyRating = useCallback(async () => {
-    await getMyRating(manifest.name, isAuthenticated(), setRating)
-  }, [manifest.name, isAuthenticated])
-
   const getDependencies = useCallback(async () => {
     if (!manifest.dependencies || manifest.dependencies.length === 0) {
       setDependencies([])
@@ -238,15 +230,10 @@ export const useAddonActions = ({
     onViewDependency(depManifest)
   }
 
-  const handleRateAddon = async (newRating: number) => {
-    await rateAddon(manifest.name, manifest.alias, newRating, rating, setRating)
-  }
-
   return {
     release,
     readme,
     changelog,
-    rating,
     dependencies,
     isInstalled,
     isProcessing,
@@ -257,9 +244,7 @@ export const useAddonActions = ({
     handleUninstall,
     getRelease,
     getReadme,
-    getMyRating: handleGetMyRating,
     getDependencies,
     handleDependencyClick,
-    rateAddon: handleRateAddon,
   }
 }
