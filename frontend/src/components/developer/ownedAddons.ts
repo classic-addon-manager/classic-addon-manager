@@ -8,7 +8,8 @@ import {
 } from '@/components/developer/ownedParse'
 import { getAddonSources } from '@/components/developer/sources.ts'
 import type { AddonSources, SourceAddon, SourceSubmission } from '@/components/developer/types.ts'
-import { type AddonManifest, RemoteAddonService } from '@/lib/wails'
+import { fetchAddonCatalog } from '@/lib/catalog'
+import type { AddonManifest } from '@/lib/wails'
 
 export type GetOwnedAddonsResult =
   | { status: 'ok'; addons: OwnedAddon[]; submissions: OwnedSubmission[] }
@@ -19,7 +20,7 @@ export async function getOwnedAddons(): Promise<GetOwnedAddonsResult> {
   const [result, manifests] = await Promise.all([
     getAddonSources(),
     // Catalog enrichment is best-effort: ownership still loads when it is unavailable.
-    RemoteAddonService.GetAddonManifest().catch(() => []),
+    fetchAddonCatalog().catch(() => []),
   ])
   if (result.status !== 'ok') return result
   return { status: 'ok', ...sourcesToOwned(result.sources, manifests) }

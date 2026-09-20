@@ -1,5 +1,5 @@
 import { Check, ChevronsUpDown, X } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -11,11 +11,8 @@ import {
   CommandList,
 } from '@/components/ui/command'
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { useAddonCatalog } from '@/lib/catalog'
 import { cn } from '@/lib/utils'
-import type { AddonManifest } from '@/lib/wails'
-import { RemoteAddonService } from '@/lib/wails'
-
-type CatalogStatus = 'loading' | 'error' | 'success'
 
 interface DependenciesComboboxProps {
   selected: string[]
@@ -31,21 +28,7 @@ export const DependenciesCombobox = ({
   disabled = false,
 }: DependenciesComboboxProps) => {
   const [open, setOpen] = useState(false)
-  const [manifests, setManifests] = useState<AddonManifest[]>([])
-  const [status, setStatus] = useState<CatalogStatus>('loading')
-
-  const loadCatalog = useCallback(() => {
-    return RemoteAddonService.GetAddonManifest()
-      .then(result => {
-        setManifests(result ?? [])
-        setStatus('success')
-      })
-      .catch(() => setStatus('error'))
-  }, [])
-
-  useEffect(() => {
-    void loadCatalog()
-  }, [loadCatalog])
+  const { data: manifests = [], isPending, isError, refetch } = useAddonCatalog()
 
   if (disabled && open) {
     setOpen(false)
@@ -63,11 +46,11 @@ export const DependenciesCombobox = ({
   }
 
   const statusRow =
-    status === 'loading' ? (
+    isPending ? (
       <div className="flex h-9 items-center px-3 text-sm text-muted-foreground">
         Loading addons…
       </div>
-    ) : status === 'error' ? (
+    ) : isError ? (
       <div className="flex h-9 items-center justify-between gap-2 px-3">
         <span className="text-sm text-muted-foreground">Couldn't load addons.</span>
         <Button
@@ -75,10 +58,7 @@ export const DependenciesCombobox = ({
           variant="outline"
           size="sm"
           disabled={disabled}
-          onClick={() => {
-            setStatus('loading')
-            void loadCatalog()
-          }}
+          onClick={() => void refetch()}
         >
           Retry
         </Button>

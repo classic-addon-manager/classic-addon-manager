@@ -24,9 +24,9 @@ import {
 } from '@/components/ui/select'
 import { toast } from '@/components/ui/toast.tsx'
 import { notifyDependencyResult } from '@/lib/notifyDependencyResult'
+import { repoGetManifest } from '@/lib/repo'
 import { cn } from '@/lib/utils'
 import type { Addon, Release } from '@/lib/wails'
-import { RemoteAddonService } from '@/lib/wails'
 import { useAddonStore } from '@/stores/addonStore'
 
 interface ApiResponse {
@@ -248,9 +248,7 @@ export const LocalAddonVersionSelectDialog = ({ addon }: Props) => {
     setIsLoading(true)
     setError(null)
     try {
-      const manifest = (await RemoteAddonService.GetAddonManifest()).find(
-        m => m.name === addon.name
-      )
+      const manifest = await repoGetManifest(addon.name)
       if (!manifest) {
         throw new Error('Failed to fetch addon manifest')
       }

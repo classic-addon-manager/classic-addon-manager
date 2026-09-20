@@ -46,7 +46,7 @@ export const AddonsToolbar = () => {
     setIsRefreshing(true)
 
     const startTime = Date.now()
-    const [, err] = await safeCall(loadAddons())
+    const [, err] = await safeCall(loadAddons(true))
     if (err) {
       console.error('Failed to refresh addons', err)
       toast({

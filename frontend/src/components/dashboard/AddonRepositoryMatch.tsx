@@ -1,9 +1,10 @@
+import { useQuery } from '@tanstack/react-query'
 import { useAtom } from 'jotai'
 import { AlertTriangleIcon, ArrowUpCircle, CheckIcon, CloudOffIcon } from 'lucide-react'
-import usePromise from 'react-promise-suspense'
 
 import { Button } from '@/components/ui/button'
 import { toast } from '@/components/ui/toast'
+import { addonCatalogQuery } from '@/lib/catalog'
 import { notifyDependencyResult } from '@/lib/notifyDependencyResult'
 import { repoGetManifest } from '@/lib/repo'
 import { safeCall } from '@/lib/utils.ts'
@@ -12,17 +13,11 @@ import { useAddonStore } from '@/stores/addonStore'
 
 import { isAddonDialogOpenAtom, selectedAddonAtom } from './atoms'
 
-const fetchData = async (name: string) => {
-  const [manifest, err] = await safeCall(repoGetManifest(name))
-  if (err) {
-    return null
-  }
-
-  return manifest
-}
-
 export const AddonRepositoryMatch = ({ name }: { name: string }) => {
-  const data = usePromise(fetchData, [name])
+  const { data } = useQuery({
+    ...addonCatalogQuery,
+    select: manifests => manifests.find(m => m.name === name) ?? null,
+  })
   const { installWithDependencies } = useAddonStore()
   const [, setDialogOpen] = useAtom(isAddonDialogOpenAtom)
   const [, setSelectedAddon] = useAtom(selectedAddonAtom)

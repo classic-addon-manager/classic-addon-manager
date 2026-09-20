@@ -1,8 +1,10 @@
 import { atom } from 'jotai'
 
+import { addonCatalogQuery, fetchAddonCatalog } from '@/lib/catalog'
+import { queryClient } from '@/lib/queryClient'
 import { daysAgo } from '@/lib/utils'
 import type { AddonManifest } from '@/lib/wails'
-import { LocalAddonService, RemoteAddonService } from '@/lib/wails'
+import { LocalAddonService } from '@/lib/wails'
 
 import type { AddonListItem } from './types'
 
@@ -19,8 +21,11 @@ export const isManifestDialogOpenAtom = atom(false)
 export const addonsAtom = atom<AddonListItem[]>([])
 export const tagsAtom = atom(['All'])
 
-export const loadAddonsAtom = atom(null, async (get, set) => {
-  const manifests = await RemoteAddonService.GetAddonManifest()
+export const loadAddonsAtom = atom(null, async (get, set, force?: boolean) => {
+  if (force) {
+    await queryClient.invalidateQueries({ queryKey: addonCatalogQuery.queryKey })
+  }
+  const manifests = await fetchAddonCatalog()
 
   const installedAddonNames = await LocalAddonService.GetAllInstalledAddonNames()
   const installedAddonSet = new Set(installedAddonNames)

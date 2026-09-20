@@ -1,7 +1,7 @@
 import { atom } from 'jotai'
 
+import { fetchAddonCatalog } from '@/lib/catalog'
 import { addonIconUrl } from '@/lib/icon'
-import { RemoteAddonService } from '@/lib/wails'
 
 /**
  * Icon URL per addon name, from the catalog manifests. Loaded once by the
@@ -13,7 +13,7 @@ export const catalogIconMapAtom = atom<Map<string, string>>(new Map())
 
 export const loadCatalogIconMapAtom = atom(null, async (_get, set) => {
   try {
-    const manifests = await RemoteAddonService.GetAddonManifest()
+    const manifests = await fetchAddonCatalog()
     const iconByName = new Map<string, string>()
     for (const manifest of manifests) {
       const iconUrl = addonIconUrl(manifest)
