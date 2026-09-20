@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { getOwnedAddons, type GetOwnedAddonsResult } from '@/components/developer/ownedAddons'
 import type { OwnedAddon, OwnedSubmission } from '@/components/developer/ownedParse'
 import { toast } from '@/components/ui/toast'
+import { queryClient } from '@/lib/queryClient'
 
 export type OwnedAddonsData = {
   addons: OwnedAddon[]
@@ -69,8 +70,14 @@ export function useOwnedAddons(
     }
   }, [enabled, sessionKey, load])
 
-  const retry = () => {
+  const retry = async () => {
     setError(null)
+    // Refresh covers the open detail panes too, not just the list.
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['dev-addon-stats'] }),
+      queryClient.invalidateQueries({ queryKey: ['dev-addon-submission'] }),
+      queryClient.invalidateQueries({ queryKey: ['dev-addon-values'] }),
+    ])
     return load('user')
   }
 

@@ -93,8 +93,7 @@ type ChartPoint = Pick<SnapshotPoint, 'takenOn' | 'dailyDownloads' | 'dailySubsc
 
 export function AddonStatistics({ addon }: { addon: OwnedAddon }) {
   const [period, setPeriod] = useState<7 | 30>(7)
-  const [reloadKey, setReloadKey] = useState(0)
-  const loaded = useDevAddonStats(addon.uuid, reloadKey)
+  const loaded = useDevAddonStats(addon.uuid)
 
   if (loaded.loading) {
     return (
@@ -111,7 +110,7 @@ export function AddonStatistics({ addon }: { addon: OwnedAddon }) {
         <p className="text-center text-sm text-destructive">
           {loaded.error ?? 'These statistics could not be loaded.'}
         </p>
-        <Button variant="outline" onClick={() => setReloadKey(key => key + 1)}>
+        <Button variant="outline" onClick={() => void loaded.refetch()}>
           Retry
         </Button>
       </div>

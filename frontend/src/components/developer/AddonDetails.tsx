@@ -49,7 +49,6 @@ export function AddonDetails({
     : addon
   const [tab, setTab] = useState('overview')
   const [mode, setMode] = useState<'view' | 'edit'>('view')
-  const [reloadKey, setReloadKey] = useState(0)
   // The addon's current status is its latest submission, never a previewed one.
   const review = latestReview(display.reviewHistory)
   const pendingId =
@@ -59,8 +58,7 @@ export function AddonDetails({
   const pending = useDevAddonValues(
     mode !== 'edit' || pendingId === null
       ? null
-      : { type: 'submission', id: pendingId, kind: 'update', name: addon.name },
-    reloadKey
+      : { type: 'submission', id: pendingId, kind: 'update', name: addon.name }
   )
   const pendingForm = pending.values ? valuesToForm(pending.values) : null
   const submissionCount = display.reviewHistory.length
@@ -149,7 +147,7 @@ export function AddonDetails({
               <p className="text-center text-sm text-destructive">
                 {pending.error ?? 'This submission could not be loaded.'}
               </p>
-              <Button variant="outline" onClick={() => setReloadKey(key => key + 1)}>
+              <Button variant="outline" onClick={() => void pending.refetch()}>
                 Retry
               </Button>
             </div>

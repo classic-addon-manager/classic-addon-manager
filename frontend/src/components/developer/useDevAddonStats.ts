@@ -1,45 +1,30 @@
-import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 
 import { getAddonStats } from '@/components/developer/stats.ts'
-import type { AddonDeveloperStats } from '@/components/developer/types.ts'
+import { useUserStore } from '@/stores/userStore'
 
 /**
  * Loads owner-scoped statistics for one addon (`GET /dev/addon/{uuid}/stats`).
- * `reloadKey` re-reads the same addon after a failed load.
+ * `refetch` re-reads the same addon after a failed load.
  */
-export function useDevAddonStats(uuid: string, reloadKey = 0) {
-  const [currentUuid, setCurrentUuid] = useState(uuid)
-  const [currentReloadKey, setCurrentReloadKey] = useState(reloadKey)
-  const [result, setResult] = useState<{
-    stats: AddonDeveloperStats | null
-    error: string | null
-  } | null>(null)
-
-  if (currentUuid !== uuid || currentReloadKey !== reloadKey) {
-    setCurrentUuid(uuid)
-    setCurrentReloadKey(reloadKey)
-    setResult(null)
-  }
-
-  useEffect(() => {
-    let cancelled = false
-    void (async () => {
+export function useDevAddonStats(uuid: string) {
+  const discordId = useUserStore(state => state.user.discord_id)
+  const query = useQuery({
+    queryKey: ['dev-addon-stats', discordId, uuid],
+    // Snapshots are taken hourly, 15 minutes avoids refetching on every mount.
+    staleTime: 15 * 60 * 1000,
+    queryFn: async () => {
       const loaded = await getAddonStats(uuid)
-      if (cancelled) return
-      setResult(
-        loaded.status === 'ok'
-          ? { stats: loaded.stats, error: null }
-          : { stats: null, error: loaded.message }
-      )
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [uuid, reloadKey])
+      return loaded.status === 'ok'
+        ? { stats: loaded.stats, error: null }
+        : { stats: null, error: loaded.message }
+    },
+  })
 
   return {
-    stats: result?.stats ?? null,
-    error: result?.error ?? null,
-    loading: result === null,
+    stats: query.data?.stats ?? null,
+    error: query.data?.error ?? null,
+    loading: query.isPending,
+    refetch: query.refetch,
   }
 }

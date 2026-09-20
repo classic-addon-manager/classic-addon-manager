@@ -1,47 +1,30 @@
-import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 
 import { getSubmissionDetail } from '@/components/developer/submission.ts'
-import type { SubmissionDetail } from '@/components/developer/types.ts'
+import { useUserStore } from '@/stores/userStore'
 
 /**
  * Loads the review metadata for one submission (`GET /dev/addon/submissions/{id}`).
  * Editor values stay owned by useDevAddonValues; this hook only reports the
- * submission's status, kind, timestamps, and comment history. `reloadKey`
+ * submission's status, kind, timestamps, and comment history. `refetch`
  * re-reads the same submission, which is how a view reflects a save it just made.
  */
-export function useDevAddonSubmission(id: number, reloadKey = 0) {
-  const [currentId, setCurrentId] = useState(id)
-  const [currentReloadKey, setCurrentReloadKey] = useState(reloadKey)
-  const [result, setResult] = useState<{
-    submission: SubmissionDetail | null
-    error: string | null
-  } | null>(null)
-
-  if (currentId !== id || currentReloadKey !== reloadKey) {
-    setCurrentId(id)
-    setCurrentReloadKey(reloadKey)
-    setResult(null)
-  }
-
-  useEffect(() => {
-    let cancelled = false
-    void (async () => {
+export function useDevAddonSubmission(id: number) {
+  const discordId = useUserStore(state => state.user.discord_id)
+  const query = useQuery({
+    queryKey: ['dev-addon-submission', discordId, id],
+    queryFn: async () => {
       const result = await getSubmissionDetail(id)
-      if (cancelled) return
-      setResult(
-        result.status === 'ok'
-          ? { submission: result.submission, error: null }
-          : { submission: null, error: result.message }
-      )
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [id, reloadKey])
+      return result.status === 'ok'
+        ? { submission: result.submission, error: null }
+        : { submission: null, error: result.message }
+    },
+  })
 
   return {
-    submission: result?.submission ?? null,
-    error: result?.error ?? null,
-    loading: result === null,
+    submission: query.data?.submission ?? null,
+    error: query.data?.error ?? null,
+    loading: query.isPending,
+    refetch: query.refetch,
   }
 }

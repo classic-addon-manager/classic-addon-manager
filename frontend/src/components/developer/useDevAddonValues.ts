@@ -1,12 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 
 import { requireAddonSchema } from '@/components/developer/schema.ts'
-import type {
-  DeclarationKind,
-  DeclarationValues,
-  EditorSource,
-} from '@/components/developer/types.ts'
+import type { EditorSource } from '@/components/developer/types.ts'
 import { getAddonValues } from '@/components/developer/values.ts'
+import { useUserStore } from '@/stores/userStore'
 
 /** Cache key for a source; an absent source (null) is its own key and never fetches. */
 function sourceCacheKey(source: EditorSource | null): string {
@@ -17,50 +14,28 @@ function sourceCacheKey(source: EditorSource | null): string {
 }
 
 /**
- * Loads the editor values for one source. `reloadKey` re-reads the same source,
+ * Loads the editor values for one source. `refetch` re-reads the same source,
  * which is how a view reflects a save it just made. A null source (a submission
  * the view may not have) loads nothing and reports no values.
  */
-export function useDevAddonValues(source: EditorSource | null, reloadKey = 0) {
-  const [currentSource, setCurrentSource] = useState(source)
-  const [currentReloadKey, setCurrentReloadKey] = useState(reloadKey)
-  const [result, setResult] = useState<{
-    values: DeclarationValues | null
-    kind: DeclarationKind | null
-    error: string | null
-  } | null>(null)
-
-  if (sourceCacheKey(currentSource) !== sourceCacheKey(source) || currentReloadKey !== reloadKey) {
-    setCurrentSource(source)
-    setCurrentReloadKey(reloadKey)
-    setResult(null)
-  }
-
-  useEffect(() => {
-    if (currentSource === null) return
-    let cancelled = false
-    void (async () => {
+export function useDevAddonValues(source: EditorSource | null) {
+  const discordId = useUserStore(state => state.user.discord_id)
+  const query = useQuery({
+    queryKey: ['dev-addon-values', discordId, sourceCacheKey(source)],
+    enabled: source !== null,
+    queryFn: async () => {
+      if (source === null) {
+        return { values: null, kind: null, error: null }
+      }
       const schema = await requireAddonSchema()
-      if (cancelled) return
       if (!schema) {
-        setResult({
-          values: null,
-          kind: null,
-          error: 'This source is unavailable.',
-        })
-        return
+        return { values: null, kind: null, error: 'This source is unavailable.' }
       }
-      const loaded = await getAddonValues(currentSource, schema)
-      if (cancelled) return
+      const loaded = await getAddonValues(source, schema)
       if (loaded.status === 'ok') {
-        setResult({
-          kind: loaded.kind,
-          values: loaded.values,
-          error: null,
-        })
-        return
+        return { kind: loaded.kind, values: loaded.values, error: null }
       }
-      setResult({
+      return {
         values: null,
         kind: null,
         error:
@@ -69,20 +44,15 @@ export function useDevAddonValues(source: EditorSource | null, reloadKey = 0) {
           loaded.status === 'not_found'
             ? loaded.message
             : 'This source is unavailable.',
-      })
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [currentSource, currentReloadKey])
+      }
+    },
+  })
 
-  if (currentSource === null) {
-    return { values: null, kind: null, error: null, loading: false }
+  return {
+    values: query.data?.values ?? null,
+    kind: query.data?.kind ?? null,
+    error: query.data?.error ?? null,
+    loading: source !== null && query.isPending,
+    refetch: query.refetch,
   }
-
-  if (result === null) {
-    return { values: null, kind: null, error: null, loading: true }
-  }
-
-  return { values: result.values, kind: result.kind, error: result.error, loading: false }
 }

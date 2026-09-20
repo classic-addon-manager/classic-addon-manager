@@ -194,20 +194,15 @@ function SubmissionDetails({
   onRefresh: () => Promise<void>
   onDropSubmission: (id: number) => void
 }) {
-  // A save rewrites the row this view renders, so the reload key re-reads it.
-  const [reloadKey, setReloadKey] = useState(0)
-  const loaded = useDevAddonValues(
-    {
-      type: 'submission',
-      id: submission.id,
-      kind: 'new',
-      name: submission.title,
-    },
-    reloadKey
-  )
-  // Review metadata comes from the submission endpoint; the list payload only
+  const loaded = useDevAddonValues({
+    type: 'submission',
+    id: submission.id,
+    kind: 'new',
+    name: submission.title,
+  })
+  // Review metadata comes from the submission endpoint, the list payload only
   // seeds the sidebar and is not authoritative for status, kind, or comments.
-  const detail = useDevAddonSubmission(submission.id, reloadKey)
+  const detail = useDevAddonSubmission(submission.id)
   const submissionDetail = detail.submission
   const form = loaded.values
     ? valuesToForm(loaded.values)
@@ -461,7 +456,7 @@ function SubmissionDetails({
             submitLabel={rejected ? 'Resubmit for review' : 'Update submission'}
             onCancel={() => setEditing(false)}
             onSubmitted={() => {
-              setReloadKey(key => key + 1)
+              // A save rewrites the rows this view renders, refresh invalidates them.
               void onRefresh()
             }}
           />
