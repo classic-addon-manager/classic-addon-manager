@@ -7,7 +7,7 @@ import { AddonIcon } from '@/components/developer/AddonIcon'
 import { AddonStatistics } from '@/components/developer/AddonStatistics'
 import { latestReview } from '@/components/developer/catalogEditing'
 import { DetailField } from '@/components/developer/DetailField'
-import { valuesToForm } from '@/components/developer/formValues.ts'
+import { listOf, textOf, valuesToForm } from '@/components/developer/formValues.ts'
 import type { OwnedAddon } from '@/components/developer/ownedParse'
 import { ReviewStatus } from '@/components/developer/ReviewStatus'
 import { StatusChip } from '@/components/developer/StatusChip'
@@ -39,12 +39,13 @@ export function AddonDetails({
   const display: OwnedAddon = form
     ? {
         ...addon,
-        alias: form.alias || addon.alias,
-        repo: form.repo,
-        branch: form.branch || null,
-        author: form.author,
-        description: form.description,
-        tags: [...form.tags],
+        alias: textOf(form.values, 'alias') || addon.alias,
+        repo: textOf(form.values, 'repo'),
+        branch: textOf(form.values, 'branch') || null,
+        author: textOf(form.values, 'author'),
+        description: textOf(form.values, 'description'),
+        tags: [...listOf(form.values, 'tags')],
+        library: form.values.library === true,
       }
     : addon
   const [tab, setTab] = useState('overview')

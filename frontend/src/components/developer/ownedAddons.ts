@@ -28,7 +28,7 @@ export async function getOwnedAddons(): Promise<GetOwnedAddonsResult> {
 
 export function sourcesToOwned(
   sources: AddonSources,
-  manifests: Pick<AddonManifest, 'name' | 'repo' | 'branch' | 'icon'>[] = []
+  manifests: Pick<AddonManifest, 'name' | 'repo' | 'branch' | 'icon' | 'library'>[] = []
 ): {
   addons: OwnedAddon[]
   submissions: OwnedSubmission[]
@@ -61,7 +61,7 @@ export function sourcesToOwned(
 
 function toOwnedAddon(
   addon: SourceAddon,
-  manifest: Pick<AddonManifest, 'name' | 'repo' | 'branch' | 'icon'> | undefined,
+  manifest: Pick<AddonManifest, 'name' | 'repo' | 'branch' | 'icon' | 'library'> | undefined,
   submissions: SourceSubmission[]
 ): OwnedAddon {
   return {
@@ -77,6 +77,7 @@ function toOwnedAddon(
     downloads: addon.downloads,
     likePercentage: null,
     warning: null,
+    library: manifest?.library ?? false,
     addedAt: null,
     reviewHistory: toReviewHistory(submissions),
   }
@@ -139,6 +140,7 @@ function emptyPayload(name: string): OwnedSubmissionPayload {
     tags: [],
     keywords: [],
     dependencies: [],
+    library: false,
     kofi: '',
   }
 }

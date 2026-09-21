@@ -24,6 +24,7 @@ export type OwnedAddon = {
   downloads: number
   likePercentage: number | null
   warning: string | null
+  library: boolean
   addedAt: string | null
   reviewHistory: ReviewHistoryEntry[]
 }
@@ -38,6 +39,7 @@ export type OwnedSubmissionPayload = {
   tags: string[]
   keywords: string[]
   dependencies: string[]
+  library: boolean
   kofi: string
 }
 

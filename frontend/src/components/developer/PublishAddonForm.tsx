@@ -1,7 +1,10 @@
 import { ArrowLeft, Check, CheckIcon, CircleAlert, Code2, LoaderCircle } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
-import { AddonDeclarationFields } from '@/components/developer/AddonDeclarationFields'
+import {
+  AddonDeclarationFields,
+  type SetDeclarationValue,
+} from '@/components/developer/AddonDeclarationFields'
 import {
   INITIAL_PUBLISH_FORM,
   isPublishFormDirty,
@@ -12,7 +15,12 @@ import {
   scrollFirstFieldErrorIntoView,
 } from '@/components/developer/declarationFields'
 import { valuesToForm } from '@/components/developer/formValues.ts'
-import { requireAddonSchema } from '@/components/developer/schema.ts'
+import {
+  getAddonSchema,
+  requireAddonSchema,
+  schemaZeroValues,
+} from '@/components/developer/schema.ts'
+import type { AddonSchema } from '@/components/developer/types.ts'
 import { type FieldErrors, submitAddon, validateAddon } from '@/components/developer/validate'
 import { getAddonValues } from '@/components/developer/values.ts'
 import {
@@ -54,7 +62,28 @@ export const PublishAddonForm = ({
   const [publishError, setPublishError] = useState<string | null>(null)
   const busy = validating || publishing || resuming || !editable
 
-  const setField = <K extends keyof PublishFormState>(
+  const [schema, setSchema] = useState<AddonSchema | null>(null)
+  const [schemaError, setSchemaError] = useState<string | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    void getAddonSchema().then(result => {
+      if (cancelled) return
+      if (result.status !== 'ok') {
+        setSchemaError(result.message)
+        return
+      }
+      setSchema(result.schema)
+      setForm(prev => ({
+        ...prev,
+        values: { ...schemaZeroValues(result.schema), ...prev.values },
+      }))
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const setField = <K extends 'iconAssetId' | 'iconUrl'>(
     key: K,
     value: PublishFormState[K] | ((prev: PublishFormState[K]) => PublishFormState[K])
   ) => {
@@ -69,10 +98,26 @@ export const PublishAddonForm = ({
     setValidated(false)
     setValidationError(false)
     setFieldErrors(prev => {
-      const errorKey = key === 'iconAssetId' || key === 'iconUrl' ? 'icon' : key
-      if (!prev[errorKey]) return prev
+      if (!prev.icon) return prev
       const next = { ...prev }
-      delete next[errorKey]
+      delete next.icon
+      return next
+    })
+    setPublishError(null)
+  }
+
+  const setValue: SetDeclarationValue = (key, value) => {
+    setForm(prev => {
+      const nextValue = typeof value === 'function' ? value(prev.values[key]) : value
+      if (Object.is(nextValue, prev.values[key])) return prev
+      return { ...prev, values: { ...prev.values, [key]: nextValue } }
+    })
+    setValidated(false)
+    setValidationError(false)
+    setFieldErrors(prev => {
+      if (!prev[key]) return prev
+      const next = { ...prev }
+      delete next[key]
       return next
     })
     setPublishError(null)
@@ -285,13 +330,19 @@ export const PublishAddonForm = ({
 
       <main ref={mainRef} className="min-h-0 flex-1 overflow-auto">
         <div className="container mx-auto max-w-2xl space-y-8 px-4 py-8">
-          <AddonDeclarationFields
-            form={form}
-            setField={setField}
-            fieldErrors={fieldErrors}
-            busy={busy}
-            lockedFields={nameLocked ? ['name'] : []}
-          />
+          {schema ? (
+            <AddonDeclarationFields
+              schema={schema}
+              form={form}
+              setValue={setValue}
+              setField={setField}
+              fieldErrors={fieldErrors}
+              busy={busy}
+              lockedFields={nameLocked ? ['name'] : []}
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground">{schemaError ?? 'Loading…'}</p>
+          )}
         </div>
       </main>
 

@@ -149,7 +149,6 @@ function IconPickerForm({
     setStaged(file)
   }
 
-
   const handleSave = () => {
     if (!hasPendingChange || busy) return
     saveMutation.mutate(remove ? null : staged)

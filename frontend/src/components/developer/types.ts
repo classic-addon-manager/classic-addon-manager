@@ -1,5 +1,5 @@
-export type Widget = 'text' | 'textarea' | 'enum-multi' | 'string-list'
-export type WireValue = string | string[]
+export type Widget = 'text' | 'textarea' | 'enum-multi' | 'string-list' | 'checkbox'
+export type WireValue = string | string[] | boolean
 export type DeclarationValues = Record<string, WireValue>
 export type FieldErrors = Record<string, string[]>
 export type DeclarationKind = 'new' | 'update'
@@ -12,6 +12,7 @@ export type SchemaField = {
   required: boolean
   hint?: string
   immutable?: boolean
+  half?: boolean
   pattern?: string
   maxLength?: number
   lengthUnit?: 'runes' | 'bytes'
@@ -113,7 +114,7 @@ export type AddonDeveloperStats = {
   versions: AddonVersionStats
 }
 
-export const V1_FIELD_KEYS = [
+export const SCHEMA_FIELD_KEYS = [
   'name',
   'alias',
   'description',
@@ -123,9 +124,6 @@ export const V1_FIELD_KEYS = [
   'tags',
   'keywords',
   'dependencies',
+  'library',
   'kofi',
 ] as const
-
-export function v1SchemaKeys(): Set<string> {
-  return new Set(V1_FIELD_KEYS)
-}

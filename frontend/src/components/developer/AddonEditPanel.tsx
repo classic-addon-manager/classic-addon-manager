@@ -1,9 +1,10 @@
 import { Check, LoaderCircle } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import {
   AddonDeclarationFields,
   type SetDeclarationField,
+  type SetDeclarationValue,
 } from '@/components/developer/AddonDeclarationFields'
 import {
   isPublishFormDirty,
@@ -16,7 +17,12 @@ import {
 } from '@/components/developer/declarationFields'
 import { valuesToForm } from '@/components/developer/formValues.ts'
 import type { OwnedAddon } from '@/components/developer/ownedParse'
-import { requireAddonSchema } from '@/components/developer/schema.ts'
+import {
+  getAddonSchema,
+  requireAddonSchema,
+  schemaZeroValues,
+} from '@/components/developer/schema.ts'
+import type { AddonSchema } from '@/components/developer/types.ts'
 import { type FieldErrors, submitAddon, validateAddon } from '@/components/developer/validate'
 import { getAddonValues } from '@/components/developer/values.ts'
 import {
@@ -71,6 +77,7 @@ export function AddonEditPanel({
       tags: addon.tags,
       keywords: [],
       dependencies: [],
+      library: addon.library,
       kofi: '',
     })
   const [form, setForm] = useState<PublishFormState>(initial)
@@ -83,6 +90,27 @@ export function AddonEditPanel({
   const [editable, setEditable] = useState(true)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [validationError, setValidationError] = useState(false)
+
+  const [schema, setSchema] = useState<AddonSchema | null>(null)
+  const [schemaError, setSchemaError] = useState<string | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    void getAddonSchema().then(result => {
+      if (cancelled) return
+      if (result.status !== 'ok') {
+        setSchemaError(result.message)
+        return
+      }
+      setSchema(result.schema)
+      setForm(prev => ({
+        ...prev,
+        values: { ...schemaZeroValues(result.schema), ...prev.values },
+      }))
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
   const [publishError, setPublishError] = useState<string | null>(null)
   const busy = validating || saving || resuming || !editable
   const dirty = submissionId !== (initialSubmissionId ?? null) || isPublishFormDirty(form, initial)
@@ -110,10 +138,26 @@ export function AddonEditPanel({
     setValidationError(false)
     setPublishError(null)
     setFieldErrors(prev => {
-      const errorKey = key === 'iconAssetId' || key === 'iconUrl' ? 'icon' : key
-      if (!prev[errorKey]) return prev
+      if (!prev.icon) return prev
       const next = { ...prev }
-      delete next[errorKey]
+      delete next.icon
+      return next
+    })
+  }
+
+  const setValue: SetDeclarationValue = (key, value) => {
+    setForm(prev => {
+      const nextValue = typeof value === 'function' ? value(prev.values[key]) : value
+      if (Object.is(nextValue, prev.values[key])) return prev
+      return { ...prev, values: { ...prev.values, [key]: nextValue } }
+    })
+    setValidated(false)
+    setValidationError(false)
+    setPublishError(null)
+    setFieldErrors(prev => {
+      if (!prev[key]) return prev
+      const next = { ...prev }
+      delete next[key]
       return next
     })
   }
@@ -240,13 +284,19 @@ export function AddonEditPanel({
         <h3 className="font-medium">{introTitle}</h3>
         <p className="mt-1 text-sm text-muted-foreground">{introNote}</p>
       </div>
-      <AddonDeclarationFields
-        form={form}
-        setField={setField}
-        fieldErrors={fieldErrors}
-        busy={busy}
-        lockedFields={nameLocked ? ['name'] : []}
-      />
+      {schema ? (
+        <AddonDeclarationFields
+          schema={schema}
+          form={form}
+          setValue={setValue}
+          setField={setField}
+          fieldErrors={fieldErrors}
+          busy={busy}
+          lockedFields={nameLocked ? ['name'] : []}
+        />
+      ) : (
+        <p className="text-sm text-muted-foreground">{schemaError ?? 'Loading…'}</p>
+      )}
       {failCopy && <p className="text-sm text-destructive">{failCopy}</p>}
       <div className="flex flex-wrap gap-2 border-t pt-4">
         <div className="relative">

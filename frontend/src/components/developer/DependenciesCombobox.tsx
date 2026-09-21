@@ -45,29 +45,26 @@ export const DependenciesCombobox = ({
     onChange([...selected, name])
   }
 
-  const statusRow =
-    isPending ? (
-      <div className="flex h-9 items-center px-3 text-sm text-muted-foreground">
-        Loading addons…
-      </div>
-    ) : isError ? (
-      <div className="flex h-9 items-center justify-between gap-2 px-3">
-        <span className="text-sm text-muted-foreground">Couldn't load addons.</span>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={disabled}
-          onClick={() => void refetch()}
-        >
-          Retry
-        </Button>
-      </div>
-    ) : manifests.length === 0 ? (
-      <div className="flex h-9 items-center px-3 text-sm text-muted-foreground">
-        No addons available.
-      </div>
-    ) : null
+  const statusRow = isPending ? (
+    <div className="flex h-9 items-center px-3 text-sm text-muted-foreground">Loading addons…</div>
+  ) : isError ? (
+    <div className="flex h-9 items-center justify-between gap-2 px-3">
+      <span className="text-sm text-muted-foreground">Couldn't load addons.</span>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={disabled}
+        onClick={() => void refetch()}
+      >
+        Retry
+      </Button>
+    </div>
+  ) : manifests.length === 0 ? (
+    <div className="flex h-9 items-center px-3 text-sm text-muted-foreground">
+      No addons available.
+    </div>
+  ) : null
 
   const pillFor = (name: string) => (
     <Badge key={name} variant="default" className="max-w-full gap-1 rounded-full pr-1">

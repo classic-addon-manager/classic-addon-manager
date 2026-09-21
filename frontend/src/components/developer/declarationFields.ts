@@ -1,6 +1,6 @@
 import type { FieldErrors } from '@/components/developer/validate'
 
-export const FORM_FIELD_ORDER: (keyof FieldErrors)[] = [
+export const FORM_FIELD_ORDER: string[] = [
   'name',
   'alias',
   'icon',
@@ -11,6 +11,7 @@ export const FORM_FIELD_ORDER: (keyof FieldErrors)[] = [
   'tags',
   'keywords',
   'dependencies',
+  'library',
   'kofi',
 ]
 

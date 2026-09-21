@@ -88,6 +88,7 @@ const WIDGETS: Record<string, true> = {
   textarea: true,
   'enum-multi': true,
   'string-list': true,
+  checkbox: true,
 }
 const STRING_FIELD_OPTIONS = ['hint', 'pattern', 'itemPattern', 'joinedSeparator'] as const
 const NUMBER_FIELD_OPTIONS = ['maxLength', 'minItems', 'maxItems', 'joinedMaxLength'] as const
@@ -149,7 +150,7 @@ export function parseAddonSchema(statusCode: number, body: unknown): ParseSchema
   if (!isObject(data) || typeof data.version !== 'number') {
     return { status: 'error', message: 'Unexpected schema response.' }
   }
-  if (data.version !== 1) {
+  if (data.version !== 2) {
     return { status: 'unsupported', message: UNSUPPORTED_SCHEMA }
   }
   if (!Array.isArray(data.widgets) || !Array.isArray(data.fields)) {
@@ -165,7 +166,7 @@ export function parseAddonSchema(statusCode: number, body: unknown): ParseSchema
     if (parsed === null) return { status: 'error', message: 'Unexpected schema response.' }
     fields.push(parsed)
   }
-  return { status: 'ok', schema: { version: 1, widgets: data.widgets, fields } }
+  return { status: 'ok', schema: { version: 2, widgets: data.widgets, fields } }
 }
 
 export function parseAddonSources(statusCode: number, body: unknown): ParseSourcesResult {
@@ -550,9 +551,11 @@ function parseSchemaField(value: unknown): SchemaField | 'unsupported' | null {
     if (!isFiniteNumber(option)) return null
     field[key] = option
   }
-  if (value.immutable !== undefined) {
-    if (typeof value.immutable !== 'boolean') return null
-    field.immutable = value.immutable
+  for (const key of ['immutable', 'half'] as const) {
+    const option = value[key]
+    if (option === undefined) continue
+    if (typeof option !== 'boolean') return null
+    field[key] = option
   }
   if (value.lengthUnit !== undefined) {
     if (value.lengthUnit !== 'runes' && value.lengthUnit !== 'bytes') return null
@@ -590,6 +593,11 @@ function parseSourceSubmission(value: unknown): SourceSubmission | null {
 }
 
 function mapWireValue(field: SchemaField, raw: unknown): WireValue | 'error' {
+  if (field.widget === 'checkbox') {
+    if (raw === undefined || raw === null) return false
+    if (typeof raw !== 'boolean') return 'error'
+    return raw
+  }
   const list = field.widget === 'enum-multi' || field.widget === 'string-list'
   if (list) {
     if (raw === undefined || raw === null) return []

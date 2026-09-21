@@ -1,34 +1,8 @@
-export const APPROVED_TAGS = [
-  'Automation',
-  'Chat',
-  'Combat',
-  'Economy',
-  'Fishing',
-  'Inventory',
-  'Library',
-  'Map',
-  'Other',
-  'PvE',
-  'PvP',
-  'QoL',
-  'Raid',
-  'Social',
-  'UI',
-] as const
-
-export type ApprovedTag = (typeof APPROVED_TAGS)[number]
+import type { DeclarationValues } from '@/components/developer/types.ts'
 
 export interface PublishFormState {
-  name: string
-  alias: string
-  description: string
-  author: string
-  repo: string
-  branch: string
-  tags: ApprovedTag[]
-  keywords: string[]
-  dependencies: string[]
-  kofi: string
+  /** Wire-typed values keyed by schema field key. */
+  values: DeclarationValues
   /** Opaque temporary asset ID from upload; null means preserve current icon. */
   iconAssetId: string | null
   /** Server-projected preview URL; display only, never submitted or reconstructed. */
@@ -36,16 +10,7 @@ export interface PublishFormState {
 }
 
 export const INITIAL_PUBLISH_FORM: PublishFormState = {
-  name: '',
-  alias: '',
-  description: '',
-  author: '',
-  repo: '',
-  branch: '',
-  tags: [],
-  keywords: [],
-  dependencies: [],
-  kofi: '',
+  values: {},
   iconAssetId: null,
   iconUrl: null,
 }
@@ -54,52 +19,31 @@ export function isPublishFormDirty(
   form: PublishFormState,
   baseline: PublishFormState = INITIAL_PUBLISH_FORM
 ): boolean {
-  return (
-    form.name !== baseline.name ||
-    form.alias !== baseline.alias ||
-    form.description !== baseline.description ||
-    form.author !== baseline.author ||
-    form.repo !== baseline.repo ||
-    form.branch !== baseline.branch ||
-    form.keywords.length !== baseline.keywords.length ||
-    form.keywords.some((keyword, index) => keyword !== baseline.keywords[index]) ||
-    form.kofi !== baseline.kofi ||
-    form.tags.length !== baseline.tags.length ||
-    form.tags.some((tag, index) => tag !== baseline.tags[index]) ||
-    form.dependencies.length !== baseline.dependencies.length ||
-    form.dependencies.some((dep, index) => dep !== baseline.dependencies[index]) ||
-    form.iconAssetId !== baseline.iconAssetId
-  )
+  const keys = new Set([...Object.keys(form.values), ...Object.keys(baseline.values)])
+  for (const key of keys) {
+    const a = form.values[key]
+    const b = baseline.values[key]
+    if (Array.isArray(a) || Array.isArray(b)) {
+      const listA = Array.isArray(a) ? a : []
+      const listB = Array.isArray(b) ? b : []
+      if (listA.length !== listB.length || listA.some((item, i) => item !== listB[i])) return true
+      continue
+    }
+    if (
+      (a === undefined && (b === '' || b === false)) ||
+      (b === undefined && (a === '' || a === false))
+    ) {
+      continue
+    }
+    if (a !== b) return true
+  }
+  return form.iconAssetId !== baseline.iconAssetId
 }
 
-export function publishFormFromPayload(payload: {
-  name: string
-  alias: string
-  description: string
-  author: string
-  repo: string
-  branch: string
-  tags: string[]
-  keywords: string[]
-  dependencies: string[]
-  kofi: string
-  iconAssetId?: string | null
-  iconUrl?: string | null
-}): PublishFormState {
+export function publishFormFromPayload(payload: DeclarationValues): PublishFormState {
   return {
-    name: payload.name,
-    alias: payload.alias,
-    description: payload.description,
-    author: payload.author,
-    repo: payload.repo,
-    branch: payload.branch,
-    tags: payload.tags
-      .filter((tag): tag is ApprovedTag => (APPROVED_TAGS as readonly string[]).includes(tag))
-      .slice(0, 3),
-    keywords: [...payload.keywords],
-    dependencies: [...payload.dependencies],
-    kofi: payload.kofi,
-    iconAssetId: payload.iconAssetId ?? null,
-    iconUrl: payload.iconUrl ?? null,
+    values: { ...payload },
+    iconAssetId: null,
+    iconUrl: null,
   }
 }

@@ -16,7 +16,7 @@ import { publishFormFromPayload } from '@/components/developer/constants'
 import { withdrawDeclaration } from '@/components/developer/declarationApi.ts'
 import { DetailField } from '@/components/developer/DetailField'
 import type { DeveloperScope } from '@/components/developer/DeveloperToolbar'
-import { valuesToForm } from '@/components/developer/formValues.ts'
+import { listOf, textOf, valuesToForm } from '@/components/developer/formValues.ts'
 import { statusTone } from '@/components/developer/ownedAddons'
 import type { OwnedSubmission } from '@/components/developer/ownedParse'
 import { StatusChip } from '@/components/developer/StatusChip'
@@ -303,7 +303,7 @@ function SubmissionDetails({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 className="wrap-break-word text-xl font-semibold tracking-tight">
-              {form.alias || form.name}
+              {textOf(form.values, 'alias') || textOf(form.values, 'name')}
             </h2>
             <div className="mt-1">
               {closed ? (
@@ -327,10 +327,12 @@ function SubmissionDetails({
           )}
         </div>
         <div className="flex flex-wrap gap-2">
-          {form.repo !== '' && !fromHistory && (
+          {textOf(form.values, 'repo') !== '' && !fromHistory && (
             <Button
               variant="outline"
-              onClick={() => void Browser.OpenURL(`https://github.com/${form.repo}`)}
+              onClick={() =>
+                void Browser.OpenURL(`https://github.com/${textOf(form.values, 'repo')}`)
+              }
             >
               <GithubIcon />
               View code
@@ -464,25 +466,37 @@ function SubmissionDetails({
           <section className="space-y-3">
             <h3 className="text-sm font-medium">Submitted declaration</h3>
             <p className="whitespace-pre-wrap wrap-break-word text-sm text-muted-foreground">
-              {form.description || 'No description provided.'}
+              {textOf(form.values, 'description') || 'No description provided.'}
             </p>
             <dl className="divide-y rounded-xl border bg-card/40 px-4 text-sm">
-              <DetailField label="Name" value={form.name} />
-              <DetailField label="Alias" value={form.alias} />
-              <DetailField label="Author" value={form.author} />
+              <DetailField label="Name" value={textOf(form.values, 'name')} />
+              <DetailField label="Alias" value={textOf(form.values, 'alias')} />
+              <DetailField label="Author" value={textOf(form.values, 'author')} />
               <DetailField
                 label="Repository"
-                value={form.repo}
-                href={form.repo !== '' ? `https://github.com/${form.repo}` : undefined}
+                value={textOf(form.values, 'repo')}
+                href={
+                  textOf(form.values, 'repo') !== ''
+                    ? `https://github.com/${textOf(form.values, 'repo')}`
+                    : undefined
+                }
               />
-              <DetailField label="Branch" value={form.branch} />
-              <DetailField label="Tags" value={form.tags.join(', ')} />
-              <DetailField label="Keywords" value={form.keywords.join(', ')} />
-              <DetailField label="Dependencies" value={form.dependencies.join(', ')} />
+              <DetailField label="Branch" value={textOf(form.values, 'branch')} />
+              <DetailField label="Tags" value={listOf(form.values, 'tags').join(', ')} />
+              <DetailField label="Keywords" value={listOf(form.values, 'keywords').join(', ')} />
+              <DetailField
+                label="Dependencies"
+                value={listOf(form.values, 'dependencies').join(', ')}
+              />
+              <DetailField label="Library" value={form.values.library === true ? 'Yes' : 'No'} />
               <DetailField
                 label="Ko-fi"
-                value={form.kofi}
-                href={form.kofi !== '' ? `https://ko-fi.com/${form.kofi}` : undefined}
+                value={textOf(form.values, 'kofi')}
+                href={
+                  textOf(form.values, 'kofi') !== ''
+                    ? `https://ko-fi.com/${textOf(form.values, 'kofi')}`
+                    : undefined
+                }
               />
               <DetailField
                 label="Submitted"

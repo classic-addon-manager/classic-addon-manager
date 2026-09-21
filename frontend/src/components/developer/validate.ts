@@ -2,11 +2,10 @@ import { imageSize } from 'image-size'
 
 import type { PublishFormState } from '@/components/developer/constants'
 import { saveDeclaration, validateDeclaration } from '@/components/developer/declarationApi.ts'
-import { formToValues } from '@/components/developer/formValues.ts'
+import { formToValues, textOf } from '@/components/developer/formValues.ts'
 import { findActionableSubmission } from '@/components/developer/sources.ts'
-import type { FieldErrors as WireFieldErrors } from '@/components/developer/types.ts'
 
-export type FieldErrors = Partial<Record<keyof PublishFormState | 'icon', string[]>>
+export type FieldErrors = Partial<Record<string, string[]>>
 
 // Client-side icon rules. UX only: the server re-checks everything once icon
 // transport exists: keep both in sync when that lands.
@@ -83,11 +82,11 @@ export async function validateAddon(
   if (result.status === 'valid') return { status: 'valid' }
   if (result.status === 'invalid') {
     if (isNameAlreadyTaken(submissionId, result.fields, result.other)) {
-      const existing = await findActionableSubmission(form.name)
+      const existing = await findActionableSubmission(textOf(form.values, 'name'))
       if (existing.status === 'found') return { status: 'already_open', id: existing.id }
       if (existing.status === 'error') return existing
     }
-    return { status: 'invalid', fields: toFormFieldErrors(result.fields), other: result.other }
+    return { status: 'invalid', fields: result.fields, other: result.other }
   }
   if (result.status === 'not_open') return { status: 'not_open', id: result.id }
   return { status: 'error', message: result.message }
@@ -98,7 +97,7 @@ export async function submitAddon(
   submissionId: number | null = null
 ): Promise<SubmitAddonResult> {
   if (submissionId === null) {
-    const existing = await findActionableSubmission(form.name)
+    const existing = await findActionableSubmission(textOf(form.values, 'name'))
     if (existing.status === 'found') return { status: 'already_open', id: existing.id }
     if (existing.status === 'error') return existing
   }
@@ -106,16 +105,8 @@ export async function submitAddon(
   if (result.status === 'saved') return { status: 'submitted', id: result.id }
   if (result.status === 'already_open') return { status: 'already_open', id: result.id }
   if (result.status === 'invalid') {
-    return { status: 'invalid', fields: toFormFieldErrors(result.fields), other: result.other }
+    return { status: 'invalid', fields: result.fields, other: result.other }
   }
   if (result.status === 'not_open') return { status: 'not_open', id: result.id }
   return { status: 'error', message: result.message }
-}
-
-function toFormFieldErrors(fields: WireFieldErrors): FieldErrors {
-  const next: FieldErrors = {}
-  for (const [key, messages] of Object.entries(fields)) {
-    next[key as keyof FieldErrors] = messages
-  }
-  return next
 }

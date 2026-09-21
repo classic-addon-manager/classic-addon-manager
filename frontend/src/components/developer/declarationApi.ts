@@ -7,7 +7,7 @@ import {
   type ParseWithdrawResult,
 } from '@/components/developer/parse.ts'
 import type { DeclarationValues } from '@/components/developer/types.ts'
-import { v1SchemaKeys } from '@/components/developer/types.ts'
+import { SCHEMA_FIELD_KEYS } from '@/components/developer/types.ts'
 import { apiClient } from '@/lib/api'
 
 export type { ParseSaveResult, ParseValidateResult, ParseWithdrawResult }
@@ -76,9 +76,7 @@ export function editorWithdrawPath(submissionId: number): string {
 }
 
 function declarationErrorKeys(): Set<string> {
-  const keys = v1SchemaKeys()
-  keys.add('icon')
-  return keys
+  return new Set<string>([...SCHEMA_FIELD_KEYS, 'icon'])
 }
 
 export async function validateDeclaration(

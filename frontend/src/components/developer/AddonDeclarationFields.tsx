@@ -2,13 +2,16 @@ import { Browser } from '@wailsio/runtime'
 import { CircleAlert, GithubIcon, ImageIcon } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
 
-import { APPROVED_TAGS, type PublishFormState } from '@/components/developer/constants'
+import type { PublishFormState } from '@/components/developer/constants'
 import { uploadIcon } from '@/components/developer/declarationApi'
 import { DependenciesCombobox } from '@/components/developer/DependenciesCombobox'
+import { listOf, textOf } from '@/components/developer/formValues.ts'
 import { IconPickerDialog } from '@/components/developer/IconPickerDialog'
 import { KeywordsInput } from '@/components/developer/KeywordsInput'
+import type { AddonSchema, SchemaField, WireValue } from '@/components/developer/types.ts'
 import type { FieldErrors } from '@/components/developer/validate'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
@@ -16,7 +19,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Toggle } from '@/components/ui/toggle'
 import { cn } from '@/lib/utils'
 
-export type SetDeclarationField = <K extends keyof PublishFormState>(
+export type SetDeclarationField = <K extends 'iconAssetId' | 'iconUrl'>(
   key: K,
   value: PublishFormState[K] | ((prev: PublishFormState[K]) => PublishFormState[K])
 ) => void
@@ -185,230 +188,362 @@ function IconFieldRow({
   )
 }
 
+export type SetDeclarationValue = (
+  key: string,
+  value: WireValue | ((prev: WireValue | undefined) => WireValue)
+) => void
+
+const SECTION_DESCRIPTIONS: Record<string, string> = {
+  Repository: 'GitHub user/repo and branch.',
+}
+
 export function AddonDeclarationFields({
+  schema,
   form,
+  setValue,
   setField,
   fieldErrors,
   busy,
   lockedFields = [],
 }: {
+  schema: AddonSchema
   form: PublishFormState
+  setValue: SetDeclarationValue
   setField: SetDeclarationField
   fieldErrors: FieldErrors
   busy: boolean
-  lockedFields?: readonly (keyof PublishFormState)[]
+  lockedFields?: readonly string[]
 }) {
-  const nameLocked = lockedFields.includes('name')
+  const fieldByKey = new Map(schema.fields.map(field => [field.key, field]))
+  const sections = new Map<string, SchemaField[]>()
+  for (const field of schema.fields) {
+    if (field.key === 'branch' && fieldByKey.has('repo')) continue
+    const list = sections.get(field.section)
+    if (list) list.push(field)
+    else sections.set(field.section, [field])
+  }
+  const branchField = fieldByKey.get('branch')
+  const renderField = (field: SchemaField): ReactNode => {
+    switch (field.key) {
+      case 'repo':
+        return (
+          <RepoRow
+            field={field}
+            branch={branchField}
+            form={form}
+            setValue={setValue}
+            fieldErrors={fieldErrors}
+            busy={busy}
+          />
+        )
+      case 'dependencies':
+        return (
+          <Field label={field.label} hint={field.hint} error={fieldErrors.dependencies}>
+            <div id="addon-dependencies">
+              <DependenciesCombobox
+                selected={listOf(form.values, 'dependencies')}
+                invalid={!!fieldErrors.dependencies}
+                disabled={busy}
+                onChange={names => setValue('dependencies', names)}
+              />
+            </div>
+          </Field>
+        )
+      case 'kofi':
+        return (
+          <KofiField
+            field={field}
+            form={form}
+            setValue={setValue}
+            fieldErrors={fieldErrors}
+            busy={busy}
+          />
+        )
+      default:
+        return (
+          <GenericField
+            field={field}
+            form={form}
+            setValue={setValue}
+            fieldErrors={fieldErrors}
+            busy={busy}
+            lockedFields={lockedFields}
+          />
+        )
+    }
+  }
+  const iconField = (
+    <IconFieldRow
+      key="icon"
+      iconUrl={form.iconUrl}
+      error={fieldErrors.icon}
+      busy={busy}
+      onChange={(assetId, url) => {
+        setField('iconAssetId', assetId)
+        setField('iconUrl', url)
+      }}
+    />
+  )
 
   return (
     <div className="space-y-8">
-      <Section title="Identity">
-        <div className="space-y-4 px-4 py-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field
-              id="addon-name"
-              label="Name"
-              hint={
-                nameLocked ? "Name can't be changed after publish." : 'No spaces. Starts with A–Z.'
-              }
-              error={fieldErrors.name}
-            >
-              <Input
-                id="addon-name"
-                value={form.name}
-                disabled={busy || nameLocked}
-                aria-invalid={!!fieldErrors.name}
-                onChange={event => setField('name', event.target.value)}
-              />
-            </Field>
-            <Field id="addon-alias" label="Alias" error={fieldErrors.alias}>
-              <Input
-                id="addon-alias"
-                value={form.alias}
-                disabled={busy}
-                aria-invalid={!!fieldErrors.alias}
-                onChange={event => setField('alias', event.target.value)}
-              />
-            </Field>
-          </div>
-          <IconFieldRow
-            iconUrl={form.iconUrl}
-            error={fieldErrors.icon}
-            busy={busy}
-            onChange={(assetId, url) => {
-              setField('iconAssetId', assetId)
-              setField('iconUrl', url)
-            }}
-          />
-          <Field id="addon-description" label="Description" error={fieldErrors.description}>
-            <Textarea
-              id="addon-description"
-              value={form.description}
-              disabled={busy}
-              aria-invalid={!!fieldErrors.description}
-              onChange={event => setField('description', event.target.value)}
-            />
-          </Field>
-          <Field id="addon-author" label="Author" error={fieldErrors.author}>
-            <Input
-              id="addon-author"
-              value={form.author}
-              disabled={busy}
-              aria-invalid={!!fieldErrors.author}
-              onChange={event => setField('author', event.target.value)}
-            />
-          </Field>
-        </div>
-      </Section>
-
-      <Section title="Repository" description="GitHub user/repo and branch.">
-        <div className="space-y-4 px-4 py-4">
-          <div className="grid gap-4 sm:grid-cols-[1fr_10rem]">
-            <Field
-              id="addon-repo"
-              label="Repository"
-              hint="Format: user/repo"
-              error={fieldErrors.repo}
-            >
+      {[...sections.entries()].map(([section, fields]) => {
+        const rows: ReactNode[] = []
+        for (let i = 0; i < fields.length; i++) {
+          const field = fields[i]
+          const next = fields[i + 1]
+          if (field.key !== 'repo' && field.half && next?.half) {
+            rows.push(
               <div
-                className={cn(
-                  'border-input dark:bg-input/30 focus-within:border-ring focus-within:ring-ring/50 flex h-9 overflow-hidden rounded-md border shadow-xs focus-within:ring-[3px]',
-                  fieldErrors.repo &&
-                    'border-destructive focus-within:border-destructive focus-within:ring-destructive/20'
-                )}
+                key={`${field.key}+${next.key}`}
+                className="grid grid-cols-1 gap-4 sm:grid-cols-2"
               >
-                <span className="text-muted-foreground flex shrink-0 items-center gap-1.5 border-r border-input px-2.5 text-sm">
-                  <GithubIcon className="size-3.5" />
-                  github.com/
-                </span>
-                <Input
-                  id="addon-repo"
-                  value={form.repo}
-                  placeholder="user/repo"
-                  disabled={busy}
-                  aria-invalid={!!fieldErrors.repo}
-                  onChange={event => setField('repo', event.target.value)}
-                  className="h-full rounded-none border-0 bg-transparent shadow-none focus-visible:ring-0 dark:bg-transparent"
-                />
+                {renderField(field)}
+                {renderField(next)}
               </div>
-            </Field>
-            <Field id="addon-branch" label="Branch" error={fieldErrors.branch}>
-              <Input
-                id="addon-branch"
-                value={form.branch}
-                placeholder="main"
-                disabled={busy}
-                aria-invalid={!!fieldErrors.branch}
-                onChange={event => setField('branch', event.target.value)}
-              />
-            </Field>
-          </div>
-        </div>
-      </Section>
-
-      <Section title="Discoverability">
-        <div className="space-y-4 px-4 py-4">
-          <Field label="Tags" hint="Pick up to 3." error={fieldErrors.tags} errorMode="label">
-            <div
-              id="addon-tags"
-              role="group"
-              aria-label="Tags"
-              aria-invalid={fieldErrors.tags ? true : undefined}
-              className="flex flex-wrap gap-1.5"
-            >
-              {APPROVED_TAGS.map(tag => {
-                const selected = form.tags.includes(tag)
-                return (
-                  <Toggle
-                    key={tag}
-                    size="sm"
-                    variant="outline"
-                    pressed={selected}
-                    disabled={busy || (!selected && form.tags.length >= 3)}
-                    onPressedChange={pressed => {
-                      setField('tags', prev => {
-                        if (pressed) {
-                          if (prev.includes(tag) || prev.length >= 3) return prev
-                          return [...prev, tag]
-                        }
-                        return prev.filter(item => item !== tag)
-                      })
-                    }}
-                    className="px-2.5 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
-                  >
-                    {tag}
-                  </Toggle>
-                )
-              })}
-            </div>
-          </Field>
-          <Field
-            id="addon-keywords"
-            label="Keywords"
-            hint="Space-separated. No spaces inside a keyword."
-            error={fieldErrors.keywords}
-          >
-            <KeywordsInput
-              id="addon-keywords"
-              value={form.keywords}
-              invalid={!!fieldErrors.keywords}
-              disabled={busy}
-              onChange={keywords => setField('keywords', keywords)}
-            />
-          </Field>
-        </div>
-      </Section>
-
-      <Section title="Optional">
-        <div className="space-y-4 px-4 py-4">
-          <Field
-            label="Dependencies"
-            hint="Selected addons will be installed alongside your addon."
-            error={fieldErrors.dependencies}
-          >
-            <div id="addon-dependencies">
-              <DependenciesCombobox
-                selected={form.dependencies}
-                invalid={!!fieldErrors.dependencies}
-                disabled={busy}
-                onChange={names => setField('dependencies', names)}
-              />
-            </div>
-          </Field>
-          <Field
-            id="addon-kofi"
-            label="Ko-fi username"
-            hint={
-              <>
-                Players can support you at{' '}
-                <button
-                  type="button"
-                  className="cursor-pointer text-primary underline-offset-2 hover:underline"
-                  onClick={() =>
-                    Browser.OpenURL(
-                      form.kofi.trim()
-                        ? `https://ko-fi.com/${form.kofi.trim()}`
-                        : 'https://ko-fi.com'
-                    )
-                  }
-                >
-                  {form.kofi.trim() ? `ko-fi.com/${form.kofi.trim()}` : 'ko-fi.com'}
-                </button>
-                .
-              </>
-            }
-            error={fieldErrors.kofi}
-          >
-            <Input
-              id="addon-kofi"
-              value={form.kofi}
-              disabled={busy}
-              aria-invalid={!!fieldErrors.kofi}
-              onChange={event => setField('kofi', event.target.value)}
-            />
-          </Field>
-        </div>
-      </Section>
+            )
+            if (field.key === 'alias' || next.key === 'alias') rows.push(iconField)
+            i++
+            continue
+          }
+          rows.push(<div key={field.key}>{renderField(field)}</div>)
+          if (field.key === 'alias') rows.push(iconField)
+        }
+        return (
+          <Section key={section} title={section} description={SECTION_DESCRIPTIONS[section]}>
+            <div className="space-y-4 px-4 py-4">{rows}</div>
+          </Section>
+        )
+      })}
     </div>
+  )
+}
+
+function GenericField({
+  field,
+  form,
+  setValue,
+  fieldErrors,
+  busy,
+  lockedFields,
+}: {
+  field: SchemaField
+  form: PublishFormState
+  setValue: SetDeclarationValue
+  fieldErrors: FieldErrors
+  busy: boolean
+  lockedFields: readonly string[]
+}) {
+  const id = `addon-${field.key}`
+  const error = fieldErrors[field.key]
+  const locked = !!field.immutable && lockedFields.includes(field.key)
+  const hint = locked ? `${field.label} can't be changed after publish.` : field.hint
+
+  if (field.widget === 'checkbox') {
+    return (
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id={id}
+            checked={form.values[field.key] === true}
+            disabled={busy || locked}
+            aria-invalid={!!error}
+            onCheckedChange={checked => setValue(field.key, checked === true)}
+          />
+          <Label htmlFor={id} className="cursor-pointer font-normal">
+            {field.label}
+          </Label>
+        </div>
+        {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+        {error?.map((message, index) => (
+          <p key={index} className="text-xs font-medium text-destructive">
+            {message}
+          </p>
+        ))}
+      </div>
+    )
+  }
+
+  if (field.widget === 'enum-multi') {
+    const selected = listOf(form.values, field.key)
+    const options = field.enum ?? []
+    const max = field.maxItems ?? 0
+    return (
+      <Field label={field.label} hint={hint} error={error} errorMode="label">
+        <div
+          id={id}
+          role="group"
+          aria-label={field.label}
+          aria-invalid={error ? true : undefined}
+          className="flex flex-wrap gap-1.5"
+        >
+          {options.map(option => {
+            const on = selected.includes(option)
+            return (
+              <Toggle
+                key={option}
+                size="sm"
+                variant="outline"
+                pressed={on}
+                disabled={busy || locked || (!on && max > 0 && selected.length >= max)}
+                onPressedChange={pressed => {
+                  setValue(field.key, prev => {
+                    const list = Array.isArray(prev) ? prev : []
+                    if (pressed) {
+                      if (list.includes(option) || (max > 0 && list.length >= max)) return list
+                      return [...list, option]
+                    }
+                    return list.filter(item => item !== option)
+                  })
+                }}
+                className="px-2.5 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+              >
+                {option}
+              </Toggle>
+            )
+          })}
+        </div>
+      </Field>
+    )
+  }
+
+  if (field.widget === 'string-list') {
+    return (
+      <Field id={id} label={field.label} hint={hint} error={error}>
+        <KeywordsInput
+          id={id}
+          value={listOf(form.values, field.key)}
+          invalid={!!error}
+          disabled={busy || locked}
+          onChange={items => setValue(field.key, items)}
+        />
+      </Field>
+    )
+  }
+
+  return (
+    <Field id={id} label={field.label} hint={hint} error={error}>
+      {field.widget === 'textarea' ? (
+        <Textarea
+          id={id}
+          value={textOf(form.values, field.key)}
+          disabled={busy || locked}
+          aria-invalid={!!error}
+          onChange={event => setValue(field.key, event.target.value)}
+        />
+      ) : (
+        <Input
+          id={id}
+          value={textOf(form.values, field.key)}
+          disabled={busy || locked}
+          aria-invalid={!!error}
+          onChange={event => setValue(field.key, event.target.value)}
+        />
+      )}
+    </Field>
+  )
+}
+
+function RepoRow({
+  field,
+  branch,
+  form,
+  setValue,
+  fieldErrors,
+  busy,
+}: {
+  field: SchemaField
+  branch: SchemaField | undefined
+  form: PublishFormState
+  setValue: SetDeclarationValue
+  fieldErrors: FieldErrors
+  busy: boolean
+}) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-[1fr_10rem]">
+      <Field id="addon-repo" label={field.label} hint={field.hint} error={fieldErrors.repo}>
+        <div
+          className={cn(
+            'border-input dark:bg-input/30 focus-within:border-ring focus-within:ring-ring/50 flex h-9 overflow-hidden rounded-md border shadow-xs focus-within:ring-[3px]',
+            fieldErrors.repo &&
+              'border-destructive focus-within:border-destructive focus-within:ring-destructive/20'
+          )}
+        >
+          <span className="text-muted-foreground flex shrink-0 items-center gap-1.5 border-r border-input px-2.5 text-sm">
+            <GithubIcon className="size-3.5" />
+            github.com/
+          </span>
+          <Input
+            id="addon-repo"
+            value={textOf(form.values, 'repo')}
+            placeholder="user/repo"
+            disabled={busy}
+            aria-invalid={!!fieldErrors.repo}
+            onChange={event => setValue('repo', event.target.value)}
+            className="h-full rounded-none border-0 bg-transparent shadow-none focus-visible:ring-0 dark:bg-transparent"
+          />
+        </div>
+      </Field>
+      {branch ? (
+        <Field id="addon-branch" label={branch.label} error={fieldErrors.branch}>
+          <Input
+            id="addon-branch"
+            value={textOf(form.values, 'branch')}
+            placeholder="main"
+            disabled={busy}
+            aria-invalid={!!fieldErrors.branch}
+            onChange={event => setValue('branch', event.target.value)}
+          />
+        </Field>
+      ) : null}
+    </div>
+  )
+}
+
+function KofiField({
+  field,
+  form,
+  setValue,
+  fieldErrors,
+  busy,
+}: {
+  field: SchemaField
+  form: PublishFormState
+  setValue: SetDeclarationValue
+  fieldErrors: FieldErrors
+  busy: boolean
+}) {
+  const kofi = textOf(form.values, 'kofi')
+  return (
+    <Field
+      id="addon-kofi"
+      label={`${field.label} username`}
+      hint={
+        <>
+          Players can support you at{' '}
+          <button
+            type="button"
+            className="cursor-pointer text-primary underline-offset-2 hover:underline"
+            onClick={() =>
+              Browser.OpenURL(
+                kofi.trim() ? `https://ko-fi.com/${kofi.trim()}` : 'https://ko-fi.com'
+              )
+            }
+          >
+            {kofi.trim() ? `ko-fi.com/${kofi.trim()}` : 'ko-fi.com'}
+          </button>
+          .
+        </>
+      }
+      error={fieldErrors.kofi}
+    >
+      <Input
+        id="addon-kofi"
+        value={kofi}
+        disabled={busy}
+        aria-invalid={!!fieldErrors.kofi}
+        onChange={event => setValue('kofi', event.target.value)}
+      />
+    </Field>
   )
 }

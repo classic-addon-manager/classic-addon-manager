@@ -1,37 +1,29 @@
-import { publishFormFromPayload, type PublishFormState } from '@/components/developer/constants'
+import type { PublishFormState } from '@/components/developer/constants'
 import type { DeclarationValues } from '@/components/developer/types.ts'
 
 export function formToValues(form: PublishFormState): DeclarationValues {
   return {
-    name: form.name,
-    alias: form.alias,
-    description: form.description,
-    author: form.author,
-    repo: form.repo,
-    branch: form.branch,
-    tags: [...form.tags],
-    keywords: [...form.keywords],
-    dependencies: [...form.dependencies],
-    kofi: form.kofi,
+    ...form.values,
     // Absent preserves the server's current icon state, '' removes, a UUID replaces.
     ...(form.iconAssetId === null ? {} : { icon_asset_id: form.iconAssetId }),
   }
 }
 
 export function valuesToForm(values: DeclarationValues): PublishFormState {
-  const keywords = values.keywords
-  return publishFormFromPayload({
-    name: typeof values.name === 'string' ? values.name : '',
-    alias: typeof values.alias === 'string' ? values.alias : '',
-    description: typeof values.description === 'string' ? values.description : '',
-    author: typeof values.author === 'string' ? values.author : '',
-    repo: typeof values.repo === 'string' ? values.repo : '',
-    branch: typeof values.branch === 'string' ? values.branch : '',
-    tags: Array.isArray(values.tags) ? values.tags : [],
-    keywords: Array.isArray(keywords) ? keywords : [],
-    dependencies: Array.isArray(values.dependencies) ? values.dependencies : [],
-    kofi: typeof values.kofi === 'string' ? values.kofi : '',
+  const { icon_url, ...rest } = values
+  return {
+    values: rest,
     iconAssetId: null,
-    iconUrl: typeof values.icon_url === 'string' && values.icon_url !== '' ? values.icon_url : null,
-  })
+    iconUrl: typeof icon_url === 'string' && icon_url !== '' ? icon_url : null,
+  }
+}
+
+export function textOf(values: DeclarationValues, key: string): string {
+  const value = values[key]
+  return typeof value === 'string' ? value : ''
+}
+
+export function listOf(values: DeclarationValues, key: string): string[] {
+  const value = values[key]
+  return Array.isArray(value) ? value : []
 }
