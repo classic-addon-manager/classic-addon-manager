@@ -144,6 +144,27 @@ func TestMoveAddonReleaseNoRootDirectoryLeavesDest(t *testing.T) {
 	}
 }
 
+func TestMoveAddonReleaseNoEligibleRootLeavesDest(t *testing.T) {
+	addonDir, cacheDir := setupAddonDirs(t)
+	dest := filepath.Join(addonDir, "NoMain")
+
+	writeTestFile(t, filepath.Join(dest, "main.lua"), "old main")
+	writeTestFile(t, filepath.Join(dest, ".data", "keep.json"), "keep")
+	writeTestFile(t, filepath.Join(cacheDir, "NoMain", "aaa", "extra.lua"), "x")
+	writeTestFile(t, filepath.Join(cacheDir, "NoMain", "zzz", "other.lua"), "x")
+
+	if err := MoveAddonRelease("NoMain"); err == nil {
+		t.Fatal("expected error when no release root contains main.lua")
+	}
+
+	if got := readTestFile(t, filepath.Join(dest, "main.lua")); got != "old main" {
+		t.Fatalf("main.lua = %q, want untouched original", got)
+	}
+	if got := readTestFile(t, filepath.Join(dest, ".data", "keep.json")); got != "keep" {
+		t.Fatalf(".data/keep.json = %q, want untouched original", got)
+	}
+}
+
 func TestMoveAddonReleaseMissingExtractFails(t *testing.T) {
 	setupAddonDirs(t)
 

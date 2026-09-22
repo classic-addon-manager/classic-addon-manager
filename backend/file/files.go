@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -149,7 +150,11 @@ func ValidateAddonZip(zipPath string) error {
 
 	for _, f := range archive.File {
 		// Iterate until we find main.lua
-		if !strings.HasSuffix(f.Name, "main.lua") {
+		if !f.Mode().IsRegular() {
+			continue
+		}
+		parts := strings.Split(path.Clean(f.Name), "/")
+		if len(parts) != 2 || parts[0] == "" || parts[1] != "main.lua" {
 			continue
 		}
 

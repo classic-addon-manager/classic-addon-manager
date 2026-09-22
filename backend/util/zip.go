@@ -83,14 +83,27 @@ func MoveAddonRelease(addonName string) error {
 	var rootDir string
 
 	for _, entry := range entries {
-		if entry.IsDir() {
-			rootDir = entry.Name()
-			break
+		if !entry.IsDir() {
+			continue
 		}
+		info, err := os.Stat(filepath.Join(src, entry.Name(), "main.lua"))
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return fmt.Errorf("error inspecting release root %q: %w", entry.Name(), err)
+		}
+		if !info.Mode().IsRegular() {
+			continue
+		}
+		if rootDir != "" {
+			return fmt.Errorf("multiple release roots containing main.lua found in addon release: %q and %q", rootDir, entry.Name())
+		}
+		rootDir = entry.Name()
 	}
 
 	if rootDir == "" {
-		return errors.New("no root directory found in addon release")
+		return errors.New("no root directory containing main.lua found in addon release")
 	}
 
 	if err := replaceAddonDir(filepath.Join(src, rootDir), filepath.Join(config.GetAddonDir(), addonName)); err != nil {

@@ -245,6 +245,16 @@ func InstallZip(zipPath string) (string, error) {
 	fileName := filepath.Base(zipPath)
 	addonName := strings.TrimSuffix(fileName, filepath.Ext(fileName))
 
+	if addonName == "" || addonName == "." || addonName == ".." ||
+		strings.HasSuffix(addonName, ".") || strings.HasSuffix(addonName, " ") {
+		return "", fmt.Errorf("invalid addon name derived from zip file name %q", fileName)
+	}
+
+	cacheDir := config.GetCacheDir()
+	if cacheDir == "" {
+		return "", errors.New("cache directory unavailable")
+	}
+
 	// Validate the zip file contains a main.lua file
 	err := file.ValidateAddonZip(zipPath)
 	if err != nil {
@@ -252,11 +262,17 @@ func InstallZip(zipPath string) (string, error) {
 	}
 
 	// Copy the zip file to the cache directory
-	cachePath := filepath.Join(config.GetCacheDir(), addonName+".zip")
+	cachePath := filepath.Join(cacheDir, addonName+".zip")
 	err = file.MoveFile(zipPath, cachePath)
 	if err != nil {
 		logger.Error("failed to copy zip file to cache directory", err)
 		return "", err
+	}
+
+	if file.FileExists(filepath.Join(cacheDir, addonName)) {
+		if err := os.RemoveAll(filepath.Join(cacheDir, addonName)); err != nil {
+			return "", err
+		}
 	}
 
 	// Extract the zip file to the cache directory
