@@ -102,9 +102,10 @@ func SortAddonsTxt() error {
 	}
 
 	// Dependency information comes from the locally managed addons
-	// (managed_addons.json), populated in the LocalAddons map.
-	dependenciesByName := make(map[string][]string, len(LocalAddons))
-	for name, managed := range LocalAddons {
+	// (managed_addons.json), populated in the localAddons package state.
+	managedAddons := localAddonsSnapshot()
+	dependenciesByName := make(map[string][]string, len(managedAddons))
+	for name, managed := range managedAddons {
 		dependenciesByName[name] = managed.Dependencies
 	}
 

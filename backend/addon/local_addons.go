@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -39,7 +40,21 @@ type ManagedAddonsFile struct {
 	Addons  []Addon `json:"addons"`
 }
 
-var LocalAddons map[string]Addon
+var (
+	localAddons   map[string]Addon
+	localAddonsMu sync.RWMutex
+)
+
+func localAddonsSnapshot() map[string]Addon {
+	localAddonsMu.RLock()
+	defer localAddonsMu.RUnlock()
+
+	addons := make(map[string]Addon, len(localAddons))
+	for name, addon := range localAddons {
+		addons[name] = addon
+	}
+	return addons
+}
 
 func managedAddonsFilePath() string {
 	return filepath.Join(config.GetDataDir(), "managed_addons.json")
@@ -78,7 +93,10 @@ func backfillDependencies(addons []Addon) []Addon {
 }
 
 func LoadManagedAddonsFile() error {
-	LocalAddons = make(map[string]Addon)
+	localAddonsMu.Lock()
+	defer localAddonsMu.Unlock()
+
+	localAddons = make(map[string]Addon)
 	fp := managedAddonsFilePath()
 	if !file.FileExists(fp) {
 		return errors.New("managed_addons.json not found")
@@ -102,7 +120,7 @@ func LoadManagedAddonsFile() error {
 
 		addons = backfillDependencies(addons)
 		for _, addon := range addons {
-			LocalAddons[addon.Name] = normalizeAddon(addon)
+			localAddons[addon.Name] = normalizeAddon(addon)
 		}
 
 		backupPath := filepath.Join(config.GetDataDir(), "managed_addons.json.bak")
@@ -112,7 +130,7 @@ func LoadManagedAddonsFile() error {
 		}
 
 		logger.Info("Migrated managed_addons.json from legacy format to version 1")
-		SaveManagedAddonsToDisk()
+		saveManagedAddonsToDiskLocked()
 		return nil
 	}
 
@@ -126,14 +144,17 @@ func LoadManagedAddonsFile() error {
 	}
 
 	for _, addon := range managedFile.Addons {
-		LocalAddons[addon.Name] = normalizeAddon(addon)
+		localAddons[addon.Name] = normalizeAddon(addon)
 	}
 
 	return nil
 }
 
 func FindLocalAddonByName(name string) *Addon {
-	if addon, exists := LocalAddons[name]; exists {
+	localAddonsMu.RLock()
+	defer localAddonsMu.RUnlock()
+
+	if addon, exists := localAddons[name]; exists {
 		return &addon
 	}
 	return nil
@@ -163,32 +184,44 @@ func AddManagedAddon(manifest shared.AddonManifest, release api.Release) {
 		addon.Alias = manifest.Alias
 	}
 
-	LocalAddons[manifest.Name] = addon
-	SaveManagedAddonsToDisk()
+	localAddonsMu.Lock()
+	defer localAddonsMu.Unlock()
+
+	localAddons[manifest.Name] = addon
+	saveManagedAddonsToDiskLocked()
 }
 
 func RemoveManagedAddon(name string) bool {
-	delete(LocalAddons, name)
-	SaveManagedAddonsToDisk()
-	// Check if the addon is still in LocalAddons
-	if _, exists := LocalAddons[name]; exists {
+	localAddonsMu.Lock()
+	defer localAddonsMu.Unlock()
+
+	delete(localAddons, name)
+	saveManagedAddonsToDiskLocked()
+	// Check if the addon is still in localAddons
+	if _, exists := localAddons[name]; exists {
 		return false
 	}
 	return true
 }
 
 func SaveManagedAddonsToDisk() {
+	localAddonsMu.Lock()
+	defer localAddonsMu.Unlock()
+	saveManagedAddonsToDiskLocked()
+}
+
+func saveManagedAddonsToDiskLocked() {
 	// A nil map means LoadManagedAddonsFile never ran: this process holds no
 	// ownership data, so writing would replace managed_addons.json with an empty
 	// file and silently discard what another instance owns.
-	if LocalAddons == nil {
+	if localAddons == nil {
 		logger.Error("Refusing to save managed addons: managed_addons.json was never loaded",
 			errors.New("managed addons not loaded"))
 		return
 	}
 
-	managedAddons := make([]Addon, 0, len(LocalAddons))
-	for _, addon := range LocalAddons {
+	managedAddons := make([]Addon, 0, len(localAddons))
+	for _, addon := range localAddons {
 		managedAddons = append(managedAddons, normalizeAddon(addon))
 	}
 

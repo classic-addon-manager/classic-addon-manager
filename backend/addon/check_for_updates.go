@@ -26,7 +26,7 @@ func CheckForUpdates() map[string]Addon {
 		updates = make(map[string]Addon)
 	)
 
-	for _, addon := range LocalAddons {
+	for _, addon := range localAddonsSnapshot() {
 		wg.Add(1)
 		go func(a Addon) {
 			defer wg.Done()
