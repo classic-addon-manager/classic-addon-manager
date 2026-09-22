@@ -2,6 +2,7 @@ package appstate
 
 import (
 	"ClassicAddonManager/backend/config"
+	"ClassicAddonManager/backend/file"
 	"ClassicAddonManager/backend/logger"
 	"encoding/json"
 	"fmt"
@@ -22,10 +23,6 @@ type stateFile struct {
 
 func statePath() string {
 	return filepath.Join(getStateDir(), stateFileName)
-}
-
-func tmpStatePath() string {
-	return filepath.Join(getStateDir(), stateFileName+".tmp")
 }
 
 func stateFileExists() bool {
@@ -58,7 +55,7 @@ func EnsureInitialized() error {
 	if err != nil {
 		return fmt.Errorf("error marshaling app state: %w", err)
 	}
-	if err := writeAtomic(tmpStatePath(), statePath(), data); err != nil {
+	if err := file.WriteAtomic(statePath(), data, 0600); err != nil {
 		return fmt.Errorf("error writing app state: %w", err)
 	}
 	logger.Info("App state: initialized app_state.json (first launch)")
@@ -77,7 +74,7 @@ func RecordKofiModalShown() error {
 		return fmt.Errorf("error marshaling app state: %w", err)
 	}
 
-	if err := writeAtomic(tmpStatePath(), statePath(), data); err != nil {
+	if err := file.WriteAtomic(statePath(), data, 0600); err != nil {
 		return fmt.Errorf("error writing app state: %w", err)
 	}
 
@@ -103,22 +100,4 @@ func loadState() (*stateFile, error) {
 		return nil, fmt.Errorf("unsupported app state version: %d", sf.Version)
 	}
 	return &sf, nil
-}
-
-func writeAtomic(tmpPath, finalPath string, data []byte) error {
-	if err := os.WriteFile(tmpPath, data, 0600); err != nil {
-		return fmt.Errorf("error writing temp file: %w", err)
-	}
-
-	f, err := os.Open(tmpPath)
-	if err == nil {
-		_ = f.Sync()
-		f.Close()
-	}
-
-	if err := os.Rename(tmpPath, finalPath); err != nil {
-		return fmt.Errorf("error renaming temp file: %w", err)
-	}
-
-	return nil
 }

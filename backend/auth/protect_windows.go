@@ -112,7 +112,3 @@ func unprotectToken(encoding, token string) (string, error) {
 	}
 	return "", fmt.Errorf("unknown encoding: %s", encoding)
 }
-
-func afterWriteHook(path string) error {
-	return nil
-}

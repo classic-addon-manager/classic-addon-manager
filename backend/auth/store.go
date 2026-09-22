@@ -2,6 +2,7 @@ package auth
 
 import (
 	"ClassicAddonManager/backend/config"
+	"ClassicAddonManager/backend/file"
 	"ClassicAddonManager/backend/logger"
 	"encoding/json"
 	"fmt"
@@ -21,10 +22,6 @@ const sessionFileName = "auth_session.json"
 
 func sessionPath() string {
 	return filepath.Join(config.GetDataDir(), sessionFileName)
-}
-
-func tmpSessionPath() string {
-	return filepath.Join(config.GetDataDir(), sessionFileName+".tmp")
 }
 
 func LoadFromDisk() {
@@ -86,9 +83,7 @@ func SaveToDisk(token string) error {
 		return fmt.Errorf("error marshaling session file: %w", err)
 	}
 
-	tmpPath := tmpSessionPath()
-	finalPath := sessionPath()
-	if err := writeAtomic(tmpPath, finalPath, data); err != nil {
+	if err := file.WriteAtomic(sessionPath(), data, 0600); err != nil {
 		return fmt.Errorf("error writing session file: %w", err)
 	}
 
@@ -106,24 +101,6 @@ func DeleteFromDisk() error {
 	ClearToken()
 	logger.Info("Auth: session deleted from disk")
 	return nil
-}
-
-func writeAtomic(tmpPath, finalPath string, data []byte) error {
-	if err := os.WriteFile(tmpPath, data, 0600); err != nil {
-		return fmt.Errorf("error writing temp file: %w", err)
-	}
-
-	f, err := os.Open(tmpPath)
-	if err == nil {
-		_ = f.Sync()
-		f.Close()
-	}
-
-	if err := os.Rename(tmpPath, finalPath); err != nil {
-		return fmt.Errorf("error renaming temp file: %w", err)
-	}
-
-	return afterWriteHook(finalPath)
 }
 
 func quarantine(path string) {

@@ -4,6 +4,8 @@ import (
 	"ClassicAddonManager/backend/logger"
 	"archive/zip"
 	"bufio"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"os/exec"
@@ -47,50 +49,77 @@ func ReadLines(path string) ([]string, error) {
 }
 
 func WriteLines(path string, lines []string) error {
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
-		return fmt.Errorf("failed to create directories: %w", err)
-	}
-
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	for i, line := range lines {
-		if i == len(lines)-1 {
-			_, err := f.WriteString(line)
-			if err != nil {
-				return err
-			}
-		} else {
-			_, err := f.WriteString(line + "\n")
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
+	return WriteAtomic(path, []byte(strings.Join(lines, "\n")), 0644)
 }
 
 func WriteJSON(path string, data []byte) error {
+	return WriteAtomic(path, data, 0644)
+}
+
+// createAtomicTemp avoids name collisions while letting the OS apply the process umask.
+func createAtomicTemp(dir, base string, perm os.FileMode) (*os.File, error) {
+	var suffix [8]byte
+	for range 100 {
+		if _, err := rand.Read(suffix[:]); err != nil {
+			return nil, fmt.Errorf("failed to generate temp file name: %w", err)
+		}
+		tmpPath := filepath.Join(dir, "."+base+".tmp-"+hex.EncodeToString(suffix[:]))
+		tmp, err := os.OpenFile(tmpPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, perm)
+		if os.IsExist(err) {
+			continue
+		}
+		if err != nil {
+			return nil, fmt.Errorf("failed to create temp file: %w", err)
+		}
+		return tmp, nil
+	}
+	return nil, fmt.Errorf("failed to create temp file after repeated name collisions")
+}
+
+// WriteAtomic replaces a file only after its new contents are synced and closed.
+func WriteAtomic(path string, data []byte, perm os.FileMode) (err error) {
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		return fmt.Errorf("failed to create directories: %w", err)
 	}
 
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	// Preserve an existing mode; for new files, the process umask narrows perm.
+	writePerm := perm
+	preserveMode := false
+	if info, statErr := os.Stat(path); statErr == nil {
+		writePerm = info.Mode().Perm()
+		preserveMode = true
+	} else if !os.IsNotExist(statErr) {
+		return fmt.Errorf("failed to inspect existing file: %w", statErr)
+	}
+
+	tmp, err := createAtomicTemp(dir, filepath.Base(path), writePerm)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	tmpPath := tmp.Name()
+	defer func() {
+		_ = tmp.Close()
+		_ = os.Remove(tmpPath)
+	}()
 
-	if _, err = f.Write(data); err != nil {
-		return fmt.Errorf("failed to write data: %w", err)
+	if preserveMode {
+		if err := tmp.Chmod(writePerm); err != nil {
+			return fmt.Errorf("failed to preserve file permissions: %w", err)
+		}
 	}
-
+	if _, err := tmp.Write(data); err != nil {
+		return fmt.Errorf("failed to write temp file: %w", err)
+	}
+	if err := tmp.Sync(); err != nil {
+		return fmt.Errorf("failed to sync temp file: %w", err)
+	}
+	if err := tmp.Close(); err != nil {
+		return fmt.Errorf("failed to close temp file: %w", err)
+	}
+	if err := os.Rename(tmpPath, path); err != nil {
+		return fmt.Errorf("failed to replace file: %w", err)
+	}
 	return nil
 }
 

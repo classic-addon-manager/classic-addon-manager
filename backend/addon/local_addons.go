@@ -236,7 +236,7 @@ func saveManagedAddonsToDiskLocked() {
 		return
 	}
 
-	err = os.WriteFile(managedAddonsFilePath(), data, 0644)
+	err = file.WriteJSON(managedAddonsFilePath(), data)
 	if err != nil {
 		logger.Error("Error writing managed addons to disk:", err)
 		return
