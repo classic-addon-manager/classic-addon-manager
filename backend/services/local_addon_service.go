@@ -12,6 +12,16 @@ import (
 
 type LocalAddonService struct{}
 
+var (
+	isAddonInstalled     = addon.IsInstalled
+	findLocalAddonByName = addon.FindLocalAddonByName
+	removeFromAddonsTxt  = addon.RemoveFromAddonsTxt
+	removeAddonDirectory = file.RemoveDir
+	removeManagedAddon   = addon.RemoveManagedAddon
+	sortAddonsTxt        = addon.SortAddonsTxt
+	unsubscribeFromAddon = api.UnsubscribeFromAddon
+)
+
 func (s *LocalAddonService) OpenDirectory(name string) error {
 	return file.OpenDirectory(filepath.Join(config.GetAddonDir(), name))
 }
@@ -29,11 +39,18 @@ func (s *LocalAddonService) GetAllInstalledAddonNames() []string {
 }
 
 func (s *LocalAddonService) UninstallAddon(name string) bool {
-	if !addon.IsInstalled(name) {
+	if !isAddonInstalled(name) {
 		return false
 	}
 
-	ok, err := file.RemoveDir(filepath.Join(config.GetAddonDir(), name))
+	wasManaged := findLocalAddonByName(name) != nil
+
+	if err := removeFromAddonsTxt(name); err != nil {
+		logger.Error("Error removing addon from addons.txt:", err)
+		return false
+	}
+
+	ok, err := removeAddonDirectory(filepath.Join(config.GetAddonDir(), name))
 	if err != nil {
 		logger.Error("Error removing addon directory:", err)
 		return false
@@ -42,21 +59,16 @@ func (s *LocalAddonService) UninstallAddon(name string) bool {
 		return false
 	}
 
-	// Remove from managed addons
-	wasRemoved := addon.RemoveManagedAddon(name)
-
-	// Remove from addons.txt
-	if err := addon.RemoveFromAddonsTxt(name); err != nil {
-		logger.Error("Error removing addon from addons.txt:", err)
-		return false
+	if wasManaged {
+		removeManagedAddon(name)
 	}
 
 	// Reorder remaining addons so dependencies still load before dependents. A
 	// cycle error is logged inside SortAddonsTxt; the removal itself succeeded.
-	_ = addon.SortAddonsTxt()
+	_ = sortAddonsTxt()
 
-	if wasRemoved {
-		api.UnsubscribeFromAddon(name)
+	if wasManaged {
+		unsubscribeFromAddon(name)
 	}
 
 	return true
