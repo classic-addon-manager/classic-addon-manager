@@ -18,7 +18,17 @@ var (
 func GetInstalledAddonNames() []string {
 	installedAddonNamesMu.RLock()
 	defer installedAddonNamesMu.RUnlock()
-	return installedAddonNames
+	return withoutUpdateNotification(installedAddonNames)
+}
+
+func withoutUpdateNotification(names []string) []string {
+	filtered := make([]string, 0, len(names))
+	for _, name := range names {
+		if name != "AddonUpdateNotification" {
+			filtered = append(filtered, name)
+		}
+	}
+	return filtered
 }
 
 func setInstalledAddonNames(names []string) {
@@ -34,13 +44,10 @@ func ReadAddonsTxt() ([]string, error) {
 		return nil, err
 	}
 
-	// Remove "AddonUpdateNotification" from lines if it exists
-	if idx := slices.Index(lines, "AddonUpdateNotification"); idx >= 0 {
-		lines = slices.Delete(lines, idx, idx+1)
-	}
-
 	setInstalledAddonNames(lines)
-	return lines, nil
+
+	// Remove "AddonUpdateNotification" from lines if it exists
+	return withoutUpdateNotification(lines), nil
 }
 
 func AddToAddonsTxt(addonName string) error {
