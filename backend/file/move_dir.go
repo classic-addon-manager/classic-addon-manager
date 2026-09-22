@@ -2,7 +2,6 @@ package file
 
 import (
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 )
@@ -52,11 +51,15 @@ func CopyDir(src string, dest string) error {
 				return err
 			}
 		} else {
+			info, err := entry.Info()
+			if err != nil {
+				return err
+			}
 			data, err := os.ReadFile(srcPath)
 			if err != nil {
 				return err
 			}
-			if err := os.WriteFile(destPath, data, fs.FileMode(0644)); err != nil {
+			if err := os.WriteFile(destPath, data, info.Mode().Perm()); err != nil {
 				return err
 			}
 		}

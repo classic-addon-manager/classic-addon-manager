@@ -27,9 +27,9 @@ func InstallAddon(manifest shared.AddonManifest, version string) (bool, error) {
 		return false, err
 	}
 
-	if !util.MoveAddonRelease(manifest.Name) {
-		logger.Error(manifest.Name+" - Error moving addon release", errors.New("error moving addon release"))
-		return false, nil
+	if err := util.MoveAddonRelease(manifest.Name); err != nil {
+		logger.Error(manifest.Name+" - Error moving addon release", err)
+		return false, err
 	}
 
 	if err := AddToAddonsTxt(manifest.Name); err != nil {
@@ -56,7 +56,8 @@ func UpdateAddon(manifest shared.AddonManifest, version string) (bool, error) {
 		return false, err
 	}
 
-	if err := performUpdateFileOperations(manifest); err != nil {
+	if err := util.MoveAddonRelease(manifest.Name); err != nil {
+		logger.Error(manifest.Name+" - Error moving addon release", err)
 		return false, err
 	}
 
@@ -153,80 +154,4 @@ func updateAddonMetadata(manifest shared.AddonManifest, version string) error {
 
 	AddManagedAddon(manifest, release)
 	return nil
-}
-
-func performUpdateFileOperations(manifest shared.AddonManifest) error {
-	cacheExtractDir := filepath.Join(config.GetCacheDir(), manifest.Name)
-
-	// Find the root directory of the extracted release
-	entries, err := os.ReadDir(cacheExtractDir)
-	if err != nil {
-		return err
-	}
-
-	var rootDir string
-	for _, e := range entries {
-		if e.IsDir() {
-			rootDir = e.Name()
-			break
-		}
-	}
-	if rootDir == "" {
-		return errors.New("no root directory found")
-	}
-
-	destAddonDir := filepath.Join(config.GetAddonDir(), manifest.Name)
-
-	// Ensure destination exists
-	if err := os.MkdirAll(destAddonDir, os.ModePerm); err != nil {
-		return err
-	}
-
-	// Remove everything in destination except the .data folder
-	destEntries, err := os.ReadDir(destAddonDir)
-	if err != nil {
-		return err
-	}
-	for _, de := range destEntries {
-		name := de.Name()
-		if name == ".data" {
-			continue
-		}
-		removePath := filepath.Join(destAddonDir, name)
-		if err := os.RemoveAll(removePath); err != nil {
-			return err
-		}
-	}
-
-	// Copy new release contents into destination, preserving an existing .data folder
-	srcRoot := filepath.Join(cacheExtractDir, rootDir)
-	srcEntries, err := os.ReadDir(srcRoot)
-	if err != nil {
-		return err
-	}
-	for _, se := range srcEntries {
-		name := se.Name()
-		if name == ".data" {
-			if _, err := os.Stat(filepath.Join(destAddonDir, ".data")); err == nil {
-				continue
-			}
-		}
-		srcPath := filepath.Join(srcRoot, name)
-		destPath := filepath.Join(destAddonDir, name)
-		if se.IsDir() {
-			if err := file.CopyDir(srcPath, destPath); err != nil {
-				return err
-			}
-		} else {
-			if mkErr := os.MkdirAll(filepath.Dir(destPath), os.ModePerm); mkErr != nil {
-				return mkErr
-			}
-			if err := file.MoveFile(srcPath, destPath); err != nil {
-				return err
-			}
-		}
-	}
-
-	// Cleanup extracted cache
-	return os.RemoveAll(cacheExtractDir)
 }

@@ -270,8 +270,8 @@ func InstallZip(zipPath string) (string, error) {
 	}
 
 	// Move the extracted addon from cache to the addon directory
-	if !util.MoveAddonRelease(addonName) {
-		return "", errors.New("failed to move addon release")
+	if err := util.MoveAddonRelease(addonName); err != nil {
+		return "", err
 	}
 
 	if err := AddToAddonsTxt(addonName); err != nil {
