@@ -197,10 +197,6 @@ func RemoveManagedAddon(name string) bool {
 
 	delete(localAddons, name)
 	saveManagedAddonsToDiskLocked()
-	// Check if the addon is still in localAddons
-	if _, exists := localAddons[name]; exists {
-		return false
-	}
 	return true
 }
 
