@@ -1,14 +1,15 @@
 package addon
 
 import (
+	_ "embed"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+
 	"ClassicAddonManager/backend/api"
 	"ClassicAddonManager/backend/config"
 	"ClassicAddonManager/backend/logger"
-	_ "embed"
-	"fmt"
-	"os"
-	"path/filepath"
-	"sync"
 )
 
 //go:embed cam.lua
@@ -123,23 +124,44 @@ func GenerateUpdateAddonLua(updates map[string]Addon) {
 }
 
 func generateUpdatesLua(updates map[string]Addon) []byte {
-	var luaTable string
-	luaTable = "{\n"
+	var luaTable strings.Builder
+	luaTable.WriteString("{\n")
 
 	for _, addon := range updates {
-		var displayName string
-		if addon.Alias == "" {
-			displayName = addon.Name
-		} else {
+		displayName := addon.Name
+		if addon.Alias != "" {
 			displayName = addon.Alias
 		}
-		luaTable += fmt.Sprintf("    ['%s'] = {name=\"%s\", version=\"%s\"}, \n",
-			addon.Name,
-			displayName,
-			addon.Version,
-		)
+		luaTable.WriteString("    [")
+		writeLuaString(&luaTable, addon.Name)
+		luaTable.WriteString("] = {name=")
+		writeLuaString(&luaTable, displayName)
+		luaTable.WriteString(", version=")
+		writeLuaString(&luaTable, addon.Version)
+		luaTable.WriteString("}, \n")
 	}
 
-	luaTable += "}\n"
-	return []byte(luaTable)
+	luaTable.WriteString("}\n")
+	return []byte(luaTable.String())
+}
+
+// Lua decimal escapes work in Lua 5.1 and stay unambiguous before digits.
+func writeLuaString(b *strings.Builder, value string) {
+	b.WriteByte('"')
+	for i := range len(value) {
+		c := value[i]
+		switch {
+		case c == '"' || c == '\\':
+			b.WriteByte('\\')
+			b.WriteByte(c)
+		case c < ' ' || c == 0x7f:
+			b.WriteByte('\\')
+			b.WriteByte('0' + c/100)
+			b.WriteByte('0' + c/10%10)
+			b.WriteByte('0' + c%10)
+		default:
+			b.WriteByte(c)
+		}
+	}
+	b.WriteByte('"')
 }
