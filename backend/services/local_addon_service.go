@@ -7,7 +7,9 @@ import (
 	"ClassicAddonManager/backend/file"
 	"ClassicAddonManager/backend/logger"
 	"ClassicAddonManager/backend/util"
+	"fmt"
 	"path/filepath"
+	"strings"
 )
 
 type LocalAddonService struct{}
@@ -20,10 +22,30 @@ var (
 	removeManagedAddon   = addon.RemoveManagedAddon
 	sortAddonsTxt        = addon.SortAddonsTxt
 	unsubscribeFromAddon = api.UnsubscribeFromAddon
+	openAddonDirectory   = file.OpenDirectory
 )
 
 func (s *LocalAddonService) OpenDirectory(name string) error {
-	return file.OpenDirectory(filepath.Join(config.GetAddonDir(), name))
+	if name == "." || !filepath.IsLocal(name) || strings.ContainsAny(name, `/\`) {
+		return fmt.Errorf("invalid addon directory: %q", name)
+	}
+
+	root, err := resolveAddonDirectory(config.GetAddonDir())
+	if err != nil {
+		return err
+	}
+	target, err := resolveAddonDirectory(filepath.Join(root, name))
+	if err != nil {
+		return err
+	}
+	relative, err := filepath.Rel(root, target)
+	if err != nil {
+		return err
+	}
+	if relative == "." || !filepath.IsLocal(relative) {
+		return fmt.Errorf("addon directory escapes addon root: %q", name)
+	}
+	return openAddonDirectory(target)
 }
 
 func (s *LocalAddonService) GetAddOns() []addon.Addon {
