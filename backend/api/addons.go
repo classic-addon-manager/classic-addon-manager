@@ -35,6 +35,8 @@ func UnsubscribeFromAddon(addonName string) {
 }
 
 type SubscribedAddonsResponse struct {
+	Status  bool                   `json:"status"`
+	Message string                 `json:"message"`
 	Addons []shared.AddonManifest `json:"data"`
 }
 
@@ -62,6 +64,10 @@ func GetSubscribedAddons() ([]shared.AddonManifest, error) {
 	if err != nil {
 		logger.Error("Error decoding response:", err)
 		return nil, err
+	}
+	if !response.Status {
+		logger.Warn("GetSubscribedAddons status false: " + response.Message)
+		return nil, errors.New(response.Message)
 	}
 
 	return response.Addons, nil
