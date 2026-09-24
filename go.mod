@@ -9,6 +9,7 @@ require (
 	github.com/wailsapp/wails/v3 v3.0.0-beta.5
 	go.uber.org/zap v1.28.0
 	golang.org/x/sys v0.45.0
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
 
 require (

@@ -220,8 +220,7 @@ func saveManagedAddonsToDiskLocked() {
 	// ownership data, so writing would replace managed_addons.json with an empty
 	// file and silently discard what another instance owns.
 	if localAddons == nil {
-		logger.Error("Refusing to save managed addons: managed_addons.json was never loaded",
-			errors.New("managed addons not loaded"))
+		logger.Error("Refusing to save managed addons: managed_addons.json was never loaded")
 		return
 	}
 

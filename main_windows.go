@@ -113,7 +113,7 @@ func handleIPCConnection(conn net.Conn, a *application.App) {
 		logger.Info("Received authentication token")
 		mainWindow, exists := a.Window.GetByName("main")
 		if !exists {
-			logger.Error("Error getting main window", fmt.Errorf("main window not found"))
+			logger.Error("Error getting main window: main window not found")
 			return
 		}
 		if mainWindow.IsMinimised() {

@@ -38,6 +38,9 @@ func main() {
 
 	addonUpdateMode := flag.Bool("check-updates", false, "Run in headless mode to check for addon updates")
 	flag.Parse()
+	if *addonUpdateMode {
+		logger.UseHeadlessLog()
+	}
 	defer logger.Sync()
 
 	err := config.LoadConfig()
