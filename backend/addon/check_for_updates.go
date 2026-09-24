@@ -9,6 +9,7 @@ import (
 
 	"ClassicAddonManager/backend/api"
 	"ClassicAddonManager/backend/config"
+	"ClassicAddonManager/backend/file"
 	"ClassicAddonManager/backend/logger"
 )
 
@@ -74,50 +75,20 @@ func GenerateUpdateAddonLua(updates map[string]Addon) {
 		return
 	}
 
-	// Remove old file if it exists
-	err := os.Remove(filepath.Join(addonPath, "main.lua"))
-	if err != nil && !os.IsNotExist(err) {
-		logger.Error("Error removing old AddonUpdateNotification main.lua:", err)
-		return
-	}
-
-	// Write new file
-	file, err := os.Create(filepath.Join(addonPath, "main.lua"))
-	if err != nil {
-		logger.Error("Error creating AddonUpdateNotification main.lua:", err)
-		return
-	}
-	defer file.Close()
-
-	written, err := file.Write(luaScript)
-	if err != nil {
+	if err := file.WriteAtomic(filepath.Join(addonPath, "main.lua"), luaScript, 0644); err != nil {
 		logger.Error("Error writing AddonUpdateNotification main.lua:", err)
-		return
-	}
-	if written != len(luaScript) {
-		logger.Error("Error writing AddonUpdateNotification main.lua: Not all bytes written", nil)
-		return
-	}
-
-	err = os.Remove(filepath.Join(addonPath, "updates.lua"))
-	if err != nil && !os.IsNotExist(err) {
-		logger.Error("Error removing old AddonUpdateNotification updates.lua:", err)
 		return
 	}
 
 	if len(updates) == 0 {
+		err := os.Remove(filepath.Join(addonPath, "updates.lua"))
+		if err != nil && !os.IsNotExist(err) {
+			logger.Error("Error removing old AddonUpdateNotification updates.lua:", err)
+		}
 		return
 	}
 
-	file, err = os.Create(filepath.Join(addonPath, "updates.lua"))
-	if err != nil {
-		logger.Error("Error creating AddonUpdateNotification updates.lua:", err)
-		return
-	}
-	defer file.Close()
-
-	_, err = file.Write(generateUpdatesLua(updates))
-	if err != nil {
+	if err := file.WriteAtomic(filepath.Join(addonPath, "updates.lua"), generateUpdatesLua(updates), 0644); err != nil {
 		logger.Error("Error writing AddonUpdateNotification updates.lua:", err)
 		return
 	}
