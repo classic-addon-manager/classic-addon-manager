@@ -20,57 +20,66 @@ export const isManifestDialogOpenAtom = atom(false)
 
 export const addonsAtom = atom<AddonListItem[]>([])
 export const tagsAtom = atom(['All'])
+export const addonsErrorAtom = atom<string | null>(null)
 
 export const loadAddonsAtom = atom(null, async (get, set, force?: boolean) => {
-  if (force) {
-    await RemoteAddonService.InvalidateAddonManifestCache()
-    await queryClient.invalidateQueries({ queryKey: addonCatalogQuery.queryKey })
-  }
-  const manifests = await fetchAddonCatalog()
-
-  const installedAddonNames = await LocalAddonService.GetAllInstalledAddonNames()
-  const installedAddonSet = new Set(installedAddonNames)
-
-  const tmp: AddonListItem[] = manifests.map(manifest => ({
-    manifest,
-    isInstalled: installedAddonSet.has(manifest.name),
-  }))
-
-  // Generate tags
-  const uniqueTags = new Set<string>()
-  manifests.forEach(manifest => {
-    manifest.tags.forEach(tag => {
-      if (tag !== 'Example') {
-        uniqueTags.add(tag)
-      }
-    })
-  })
-
-  const sortedTags = Array.from(uniqueTags).sort((a, b) => a.localeCompare(b))
-  set(tagsAtom, ['All', ...sortedTags])
-
-  // Sort addons
-  tmp.sort((a, b) => {
-    const aIsNew = daysAgo(a.manifest.added_at) < 32
-    const bIsNew = daysAgo(b.manifest.added_at) < 32
-
-    if (aIsNew && !bIsNew) return -1
-    if (!aIsNew && bIsNew) return 1
-
-    if (aIsNew && bIsNew) {
-      const aTime = new Date(a.manifest.added_at).getTime()
-      const bTime = new Date(b.manifest.added_at).getTime()
-      if (aTime !== bTime) {
-        return bTime - aTime
-      }
+  try {
+    if (force) {
+      await RemoteAddonService.InvalidateAddonManifestCache()
+      await queryClient.invalidateQueries({ queryKey: addonCatalogQuery.queryKey })
     }
+    const manifests = await fetchAddonCatalog()
 
-    return a.manifest.name.localeCompare(b.manifest.name)
-  })
+    const installedAddonNames = await LocalAddonService.GetAllInstalledAddonNames()
+    const installedAddonSet = new Set(installedAddonNames)
 
-  set(addonsAtom, tmp)
-  set(searchQueryAtom, '')
-  set(isAddonsReadyAtom, true)
+    const tmp: AddonListItem[] = manifests.map(manifest => ({
+      manifest,
+      isInstalled: installedAddonSet.has(manifest.name),
+    }))
+
+    // Generate tags
+    const uniqueTags = new Set<string>()
+    manifests.forEach(manifest => {
+      manifest.tags.forEach(tag => {
+        if (tag !== 'Example') {
+          uniqueTags.add(tag)
+        }
+      })
+    })
+
+    const sortedTags = Array.from(uniqueTags).sort((a, b) => a.localeCompare(b))
+    set(tagsAtom, ['All', ...sortedTags])
+
+    // Sort addons
+    tmp.sort((a, b) => {
+      const aIsNew = daysAgo(a.manifest.added_at) < 32
+      const bIsNew = daysAgo(b.manifest.added_at) < 32
+
+      if (aIsNew && !bIsNew) return -1
+      if (!aIsNew && bIsNew) return 1
+
+      if (aIsNew && bIsNew) {
+        const aTime = new Date(a.manifest.added_at).getTime()
+        const bTime = new Date(b.manifest.added_at).getTime()
+        if (aTime !== bTime) {
+          return bTime - aTime
+        }
+      }
+
+      return a.manifest.name.localeCompare(b.manifest.name)
+    })
+
+    set(addonsAtom, tmp)
+    set(searchQueryAtom, '')
+    set(addonsErrorAtom, null)
+    set(isAddonsReadyAtom, true)
+    return true
+  } catch (err) {
+    set(addonsErrorAtom, err instanceof Error ? err.message : String(err))
+    set(isAddonsReadyAtom, true)
+    return false
+  }
 })
 
 export const filteredAddonsAtom = atom(get => {

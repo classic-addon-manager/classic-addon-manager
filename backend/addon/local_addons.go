@@ -67,11 +67,10 @@ func normalizeAddon(addon Addon) Addon {
 	return addon
 }
 
-func backfillDependencies(addons []Addon) []Addon {
-	manifests := GetAddonManifest()
-	if len(manifests) == 0 {
-		logger.Warn("backfillDependencies: no addon manifests available, skipping dependency backfill")
-		return addons
+func backfillDependencies(addons []Addon) ([]Addon, error) {
+	manifests, err := GetAddonManifest()
+	if err != nil {
+		return addons, err
 	}
 
 	manifestByName := make(map[string]shared.AddonManifest, len(manifests))
@@ -89,7 +88,7 @@ func backfillDependencies(addons []Addon) []Addon {
 		}
 		result[i].Dependencies = append([]string(nil), manifest.Dependencies...)
 	}
-	return result
+	return result, nil
 }
 
 func LoadManagedAddonsFile() error {
@@ -118,9 +117,12 @@ func LoadManagedAddonsFile() error {
 			return err
 		}
 
-		addons = backfillDependencies(addons)
+		addons, err = backfillDependencies(addons)
 		for _, addon := range addons {
 			localAddons[addon.Name] = normalizeAddon(addon)
+		}
+		if err != nil {
+			return fmt.Errorf("migrate managed_addons.json: %w", err)
 		}
 
 		backupPath := filepath.Join(config.GetDataDir(), "managed_addons.json.bak")

@@ -17,8 +17,12 @@ const maxDependencyDepth = 10
 // so (false, nil) can be stubbed without HTTP or the user addon dir.
 var installAddon = addon.InstallAddon
 
-func (s *RemoteAddonService) GetAddonManifest() []shared.AddonManifest {
-	return addon.GetAddonManifest()
+// getAddonManifest is the catalog fetch used by GetAddonManifest and
+// ResolveDependencies. Tests replace it to stub fetch outcomes.
+var getAddonManifest = addon.GetAddonManifest
+
+func (s *RemoteAddonService) GetAddonManifest() ([]shared.AddonManifest, error) {
+	return getAddonManifest()
 }
 
 func (s *RemoteAddonService) InvalidateAddonManifestCache() {
@@ -78,9 +82,9 @@ func (s *RemoteAddonService) ResolveDependencies(ad shared.AddonManifest) (share
 		Errors:       []string{},
 	}
 
-	manifests := addon.GetAddonManifest()
-	if len(manifests) == 0 {
-		return result, fmt.Errorf("failed to fetch addon manifests")
+	manifests, err := getAddonManifest()
+	if err != nil {
+		return result, fmt.Errorf("failed to fetch addon manifests: %w", err)
 	}
 
 	manifestByName := make(map[string]shared.AddonManifest, len(manifests))

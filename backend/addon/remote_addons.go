@@ -100,12 +100,13 @@ var (
 
 // GetAddonManifest returns the remote catalog, cached for addonManifestTTL.
 // Callers that arrive during a fetch share its result, including failures. A
-// failed fetch is not cached, the last good catalog is served instead.
-func GetAddonManifest() []shared.AddonManifest {
+// failed fetch is not cached, the last good catalog is served instead, the
+// error is returned only when no cached catalog exists.
+func GetAddonManifest() ([]shared.AddonManifest, error) {
 	manifestCacheMu.Lock()
 	defer manifestCacheMu.Unlock()
 	if manifestCache != nil && now().Before(manifestCacheUntil) {
-		return slices.Clone(manifestCache)
+		return slices.Clone(manifestCache), nil
 	}
 	f := manifestInflight
 	if f == nil {
@@ -136,11 +137,11 @@ func GetAddonManifest() []shared.AddonManifest {
 	if f.err != nil {
 		if manifestCache != nil {
 			logger.Warn("GetAddonManifest: serving last cached catalog")
-			return slices.Clone(manifestCache)
+			return slices.Clone(manifestCache), nil
 		}
-		return []shared.AddonManifest{}
+		return nil, fmt.Errorf("fetch addon manifest: %w", f.err)
 	}
-	return slices.Clone(f.manifests)
+	return slices.Clone(f.manifests), nil
 }
 
 // InvalidateAddonManifestCache forces the next GetAddonManifest call to fetch again, even when a fetch is already running, and keeps the last good catalog as the error fallback.

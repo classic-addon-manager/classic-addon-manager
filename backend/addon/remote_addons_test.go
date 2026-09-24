@@ -67,8 +67,14 @@ func TestGetAddonManifestCachesWithinTTL(t *testing.T) {
 		return []shared.AddonManifest{{Name: "cached"}}, nil
 	})
 
-	first := GetAddonManifest()
-	second := GetAddonManifest()
+	first, err := GetAddonManifest()
+	if err != nil {
+		t.Fatalf("first call returned error: %v", err)
+	}
+	second, err := GetAddonManifest()
+	if err != nil {
+		t.Fatalf("second call returned error: %v", err)
+	}
 
 	if calls != 1 {
 		t.Fatalf("fetch called %d times, want 1", calls)
@@ -88,9 +94,15 @@ func TestGetAddonManifestRefetchesAfterTTL(t *testing.T) {
 		return []shared.AddonManifest{{Name: "fetch-" + string(rune('0'+calls))}}, nil
 	})
 
-	first := GetAddonManifest()
+	first, err := GetAddonManifest()
+	if err != nil {
+		t.Fatalf("first call returned error: %v", err)
+	}
 	advance(addonManifestTTL + time.Second)
-	second := GetAddonManifest()
+	second, err := GetAddonManifest()
+	if err != nil {
+		t.Fatalf("second call returned error: %v", err)
+	}
 
 	if calls != 2 {
 		t.Fatalf("fetch called %d times, want 2", calls)
@@ -112,13 +124,21 @@ func TestGetAddonManifestServesCachedOnError(t *testing.T) {
 		return []shared.AddonManifest{{Name: name}}, nil
 	})
 
-	if got := GetAddonManifest(); len(got) != 1 || got[0].Name != "v1" {
+	got, err := GetAddonManifest()
+	if err != nil {
+		t.Fatalf("initial fetch returned error: %v", err)
+	}
+	if len(got) != 1 || got[0].Name != "v1" {
 		t.Fatalf("initial fetch returned %+v, want [v1]", got)
 	}
 
 	advance(addonManifestTTL + time.Second)
 	fail = true
-	if got := GetAddonManifest(); len(got) != 1 || got[0].Name != "v1" {
+	got, err = GetAddonManifest()
+	if err != nil {
+		t.Fatalf("expired fetch error returned error, want stale fallback: %v", err)
+	}
+	if len(got) != 1 || got[0].Name != "v1" {
 		t.Fatalf("expired fetch error returned %+v, want last cached [v1]", got)
 	}
 	if calls != 2 {
@@ -126,7 +146,11 @@ func TestGetAddonManifestServesCachedOnError(t *testing.T) {
 	}
 
 	// Errors are not cached: the next call fetches again.
-	if got := GetAddonManifest(); len(got) != 1 || got[0].Name != "v1" {
+	got, err = GetAddonManifest()
+	if err != nil {
+		t.Fatalf("second error returned error, want stale fallback: %v", err)
+	}
+	if len(got) != 1 || got[0].Name != "v1" {
 		t.Fatalf("second error returned %+v, want last cached [v1]", got)
 	}
 	if calls != 3 {
@@ -136,19 +160,51 @@ func TestGetAddonManifestServesCachedOnError(t *testing.T) {
 	// A later success replaces the catalog.
 	fail = false
 	name = "v2"
-	if got := GetAddonManifest(); len(got) != 1 || got[0].Name != "v2" || calls != 4 {
+	got, err = GetAddonManifest()
+	if err != nil {
+		t.Fatalf("recovery call returned error: %v", err)
+	}
+	if len(got) != 1 || got[0].Name != "v2" || calls != 4 {
 		t.Fatalf("recovery call returned %+v after %d fetches, want [v2] after 4", got, calls)
 	}
 }
 
-func TestGetAddonManifestEmptyOnErrorWithoutCache(t *testing.T) {
+func TestGetAddonManifestErrorWithoutCache(t *testing.T) {
+	var calls int
+	fetchErr := errors.New("fetch failed")
+	stubManifestCache(t, func() ([]shared.AddonManifest, error) {
+		calls++
+		return nil, fetchErr
+	})
+
+	got, err := GetAddonManifest()
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, fetchErr) {
+		t.Fatalf("expected error wrapping %q, got %v", fetchErr, err)
+	}
+	if got != nil {
+		t.Fatalf("expected nil slice, got %+v", got)
+	}
+
+	GetAddonManifest()
+	if calls != 2 {
+		t.Fatalf("fetch called %d times, want 2 (errors are not cached)", calls)
+	}
+}
+
+func TestGetAddonManifestEmptyCatalogIsValid(t *testing.T) {
 	var calls int
 	stubManifestCache(t, func() ([]shared.AddonManifest, error) {
 		calls++
-		return nil, errors.New("fetch failed")
+		return nil, nil
 	})
 
-	got := GetAddonManifest()
+	got, err := GetAddonManifest()
+	if err != nil {
+		t.Fatalf("empty catalog returned error: %v", err)
+	}
 	if got == nil {
 		t.Fatal("expected non-nil empty slice, got nil")
 	}
@@ -156,9 +212,11 @@ func TestGetAddonManifestEmptyOnErrorWithoutCache(t *testing.T) {
 		t.Fatalf("expected empty slice, got %+v", got)
 	}
 
-	GetAddonManifest()
-	if calls != 2 {
-		t.Fatalf("fetch called %d times, want 2 (errors are not cached)", calls)
+	if _, err := GetAddonManifest(); err != nil {
+		t.Fatalf("cached empty catalog returned error: %v", err)
+	}
+	if calls != 1 {
+		t.Fatalf("fetch called %d times, want 1 (empty catalog is cached)", calls)
 	}
 }
 
@@ -169,9 +227,13 @@ func TestInvalidateAddonManifestCache(t *testing.T) {
 		return []shared.AddonManifest{{Name: "data"}}, nil
 	})
 
-	GetAddonManifest()
+	if _, err := GetAddonManifest(); err != nil {
+		t.Fatalf("initial call returned error: %v", err)
+	}
 	InvalidateAddonManifestCache()
-	GetAddonManifest()
+	if _, err := GetAddonManifest(); err != nil {
+		t.Fatalf("post-invalidation call returned error: %v", err)
+	}
 
 	if calls != 2 {
 		t.Fatalf("fetch called %d times, want 2 after invalidation", calls)
@@ -196,12 +258,13 @@ func TestGetAddonManifestConcurrentFetch(t *testing.T) {
 
 		const goroutines = 10
 		results := make([][]shared.AddonManifest, goroutines)
+		errs := make([]error, goroutines)
 		var wg sync.WaitGroup
 		for i := 0; i < goroutines; i++ {
 			wg.Add(1)
 			go func(i int) {
 				defer wg.Done()
-				results[i] = GetAddonManifest()
+				results[i], errs[i] = GetAddonManifest()
 			}(i)
 		}
 
@@ -210,6 +273,9 @@ func TestGetAddonManifestConcurrentFetch(t *testing.T) {
 		wg.Wait()
 
 		for i, res := range results {
+			if errs[i] != nil {
+				t.Fatalf("goroutine %d got error: %v", i, errs[i])
+			}
 			if len(res) != 1 || res[0].Name != "concurrent" {
 				t.Fatalf("goroutine %d got %+v, want [concurrent]", i, res)
 			}
@@ -235,7 +301,11 @@ func TestGetAddonManifestConcurrentFailureSharesFetch(t *testing.T) {
 		return []shared.AddonManifest{{Name: "seeded"}}, nil
 	})
 
-	if got := GetAddonManifest(); len(got) != 1 || got[0].Name != "seeded" {
+	got, err := GetAddonManifest()
+	if err != nil {
+		t.Fatalf("seed fetch returned error: %v", err)
+	}
+	if len(got) != 1 || got[0].Name != "seeded" {
 		t.Fatalf("seed fetch returned %+v, want [seeded]", got)
 	}
 	advance(addonManifestTTL + time.Second)
@@ -247,12 +317,13 @@ func TestGetAddonManifestConcurrentFailureSharesFetch(t *testing.T) {
 
 		const goroutines = 10
 		results := make([][]shared.AddonManifest, goroutines)
+		errs := make([]error, goroutines)
 		var wg sync.WaitGroup
 		for i := 0; i < goroutines; i++ {
 			wg.Add(1)
 			go func(i int) {
 				defer wg.Done()
-				results[i] = GetAddonManifest()
+				results[i], errs[i] = GetAddonManifest()
 			}(i)
 		}
 
@@ -261,6 +332,9 @@ func TestGetAddonManifestConcurrentFailureSharesFetch(t *testing.T) {
 		wg.Wait()
 
 		for i, res := range results {
+			if errs[i] != nil {
+				t.Fatalf("goroutine %d got error, want stale fallback: %v", i, errs[i])
+			}
 			if len(res) != 1 || res[0].Name != "seeded" {
 				t.Fatalf("goroutine %d got %+v, want last cached [seeded]", i, res)
 			}
@@ -290,11 +364,12 @@ func TestInvalidateAddonManifestCacheDuringFetch(t *testing.T) {
 		release = make(chan struct{})
 
 		var aResult []shared.AddonManifest
+		var aErr error
 		var wg sync.WaitGroup
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			aResult = GetAddonManifest()
+			aResult, aErr = GetAddonManifest()
 		}()
 
 		// A is now blocked inside fetch #1.
@@ -303,19 +378,30 @@ func TestInvalidateAddonManifestCacheDuringFetch(t *testing.T) {
 		InvalidateAddonManifestCache()
 
 		// Must not join fetch #1: this call starts fetch #2.
-		if got := GetAddonManifest(); len(got) != 1 || got[0].Name != "v2" {
+		got, err := GetAddonManifest()
+		if err != nil {
+			t.Fatalf("post-invalidation call returned error: %v", err)
+		}
+		if len(got) != 1 || got[0].Name != "v2" {
 			t.Fatalf("post-invalidation call returned %+v, want [v2]", got)
 		}
 
 		close(release)
 		wg.Wait()
+		if aErr != nil {
+			t.Fatalf("in-flight caller got error: %v", aErr)
+		}
 		if len(aResult) != 1 || aResult[0].Name != "v1" {
 			t.Fatalf("in-flight caller got %+v, want [v1]", aResult)
 		}
 
 		// Still within the TTL: proves the superseded fetch did not overwrite
 		// the cache or its expiry.
-		if got := GetAddonManifest(); len(got) != 1 || got[0].Name != "v2" {
+		got, err = GetAddonManifest()
+		if err != nil {
+			t.Fatalf("cached call returned error: %v", err)
+		}
+		if len(got) != 1 || got[0].Name != "v2" {
 			t.Fatalf("cached call returned %+v, want [v2]", got)
 		}
 	})
@@ -330,10 +416,16 @@ func TestGetAddonManifestReturnedSliceIsCopy(t *testing.T) {
 		return []shared.AddonManifest{{Name: "original"}}, nil
 	})
 
-	first := GetAddonManifest()
+	first, err := GetAddonManifest()
+	if err != nil {
+		t.Fatalf("first call returned error: %v", err)
+	}
 	first[0].Name = "mutated"
 
-	second := GetAddonManifest()
+	second, err := GetAddonManifest()
+	if err != nil {
+		t.Fatalf("second call returned error: %v", err)
+	}
 	if second[0].Name != "original" {
 		t.Fatalf("mutating returned slice changed cache: got %q", second[0].Name)
 	}

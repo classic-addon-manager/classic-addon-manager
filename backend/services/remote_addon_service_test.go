@@ -3,7 +3,12 @@ package services
 import (
 	"ClassicAddonManager/backend/shared"
 	"errors"
+	"os"
+	"path/filepath"
+	"slices"
 	"testing"
+
+	"github.com/spf13/viper"
 )
 
 func newResolution(deps ...shared.DependencyInfo) shared.DependencyResolutionResult {
@@ -366,5 +371,70 @@ func TestApplyDependenciesThenParent_InstallDepVersionIsLatest(t *testing.T) {
 		if v != "latest" {
 			t.Fatalf("expected deps installed at 'latest', got %q", v)
 		}
+	}
+}
+
+func TestResolveDependencies_ManifestFetchError(t *testing.T) {
+	// Keep the logger singleton's app.log out of the real user config dir.
+	t.Setenv("APPDATA", os.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", os.TempDir())
+
+	fetchErr := errors.New("catalog unreachable")
+	orig := getAddonManifest
+	t.Cleanup(func() { getAddonManifest = orig })
+	getAddonManifest = func() ([]shared.AddonManifest, error) {
+		return nil, fetchErr
+	}
+
+	s := &RemoteAddonService{}
+	result, err := s.ResolveDependencies(shared.AddonManifest{Name: "main"})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, fetchErr) {
+		t.Fatalf("expected error wrapping %q, got %v", fetchErr, err)
+	}
+	if len(result.Dependencies) != 0 {
+		t.Fatalf("expected no dependencies, got %+v", result.Dependencies)
+	}
+}
+
+func TestResolveDependencies_EmptyCatalogIsValid(t *testing.T) {
+	t.Setenv("APPDATA", os.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", os.TempDir())
+
+	aacPath := t.TempDir()
+	prevValue := viper.Get("general.aacpath")
+	viper.Set("general.aacpath", aacPath)
+	t.Cleanup(func() { viper.Set("general.aacpath", prevValue) })
+
+	addonDir := filepath.Join(aacPath, "Addon")
+	if err := os.MkdirAll(addonDir, 0755); err != nil {
+		t.Fatalf("create addon dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(addonDir, "addons.txt"), []byte{}, 0644); err != nil {
+		t.Fatalf("write addons.txt: %v", err)
+	}
+
+	orig := getAddonManifest
+	t.Cleanup(func() { getAddonManifest = orig })
+	getAddonManifest = func() ([]shared.AddonManifest, error) {
+		return []shared.AddonManifest{}, nil
+	}
+
+	s := &RemoteAddonService{}
+	result, err := s.ResolveDependencies(shared.AddonManifest{
+		Name:         "main",
+		Dependencies: []string{"missing"},
+	})
+	if err != nil {
+		t.Fatalf("expected nil error for empty catalog, got %v", err)
+	}
+	if len(result.Dependencies) != 0 {
+		t.Fatalf("expected no dependencies, got %+v", result.Dependencies)
+	}
+	want := "Addon missing not found in repository manifests"
+	if !slices.Contains(result.Errors, want) {
+		t.Fatalf("expected errors to contain %q, got %v", want, result.Errors)
 	}
 }

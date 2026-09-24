@@ -1,4 +1,4 @@
-import { useAtom, useAtomValue, useSetAtom } from 'jotai'
+import { useAtom, useAtomValue, useSetAtom, useStore } from 'jotai'
 import {
   AlertTriangleIcon,
   LayoutGrid,
@@ -10,6 +10,7 @@ import {
 import { useDebouncedCallback } from 'use-debounce'
 
 import {
+  addonsErrorAtom,
   isAddonsReadyAtom,
   isRefreshingAtom,
   loadAddonsAtom,
@@ -24,10 +25,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/u
 import { toast } from '@/components/ui/toast'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useTitleBarSlot } from '@/hooks/useTitleBarSlot'
-import { safeCall } from '@/lib/utils'
 import { usePreferencesStore } from '@/stores/preferencesStore'
 
 export const AddonsToolbar = () => {
+  const store = useStore()
   const loadAddons = useSetAtom(loadAddonsAtom)
   const isReady = useAtomValue(isAddonsReadyAtom)
   const setSearchQuery = useSetAtom(searchQueryAtom)
@@ -46,15 +47,7 @@ export const AddonsToolbar = () => {
     setIsRefreshing(true)
 
     const startTime = Date.now()
-    const [, err] = await safeCall(loadAddons(true))
-    if (err) {
-      console.error('Failed to refresh addons', err)
-      toast({
-        title: 'Error',
-        description: `Failed to refresh addons: ${err.message.substring(0, 100)}`,
-        icon: AlertTriangleIcon,
-      })
-    }
+    const ok = await loadAddons(true)
 
     const elapsedTime = Date.now() - startTime
     if (elapsedTime < 500) {
@@ -62,6 +55,16 @@ export const AddonsToolbar = () => {
     }
 
     setIsRefreshing(false)
+    if (!ok) {
+      const message = store.get(addonsErrorAtom) ?? 'unknown error'
+      console.error('Failed to refresh addons', message)
+      toast({
+        title: 'Error',
+        description: `Failed to refresh addons: ${message.substring(0, 100)}`,
+        icon: AlertTriangleIcon,
+      })
+      return
+    }
     toast({
       title: 'Completed',
       description: `Refreshed addons in ${elapsedTime}ms`,
