@@ -13,6 +13,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 
@@ -27,6 +28,7 @@ const (
 	windowMinWidth  = 985
 	windowMinHeight = 640
 	fatalErrorTitle = "Classic Addon Manager Error"
+	deeplinkScheme  = "classicaddonmanager"
 )
 
 func main() {
@@ -214,4 +216,10 @@ func startup(a *application.App) {
 	if err != nil {
 		logger.Error("Error loading managed_addons.json:", err)
 	}
+}
+
+// isAuthDeeplink reports whether raw is a classicaddonmanager://auth deeplink.
+func isAuthDeeplink(raw string) bool {
+	u, err := url.Parse(raw)
+	return err == nil && u.Scheme == deeplinkScheme && u.Host == "auth"
 }

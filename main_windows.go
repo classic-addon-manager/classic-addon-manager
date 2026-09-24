@@ -51,7 +51,7 @@ func checkForRunningInstance() bool {
 	conn, err := winio.DialPipe(pipeName, &timeout)
 	if err == nil {
 		// Send deeplink to the existing instance
-		if len(os.Args) > 1 {
+		if len(os.Args) > 1 && isAuthDeeplink(os.Args[1]) {
 			_, _ = fmt.Fprintln(conn, os.Args[1])
 		}
 		_ = conn.Close()
@@ -101,38 +101,36 @@ func handleIPCConnection(conn net.Conn, a *application.App) {
 		return
 	}
 
-	// Handle the deeplink in the existing instance
-	parsedURL, err := url.Parse(deeplink)
-	if err != nil {
-		logger.Error("Failed to parse deeplink URL:", err)
+	if !isAuthDeeplink(deeplink) {
+		logger.Warn("Ignoring unrecognized deeplink")
 		return
 	}
 
-	if parsedURL.Host == "auth" {
-		token := parsedURL.Query().Get("t")
-		if token != "" {
-			logger.Info("Received authentication token")
-			mainWindow, exists := a.Window.GetByName("main")
-			if !exists {
-				logger.Error("Error getting main window:", err)
-				return
-			}
-			if mainWindow.IsMinimised() {
-				mainWindow.UnMinimise()
-			} else {
-				mainWindow.Minimise()
-				mainWindow.UnMinimise()
-				mainWindow.Focus()
-			}
-			mainWindow.EmitEvent("authTokenReceived", token)
-		} else {
-			logger.Warn("No token found in deeplink URL")
+	// Handle the deeplink in the existing instance
+	parsedURL, _ := url.Parse(deeplink)
+	token := parsedURL.Query().Get("t")
+	if token != "" {
+		logger.Info("Received authentication token")
+		mainWindow, exists := a.Window.GetByName("main")
+		if !exists {
+			logger.Error("Error getting main window", fmt.Errorf("main window not found"))
+			return
 		}
+		if mainWindow.IsMinimised() {
+			mainWindow.UnMinimise()
+		} else {
+			mainWindow.Minimise()
+			mainWindow.UnMinimise()
+			mainWindow.Focus()
+		}
+		mainWindow.EmitEvent("authTokenReceived", token)
+	} else {
+		logger.Warn("No token found in deeplink URL")
 	}
 }
 
 func registerDeeplink() {
-	protocol := "classicaddonmanager"
+	protocol := deeplinkScheme
 	regPath := `Software\Classes\` + protocol
 
 	key, _, err := registry.CreateKey(registry.CURRENT_USER, regPath, registry.SET_VALUE)
