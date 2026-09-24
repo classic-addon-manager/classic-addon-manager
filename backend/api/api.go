@@ -27,7 +27,9 @@ func NewApiRequest(ctx context.Context, method string, path string, body io.Read
 
 	req.Header.Set("X-Client", GetClientHeader())
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Content-Type", "application/json")
+	if body != nil || method != http.MethodGet {
+		req.Header.Set("Content-Type", "application/json")
+	}
 	return req, nil
 }
 
@@ -37,7 +39,9 @@ func NewAuthenticatedApiRequest(ctx context.Context, method string, path string,
 		return nil, err
 	}
 
-	req.Header.Set("X-Token", auth.GetToken())
+	if token := auth.GetToken(); token != "" {
+		req.Header.Set("X-Token", token)
+	}
 	return req, nil
 }
 
