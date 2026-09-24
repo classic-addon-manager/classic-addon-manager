@@ -82,18 +82,10 @@ func SortAddonsTxt() error {
 
 	// Always read the current file fresh from disk so we sort exactly what is
 	// on disk, not a potentially stale in-memory cache.
-	lines, err := file.ReadLines(addonsTxtPath)
+	names, err := readAddonsTxtLines(addonsTxtPath)
 	if err != nil {
 		logger.Error("SortAddonsTxt: failed to read addons.txt:", err)
 		return err
-	}
-
-	names := make([]string, 0, len(lines))
-	for _, line := range lines {
-		if strings.TrimSpace(line) == "" {
-			continue
-		}
-		names = append(names, line)
 	}
 
 	if len(names) == 0 {
@@ -123,7 +115,7 @@ func SortAddonsTxt() error {
 	if writeErr := file.WriteLines(addonsTxtPath, ordered); writeErr != nil {
 		logger.Error("SortAddonsTxt: failed to write addons.txt:", writeErr)
 		// Rollback the in-memory cache from disk if the write failed.
-		rollback, readErr := file.ReadLines(addonsTxtPath)
+		rollback, readErr := readAddonsTxtLines(addonsTxtPath)
 		if readErr != nil {
 			logger.Error("SortAddonsTxt: failed to re-read addons.txt after failed write:", readErr)
 			return writeErr

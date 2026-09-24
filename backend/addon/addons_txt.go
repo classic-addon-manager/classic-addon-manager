@@ -7,6 +7,7 @@ import (
 
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
 )
 
@@ -37,8 +38,24 @@ func setInstalledAddonNames(names []string) {
 	installedAddonNames = names
 }
 
+func readAddonsTxtLines(path string) ([]string, error) {
+	lines, err := file.ReadLines(path)
+	if err != nil {
+		return nil, err
+	}
+
+	names := make([]string, 0, len(lines))
+	for _, line := range lines {
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		names = append(names, line)
+	}
+	return names, nil
+}
+
 func ReadAddonsTxt() ([]string, error) {
-	lines, err := file.ReadLines(filepath.Join(config.GetAddonDir(), "addons.txt"))
+	lines, err := readAddonsTxtLines(filepath.Join(config.GetAddonDir(), "addons.txt"))
 	if err != nil {
 		logger.Error("Error reading addons.txt:", err)
 		return nil, err
@@ -67,7 +84,7 @@ func AddToAddonsTxt(addonName string) error {
 	if err != nil {
 		logger.Error("Error adding addon to addons.txt:", err)
 		// Rollback the in-memory change if file write fails
-		lines, readErr := file.ReadLines(filepath.Join(config.GetAddonDir(), "addons.txt"))
+		lines, readErr := readAddonsTxtLines(filepath.Join(config.GetAddonDir(), "addons.txt"))
 		if readErr != nil {
 			logger.Error("Error re-reading addons.txt after failed write:", readErr)
 			return err
@@ -105,7 +122,7 @@ func RemoveFromAddonsTxt(addonName string) error {
 	if err != nil {
 		logger.Error("Error removing addon from addons.txt:", err)
 		// Rollback the in-memory change if file write fails
-		lines, readErr := file.ReadLines(filepath.Join(config.GetAddonDir(), "addons.txt"))
+		lines, readErr := readAddonsTxtLines(filepath.Join(config.GetAddonDir(), "addons.txt"))
 		if readErr != nil {
 			logger.Error("Error re-reading addons.txt after failed write:", readErr)
 			return err

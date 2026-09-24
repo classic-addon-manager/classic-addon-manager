@@ -3,8 +3,10 @@ package addon
 import (
 	"ClassicAddonManager/backend/config"
 	"ClassicAddonManager/backend/file"
+	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/spf13/viper"
@@ -146,6 +148,91 @@ func TestReadAddonsTxtFiltersEveryUpdateNotification(t *testing.T) {
 		t.Fatalf("AddToAddonsTxt: %v", err)
 	}
 	assertAddonsTxtLines(t, path, []string{updateNotification, "First", updateNotification, "Second"})
+}
+
+func TestReadAddonsTxtSkipsBlankLines(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+	}{
+		{"LF", "First\n\n   \n" + updateNotification + "\n\t\nSecond\n\n"},
+		{"CRLF", "First\r\n\r\n  \r\n" + updateNotification + "\r\nSecond\r\n\r\n"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			path := setupAddonsTxtTest(t)
+
+			if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+				t.Fatalf("create addon dir: %v", err)
+			}
+			if err := os.WriteFile(path, []byte(tt.content), 0644); err != nil {
+				t.Fatalf("seed addons.txt: %v", err)
+			}
+
+			names, err := ReadAddonsTxt()
+			if err != nil {
+				t.Fatalf("ReadAddonsTxt: %v", err)
+			}
+			if want := []string{"First", "Second"}; !slices.Equal(names, want) {
+				t.Fatalf("ReadAddonsTxt = %v, want %v", names, want)
+			}
+			if got, want := GetInstalledAddonNames(), []string{"First", "Second"}; !slices.Equal(got, want) {
+				t.Fatalf("GetInstalledAddonNames = %v, want %v", got, want)
+			}
+
+			addons := GetAddons()
+			if len(addons) != 2 {
+				t.Fatalf("GetAddons returned %d addons, want 2", len(addons))
+			}
+			for _, a := range addons {
+				if strings.TrimSpace(a.Name) == "" {
+					t.Fatalf("GetAddons returned addon with blank name: %q", a.Name)
+				}
+			}
+
+			if err := AddToAddonsTxt("Third"); err != nil {
+				t.Fatalf("AddToAddonsTxt: %v", err)
+			}
+			assertAddonsTxtLines(t, path, []string{"First", updateNotification, "Second", "Third"})
+		})
+	}
+}
+
+func TestSortAddonsTxtSkipsBlankLines(t *testing.T) {
+	path := setupAddonsTxtTest(t)
+
+	// Second depends on Third, so sorting must move Third ahead of Second.
+	localAddonsMu.Lock()
+	prev := localAddons
+	localAddons = map[string]Addon{
+		"Second": {Name: "Second", Dependencies: []string{"Third"}},
+	}
+	localAddonsMu.Unlock()
+	t.Cleanup(func() {
+		localAddonsMu.Lock()
+		localAddons = prev
+		localAddonsMu.Unlock()
+	})
+
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		t.Fatalf("create addon dir: %v", err)
+	}
+	if err := os.WriteFile(path, []byte("Second\n\n"+updateNotification+"\n  \nThird\n"), 0644); err != nil {
+		t.Fatalf("seed addons.txt: %v", err)
+	}
+	if _, err := ReadAddonsTxt(); err != nil {
+		t.Fatalf("ReadAddonsTxt: %v", err)
+	}
+
+	if err := SortAddonsTxt(); err != nil {
+		t.Fatalf("SortAddonsTxt: %v", err)
+	}
+	assertAddonsTxtLines(t, path, []string{"Third", "Second", updateNotification})
+
+	if got, want := GetInstalledAddonNames(), []string{"Third", "Second"}; !slices.Equal(got, want) {
+		t.Fatalf("GetInstalledAddonNames = %v, want %v", got, want)
+	}
 }
 
 func TestSetupAddonsTxtTestRestoresAACPath(t *testing.T) {
