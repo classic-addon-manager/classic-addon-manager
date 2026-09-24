@@ -13,7 +13,10 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
+	"sync"
+	"time"
 )
 
 func InstallAddon(manifest shared.AddonManifest, version string) (bool, error) {
@@ -73,34 +76,111 @@ func UpdateAddon(manifest shared.AddonManifest, version string) (bool, error) {
 	return true, nil
 }
 
+const addonManifestTTL = time.Minute
+
+var (
+	manifestCacheMu    sync.Mutex
+	manifestCache      []shared.AddonManifest // nil = never fetched successfully
+	manifestCacheUntil time.Time
+	// Tests replace these.
+	fetchAddonManifest = fetchAddonManifestRemote
+	now                = time.Now
+)
+
+type manifestFetch struct {
+	done      chan struct{}
+	manifests []shared.AddonManifest
+	err       error
+}
+
+var (
+	manifestInflight *manifestFetch
+	manifestGen      uint64
+)
+
+// GetAddonManifest returns the remote catalog, cached for addonManifestTTL.
+// Callers that arrive during a fetch share its result, including failures. A
+// failed fetch is not cached, the last good catalog is served instead.
 func GetAddonManifest() []shared.AddonManifest {
+	manifestCacheMu.Lock()
+	defer manifestCacheMu.Unlock()
+	if manifestCache != nil && now().Before(manifestCacheUntil) {
+		return slices.Clone(manifestCache)
+	}
+	f := manifestInflight
+	if f == nil {
+		f = &manifestFetch{done: make(chan struct{})}
+		manifestInflight = f
+		gen := manifestGen
+		manifestCacheMu.Unlock()
+		f.manifests, f.err = fetchAddonManifest()
+		manifestCacheMu.Lock()
+		if manifestInflight == f {
+			manifestInflight = nil
+		}
+		if f.err == nil {
+			if f.manifests == nil {
+				f.manifests = []shared.AddonManifest{}
+			}
+			if gen == manifestGen {
+				manifestCache = f.manifests
+				manifestCacheUntil = now().Add(addonManifestTTL)
+			}
+		}
+		close(f.done)
+	} else {
+		manifestCacheMu.Unlock()
+		<-f.done
+		manifestCacheMu.Lock()
+	}
+	if f.err != nil {
+		if manifestCache != nil {
+			logger.Warn("GetAddonManifest: serving last cached catalog")
+			return slices.Clone(manifestCache)
+		}
+		return []shared.AddonManifest{}
+	}
+	return slices.Clone(f.manifests)
+}
+
+// InvalidateAddonManifestCache forces the next GetAddonManifest call to fetch again, even when a fetch is already running, and keeps the last good catalog as the error fallback.
+func InvalidateAddonManifestCache() {
+	manifestCacheMu.Lock()
+	defer manifestCacheMu.Unlock()
+	manifestGen++
+	manifestCacheUntil = time.Time{}
+	manifestInflight = nil // later callers start a fresh fetch instead of joining one that began before invalidation
+}
+
+func fetchAddonManifestRemote() ([]shared.AddonManifest, error) {
 	req, err := api.NewApiRequest(nil, http.MethodGet, "/addons", nil)
 	if err != nil {
 		logger.Error("GetAddonManifest Error:", err)
-		return []shared.AddonManifest{}
+		return nil, err
 	}
 
 	resp, err := api.Client.Do(req)
 	if err != nil {
 		logger.Error("GetAddonManifest Error:", err)
-		return []shared.AddonManifest{}
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		logger.Error("GetAddonManifest Error: Status Code", errors.New(strconv.Itoa(resp.StatusCode)))
-		return []shared.AddonManifest{}
+		err := errors.New(strconv.Itoa(resp.StatusCode))
+		logger.Error("GetAddonManifest Error: Status Code", err)
+		return nil, err
 	}
 
 	var manifests []shared.AddonManifest
 	if err := json.NewDecoder(resp.Body).Decode(&manifests); err != nil {
 		logger.Error("GetAddonManifest Error:", err)
-		return []shared.AddonManifest{}
+		return nil, err
 	}
 
 	logger.Info("Retrieved " + strconv.Itoa(len(manifests)) + " addon manifests from remote source")
 
-	return manifests
+	return manifests, nil
 }
 
 func ensureAddonsTxtExists() error {

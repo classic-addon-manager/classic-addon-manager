@@ -21,6 +21,10 @@ func (s *RemoteAddonService) GetAddonManifest() []shared.AddonManifest {
 	return addon.GetAddonManifest()
 }
 
+func (s *RemoteAddonService) InvalidateAddonManifestCache() {
+	addon.InvalidateAddonManifestCache()
+}
+
 func (s *RemoteAddonService) InstallAddon(ad shared.AddonManifest, version string) (bool, error) {
 	ok, err := installAddon(ad, version)
 	if err != nil {
