@@ -21,17 +21,30 @@ type stateFile struct {
 	KofiModalLastShownAt *time.Time `json:"kofi_modal_last_shown_at,omitempty"`
 }
 
-func statePath() string {
-	return filepath.Join(getStateDir(), stateFileName)
+func statePath() (string, error) {
+	dir, err := getStateDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, stateFileName), nil
 }
 
-func stateFileExists() bool {
-	_, err := os.Stat(statePath())
-	return err == nil
+func stateFileExists() (bool, error) {
+	path, err := statePath()
+	if err != nil {
+		return false, err
+	}
+	_, err = os.Stat(path)
+	return err == nil, nil
 }
 
 func ShouldShowKofiModal() bool {
-	if !stateFileExists() {
+	exists, err := stateFileExists()
+	if err != nil {
+		logger.Warn(fmt.Sprintf("App state: could not resolve state file path: %v", err))
+		return false
+	}
+	if !exists {
 		return false
 	}
 	sf, err := loadState()
@@ -47,7 +60,11 @@ func ShouldShowKofiModal() bool {
 
 // EnsureInitialized creates app_state.json on first launch without showing the kofi modal.
 func EnsureInitialized() error {
-	if stateFileExists() {
+	exists, err := stateFileExists()
+	if err != nil {
+		return err
+	}
+	if exists {
 		return nil
 	}
 	sf := stateFile{Version: 1}
@@ -55,7 +72,11 @@ func EnsureInitialized() error {
 	if err != nil {
 		return fmt.Errorf("error marshaling app state: %w", err)
 	}
-	if err := file.WriteAtomic(statePath(), data, 0600); err != nil {
+	path, err := statePath()
+	if err != nil {
+		return err
+	}
+	if err := file.WriteAtomic(path, data, 0600); err != nil {
 		return fmt.Errorf("error writing app state: %w", err)
 	}
 	logger.Info("App state: initialized app_state.json (first launch)")
@@ -74,7 +95,11 @@ func RecordKofiModalShown() error {
 		return fmt.Errorf("error marshaling app state: %w", err)
 	}
 
-	if err := file.WriteAtomic(statePath(), data, 0600); err != nil {
+	path, err := statePath()
+	if err != nil {
+		return err
+	}
+	if err := file.WriteAtomic(path, data, 0600); err != nil {
 		return fmt.Errorf("error writing app state: %w", err)
 	}
 
@@ -83,7 +108,10 @@ func RecordKofiModalShown() error {
 }
 
 func loadState() (*stateFile, error) {
-	path := statePath()
+	path, err := statePath()
+	if err != nil {
+		return nil, err
+	}
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {

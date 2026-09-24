@@ -185,7 +185,12 @@ func fetchAddonManifestRemote() ([]shared.AddonManifest, error) {
 }
 
 func ensureAddonsTxtExists() error {
-	if !file.FileExists(filepath.Join(config.GetAddonDir(), "addons.txt")) {
+	txtPath, err := addonsTxtPath()
+	if err != nil {
+		logger.Error("Could not resolve addons.txt path:", err)
+		return err
+	}
+	if !file.FileExists(txtPath) {
 		logger.Info("addons.txt not found in AAC path, creating it.")
 		if err := CreateAddonsTxt(); err != nil {
 			logger.Error("Could not create addons.txt in AAC path:", err)
@@ -203,15 +208,20 @@ func buildDownloadURL(manifest shared.AddonManifest, version string) string {
 }
 
 func downloadAndExtractAddon(manifest shared.AddonManifest, version string) error {
-	zipName := manifest.Name + ".zip"
-	url := buildDownloadURL(manifest, version)
-
-	if err := util.DownloadFile(api.ApiURL+url, filepath.Join(config.GetCacheDir(), zipName)); err != nil {
+	cacheDir, err := config.GetCacheDir()
+	if err != nil {
 		return err
 	}
 
-	if file.FileExists(filepath.Join(config.GetCacheDir(), manifest.Name)) {
-		if err := os.RemoveAll(filepath.Join(config.GetCacheDir(), manifest.Name)); err != nil {
+	zipName := manifest.Name + ".zip"
+	url := buildDownloadURL(manifest, version)
+
+	if err := util.DownloadFile(api.ApiURL+url, filepath.Join(cacheDir, zipName)); err != nil {
+		return err
+	}
+
+	if file.FileExists(filepath.Join(cacheDir, manifest.Name)) {
+		if err := os.RemoveAll(filepath.Join(cacheDir, manifest.Name)); err != nil {
 			return err
 		}
 	}
@@ -220,7 +230,7 @@ func downloadAndExtractAddon(manifest shared.AddonManifest, version string) erro
 		return err
 	}
 
-	return os.Remove(filepath.Join(config.GetCacheDir(), zipName))
+	return os.Remove(filepath.Join(cacheDir, zipName))
 }
 
 func updateAddonMetadata(manifest shared.AddonManifest, version string) error {

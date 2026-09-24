@@ -1,12 +1,10 @@
 package addon
 
 import (
-	"ClassicAddonManager/backend/config"
 	"ClassicAddonManager/backend/file"
 	"ClassicAddonManager/backend/logger"
 
 	"fmt"
-	"path/filepath"
 	"slices"
 	"strings"
 )
@@ -78,11 +76,15 @@ func SortAddonsTxt() error {
 	installedAddonNamesMu.Lock()
 	defer installedAddonNamesMu.Unlock()
 
-	addonsTxtPath := filepath.Join(config.GetAddonDir(), "addons.txt")
+	txtPath, err := addonsTxtPath()
+	if err != nil {
+		logger.Error("SortAddonsTxt: failed to resolve addons.txt path:", err)
+		return err
+	}
 
 	// Always read the current file fresh from disk so we sort exactly what is
 	// on disk, not a potentially stale in-memory cache.
-	names, err := readAddonsTxtLines(addonsTxtPath)
+	names, err := readAddonsTxtLines(txtPath)
 	if err != nil {
 		logger.Error("SortAddonsTxt: failed to read addons.txt:", err)
 		return err
@@ -112,10 +114,10 @@ func SortAddonsTxt() error {
 		return nil
 	}
 
-	if writeErr := file.WriteLines(addonsTxtPath, ordered); writeErr != nil {
+	if writeErr := file.WriteLines(txtPath, ordered); writeErr != nil {
 		logger.Error("SortAddonsTxt: failed to write addons.txt:", writeErr)
 		// Rollback the in-memory cache from disk if the write failed.
-		rollback, readErr := readAddonsTxtLines(addonsTxtPath)
+		rollback, readErr := readAddonsTxtLines(txtPath)
 		if readErr != nil {
 			logger.Error("SortAddonsTxt: failed to re-read addons.txt after failed write:", readErr)
 			return writeErr

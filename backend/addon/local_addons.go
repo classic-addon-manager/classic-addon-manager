@@ -56,8 +56,12 @@ func localAddonsSnapshot() map[string]Addon {
 	return addons
 }
 
-func managedAddonsFilePath() string {
-	return filepath.Join(config.GetDataDir(), "managed_addons.json")
+func managedAddonsFilePath() (string, error) {
+	dataDir, err := config.GetDataDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dataDir, "managed_addons.json"), nil
 }
 
 func normalizeAddon(addon Addon) Addon {
@@ -96,7 +100,10 @@ func LoadManagedAddonsFile() error {
 	defer localAddonsMu.Unlock()
 
 	localAddons = make(map[string]Addon)
-	fp := managedAddonsFilePath()
+	fp, err := managedAddonsFilePath()
+	if err != nil {
+		return err
+	}
 	if !file.FileExists(fp) {
 		return errors.New("managed_addons.json not found")
 	}
@@ -125,7 +132,7 @@ func LoadManagedAddonsFile() error {
 			return fmt.Errorf("migrate managed_addons.json: %w", err)
 		}
 
-		backupPath := filepath.Join(config.GetDataDir(), "managed_addons.json.bak")
+		backupPath := filepath.Join(filepath.Dir(fp), "managed_addons.json.bak")
 		if err := os.WriteFile(backupPath, data, 0644); err != nil {
 			logger.Error("Error writing managed_addons.json backup:", err)
 			return err
@@ -234,7 +241,13 @@ func saveManagedAddonsToDiskLocked() {
 		return
 	}
 
-	err = file.WriteJSON(managedAddonsFilePath(), data)
+	fp, err := managedAddonsFilePath()
+	if err != nil {
+		logger.Error("Error resolving managed addons file path:", err)
+		return
+	}
+
+	err = file.WriteJSON(fp, data)
 	if err != nil {
 		logger.Error("Error writing managed addons to disk:", err)
 		return
@@ -252,13 +265,13 @@ func InstallZip(zipPath string) (string, error) {
 		return "", fmt.Errorf("invalid addon name derived from zip file name %q", fileName)
 	}
 
-	cacheDir := config.GetCacheDir()
-	if cacheDir == "" {
-		return "", errors.New("cache directory unavailable")
+	cacheDir, err := config.GetCacheDir()
+	if err != nil {
+		return "", fmt.Errorf("cache directory unavailable: %w", err)
 	}
 
 	// Validate the zip file contains a main.lua file
-	err := file.ValidateAddonZip(zipPath)
+	err = file.ValidateAddonZip(zipPath)
 	if err != nil {
 		return "", err
 	}

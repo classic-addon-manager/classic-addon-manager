@@ -2,7 +2,6 @@ package addon
 
 import (
 	"ClassicAddonManager/backend/api"
-	"ClassicAddonManager/backend/config"
 	"ClassicAddonManager/backend/logger"
 	"ClassicAddonManager/backend/shared"
 	"encoding/json"
@@ -67,7 +66,11 @@ func TestManagedAddonsConcurrentAccess(t *testing.T) {
 		t.Fatalf("snapshot contains %d addons, want %d", len(snapshot), addonCount)
 	}
 
-	data, err := os.ReadFile(managedAddonsFilePath())
+	fp, err := managedAddonsFilePath()
+	if err != nil {
+		t.Fatalf("managedAddonsFilePath: %v", err)
+	}
+	data, err := os.ReadFile(fp)
 	if err != nil {
 		t.Fatalf("read managed_addons.json: %v", err)
 	}
@@ -98,12 +101,15 @@ func TestLoadManagedAddonsFile_MigrationManifestFetchFails(t *testing.T) {
 	})
 
 	legacy := `[{"name":"legacy_addon","alias":"Legacy Addon","version":"1.0.0","isManaged":true}]`
-	fp := managedAddonsFilePath()
+	fp, err := managedAddonsFilePath()
+	if err != nil {
+		t.Fatalf("managedAddonsFilePath: %v", err)
+	}
 	if err := os.WriteFile(fp, []byte(legacy), 0644); err != nil {
 		t.Fatalf("write legacy managed_addons.json: %v", err)
 	}
 
-	err := LoadManagedAddonsFile()
+	err = LoadManagedAddonsFile()
 	if err == nil {
 		t.Fatal("expected migration error, got nil")
 	}
@@ -116,7 +122,7 @@ func TestLoadManagedAddonsFile_MigrationManifestFetchFails(t *testing.T) {
 		t.Fatal("expected legacy_addon to be loaded despite migration failure")
 	}
 
-	backupPath := filepath.Join(config.GetDataDir(), "managed_addons.json.bak")
+	backupPath := filepath.Join(filepath.Dir(fp), "managed_addons.json.bak")
 	if _, statErr := os.Stat(backupPath); !os.IsNotExist(statErr) {
 		t.Fatalf("expected no backup file, stat err: %v", statErr)
 	}
@@ -149,7 +155,10 @@ func TestLoadManagedAddonsFile_MigrationBackfillsDependencies(t *testing.T) {
 	})
 
 	legacy := `[{"name":"legacy_addon","alias":"Legacy Addon","version":"1.0.0","isManaged":true}]`
-	fp := managedAddonsFilePath()
+	fp, err := managedAddonsFilePath()
+	if err != nil {
+		t.Fatalf("managedAddonsFilePath: %v", err)
+	}
 	if err := os.WriteFile(fp, []byte(legacy), 0644); err != nil {
 		t.Fatalf("write legacy managed_addons.json: %v", err)
 	}
@@ -166,7 +175,7 @@ func TestLoadManagedAddonsFile_MigrationBackfillsDependencies(t *testing.T) {
 		t.Fatalf("expected backfilled dependencies, got %v", addon.Dependencies)
 	}
 
-	backupPath := filepath.Join(config.GetDataDir(), "managed_addons.json.bak")
+	backupPath := filepath.Join(filepath.Dir(fp), "managed_addons.json.bak")
 	backup, err := os.ReadFile(backupPath)
 	if err != nil {
 		t.Fatalf("read managed_addons.json.bak: %v", err)

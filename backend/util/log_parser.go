@@ -16,7 +16,11 @@ type LogParseResult struct {
 }
 
 func parseLogFile() ([]LogParseResult, error) {
-	logPath := filepath.Join(config.GetAACDir(), "ArcheAge.log")
+	aacDir, err := config.GetAACDir()
+	if err != nil {
+		return nil, err
+	}
+	logPath := filepath.Join(aacDir, "ArcheAge.log")
 	data, err := os.ReadFile(logPath)
 	if err != nil {
 		return nil, err

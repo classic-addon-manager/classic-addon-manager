@@ -19,6 +19,8 @@ const (
 
 var ErrAACNotDetected = errors.New("ArcheAge Classic installation was not detected")
 
+var ErrAACPathNotSet = errors.New("ArcheAge Classic path is not set, open Settings, disable automatic path detection and choose the ArcheAge Classic Documents path")
+
 func LoadConfig() error {
 	err := getOrCreateConfig()
 	if err != nil {
@@ -165,60 +167,64 @@ func SaveConfig() error {
 	return nil
 }
 
-func GetCacheDir() string {
+func GetCacheDir() (string, error) {
 	c, err := os.UserCacheDir()
 	if err != nil {
-		return ""
+		return "", fmt.Errorf("resolve user cache directory: %w", err)
 	}
 	cacheDir := filepath.Join(c, "ClassicAddonManager")
 	_, err = os.Stat(cacheDir)
 	if err != nil {
-		if os.IsNotExist(err) {
-			err := os.Mkdir(cacheDir, 0700)
-			if err != nil {
-				logger.Error("Could not create cache directory", err)
-				return ""
-			}
-			logger.Info(fmt.Sprintf("Created cache directory: %s", cacheDir))
+		if !os.IsNotExist(err) {
+			return "", fmt.Errorf("stat cache directory %q: %w", cacheDir, err)
 		}
+		if err := os.MkdirAll(cacheDir, 0700); err != nil {
+			return "", fmt.Errorf("create cache directory %q: %w", cacheDir, err)
+		}
+		logger.Info(fmt.Sprintf("Created cache directory: %s", cacheDir))
 	}
-	return cacheDir
+	return cacheDir, nil
 }
 
-func GetDataDir() string {
+func GetDataDir() (string, error) {
 	configDir, err := os.UserConfigDir()
 	if err != nil {
-		logger.Error("Could not get user config directory", err)
-		return ""
+		return "", fmt.Errorf("resolve user config directory: %w", err)
 	}
 
 	managerDir := filepath.Join(configDir, "ClassicAddonManager")
 	_, err = os.Stat(managerDir)
 	// Ensure the config directory exists
 	if err != nil {
-		if os.IsNotExist(err) {
-			err := os.Mkdir(managerDir, 0700)
-			if err != nil {
-				logger.Error("Could not create config directory", err)
-				return ""
-			}
-			logger.Info(fmt.Sprintf("Created config directory: %s", managerDir))
+		if !os.IsNotExist(err) {
+			return "", fmt.Errorf("stat data directory %q: %w", managerDir, err)
 		}
+		if err := os.MkdirAll(managerDir, 0700); err != nil {
+			return "", fmt.Errorf("create data directory %q: %w", managerDir, err)
+		}
+		logger.Info(fmt.Sprintf("Created config directory: %s", managerDir))
 	}
 
-	return managerDir
+	return managerDir, nil
 }
 
-func GetAACDir() string {
+func GetAACDir() (string, error) {
 	path := viper.GetString("general.aacpath")
 	if path == "" {
-		logger.Error("Path to AAC is empty", errors.New("override automatic detection and choose a path in settings"))
+		return "", ErrAACPathNotSet
 	}
-	return path
+	if !filepath.IsAbs(path) {
+		return "", fmt.Errorf("ArcheAge Classic path %q is not absolute, choose the ArcheAge Classic Documents path in Settings", path)
+	}
+	return path, nil
 }
 
-func GetAddonDir() string {
-	return filepath.Join(GetAACDir(), "Addon")
+func GetAddonDir() (string, error) {
+	aacDir, err := GetAACDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(aacDir, "Addon"), nil
 }
 
 func GetBool(option string, defaultValue bool) bool {

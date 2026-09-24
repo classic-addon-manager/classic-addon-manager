@@ -13,7 +13,7 @@ func withTestStateDir(t *testing.T) func() {
 	t.Helper()
 	dir := t.TempDir()
 	prev := getStateDir
-	getStateDir = func() string { return dir }
+	getStateDir = func() (string, error) { return dir, nil }
 	return func() {
 		getStateDir = prev
 	}
@@ -25,7 +25,11 @@ func writeStateFile(t *testing.T, sf stateFile) {
 	if err != nil {
 		t.Fatalf("marshal state: %v", err)
 	}
-	path := filepath.Join(getStateDir(), stateFileName)
+	dir, err := getStateDir()
+	if err != nil {
+		t.Fatalf("getStateDir: %v", err)
+	}
+	path := filepath.Join(dir, stateFileName)
 	if err := os.WriteFile(path, data, 0600); err != nil {
 		t.Fatalf("write state file: %v", err)
 	}
@@ -47,7 +51,11 @@ func TestEnsureInitialized_CreatesFile(t *testing.T) {
 	if err := EnsureInitialized(); err != nil {
 		t.Fatalf("ensure state: %v", err)
 	}
-	if !stateFileExists() {
+	exists, err := stateFileExists()
+	if err != nil {
+		t.Fatalf("stateFileExists: %v", err)
+	}
+	if !exists {
 		t.Fatal("expected state file after ensure")
 	}
 	if err := EnsureInitialized(); err != nil {
@@ -109,7 +117,11 @@ func TestShouldShowKofiModal_CorruptFile(t *testing.T) {
 	cleanup := withTestStateDir(t)
 	defer cleanup()
 
-	path := filepath.Join(getStateDir(), stateFileName)
+	dir, err := getStateDir()
+	if err != nil {
+		t.Fatalf("getStateDir: %v", err)
+	}
+	path := filepath.Join(dir, stateFileName)
 	if err := os.WriteFile(path, []byte("{not json"), 0600); err != nil {
 		t.Fatalf("write corrupt state: %v", err)
 	}
@@ -142,7 +154,11 @@ func TestRecordKofiModalShown_WritesState(t *testing.T) {
 		t.Fatal("expected no show immediately after recording")
 	}
 
-	data, err := os.ReadFile(statePath())
+	path, err := statePath()
+	if err != nil {
+		t.Fatalf("statePath: %v", err)
+	}
+	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read state file: %v", err)
 	}
@@ -183,8 +199,16 @@ func TestRecordKofiModalShown_UpdatesExisting(t *testing.T) {
 }
 
 func TestStatePath_UsesConfigDataDirByDefault(t *testing.T) {
-	expected := filepath.Join(config.GetDataDir(), stateFileName)
-	if statePath() != expected {
-		t.Fatalf("statePath() = %q, want %q", statePath(), expected)
+	dataDir, err := config.GetDataDir()
+	if err != nil {
+		t.Fatalf("GetDataDir: %v", err)
+	}
+	expected := filepath.Join(dataDir, stateFileName)
+	got, err := statePath()
+	if err != nil {
+		t.Fatalf("statePath: %v", err)
+	}
+	if got != expected {
+		t.Fatalf("statePath() = %q, want %q", got, expected)
 	}
 }

@@ -29,7 +29,15 @@ func setupAddonDirs(t *testing.T) (addonDir, cacheDir string) {
 		viper.Set("general.aacpath", prevValue)
 	})
 
-	return config.GetAddonDir(), config.GetCacheDir()
+	addonDir, err := config.GetAddonDir()
+	if err != nil {
+		t.Fatalf("GetAddonDir: %v", err)
+	}
+	cacheDir, err = config.GetCacheDir()
+	if err != nil {
+		t.Fatalf("GetCacheDir: %v", err)
+	}
+	return addonDir, cacheDir
 }
 
 func writeTestFile(t *testing.T, path, content string) {

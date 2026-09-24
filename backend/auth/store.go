@@ -20,12 +20,20 @@ type sessionFile struct {
 
 const sessionFileName = "auth_session.json"
 
-func sessionPath() string {
-	return filepath.Join(config.GetDataDir(), sessionFileName)
+func sessionPath() (string, error) {
+	dataDir, err := config.GetDataDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dataDir, sessionFileName), nil
 }
 
 func LoadFromDisk() {
-	path := sessionPath()
+	path, err := sessionPath()
+	if err != nil {
+		logger.Error("Auth: cannot resolve session file path:", err)
+		return
+	}
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -83,7 +91,12 @@ func SaveToDisk(token string) error {
 		return fmt.Errorf("error marshaling session file: %w", err)
 	}
 
-	if err := file.WriteAtomic(sessionPath(), data, 0600); err != nil {
+	path, err := sessionPath()
+	if err != nil {
+		return fmt.Errorf("error resolving session file path: %w", err)
+	}
+
+	if err := file.WriteAtomic(path, data, 0600); err != nil {
 		return fmt.Errorf("error writing session file: %w", err)
 	}
 
@@ -93,8 +106,11 @@ func SaveToDisk(token string) error {
 }
 
 func DeleteFromDisk() error {
-	path := sessionPath()
-	err := os.Remove(path)
+	path, err := sessionPath()
+	if err != nil {
+		return fmt.Errorf("error resolving session file path: %w", err)
+	}
+	err = os.Remove(path)
 	if err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("error deleting session file: %w", err)
 	}
@@ -105,7 +121,7 @@ func DeleteFromDisk() error {
 
 func quarantine(path string) {
 	ts := time.Now().Format("20060102150405")
-	newPath := filepath.Join(config.GetDataDir(), fmt.Sprintf("auth_session.invalid.%s.json", ts))
+	newPath := filepath.Join(filepath.Dir(path), fmt.Sprintf("auth_session.invalid.%s.json", ts))
 	if err := os.Rename(path, newPath); err != nil {
 		logger.Error("Auth: error quarantining invalid session file:", err)
 	} else {

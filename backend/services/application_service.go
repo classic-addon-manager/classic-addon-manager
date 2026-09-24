@@ -161,11 +161,19 @@ func (s *ApplicationService) GetConfig() map[string]any {
 }
 
 func (s *ApplicationService) OpenCacheDir() error {
-	return file.OpenDirectory(config.GetCacheDir())
+	cacheDir, err := config.GetCacheDir()
+	if err != nil {
+		return err
+	}
+	return file.OpenDirectory(cacheDir)
 }
 
 func (s *ApplicationService) OpenDataDir() error {
-	return file.OpenDirectory(config.GetDataDir())
+	dataDir, err := config.GetDataDir()
+	if err != nil {
+		return err
+	}
+	return file.OpenDirectory(dataDir)
 }
 
 func (s *ApplicationService) ShouldShowKofiModal() bool {

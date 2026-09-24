@@ -22,6 +22,8 @@ func stubUninstallDeps(t *testing.T) {
 	origRemoveManaged := removeManagedAddon
 	origSort := sortAddonsTxt
 	origUnsub := unsubscribeFromAddon
+	prevAACPath := viper.Get("general.aacpath")
+	viper.Set("general.aacpath", t.TempDir())
 	t.Cleanup(func() {
 		isAddonInstalled = origIsInstalled
 		findLocalAddonByName = origFind
@@ -30,6 +32,7 @@ func stubUninstallDeps(t *testing.T) {
 		removeManagedAddon = origRemoveManaged
 		sortAddonsTxt = origSort
 		unsubscribeFromAddon = origUnsub
+		viper.Set("general.aacpath", prevAACPath)
 	})
 }
 

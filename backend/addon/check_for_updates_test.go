@@ -66,7 +66,11 @@ func TestGenerateUpdateAddonLuaWritesAtomically(t *testing.T) {
 		t.Fatalf("seed addons.txt: %v", err)
 	}
 
-	addonPath := filepath.Join(config.GetAddonDir(), updateNotification)
+	addonDir, err := config.GetAddonDir()
+	if err != nil {
+		t.Fatalf("GetAddonDir: %v", err)
+	}
+	addonPath := filepath.Join(addonDir, updateNotification)
 	if err := os.MkdirAll(addonPath, 0755); err != nil {
 		t.Fatalf("MkdirAll: %v", err)
 	}
@@ -105,7 +109,11 @@ func TestGenerateUpdateAddonLuaEmptyUpdatesRemovesUpdatesLua(t *testing.T) {
 		t.Fatalf("seed addons.txt: %v", err)
 	}
 
-	addonPath := filepath.Join(config.GetAddonDir(), updateNotification)
+	addonDir, err := config.GetAddonDir()
+	if err != nil {
+		t.Fatalf("GetAddonDir: %v", err)
+	}
+	addonPath := filepath.Join(addonDir, updateNotification)
 	if err := os.MkdirAll(addonPath, 0755); err != nil {
 		t.Fatalf("MkdirAll: %v", err)
 	}
@@ -136,7 +144,11 @@ func TestGenerateUpdateAddonLuaFailedWritePreservesUpdatesLua(t *testing.T) {
 		t.Fatalf("seed addons.txt: %v", err)
 	}
 
-	addonPath := filepath.Join(config.GetAddonDir(), updateNotification)
+	addonDir, err := config.GetAddonDir()
+	if err != nil {
+		t.Fatalf("GetAddonDir: %v", err)
+	}
+	addonPath := filepath.Join(addonDir, updateNotification)
 	if err := os.MkdirAll(addonPath, 0755); err != nil {
 		t.Fatalf("MkdirAll: %v", err)
 	}

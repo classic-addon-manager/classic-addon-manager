@@ -3,6 +3,7 @@ package addon
 import (
 	"ClassicAddonManager/backend/config"
 	"ClassicAddonManager/backend/file"
+	"errors"
 	"os"
 	"path/filepath"
 	"slices"
@@ -26,7 +27,11 @@ func setupAddonsTxtTest(t *testing.T) string {
 		setInstalledAddonNames(nil)
 	})
 
-	return filepath.Join(config.GetAddonDir(), "addons.txt")
+	addonDir, err := config.GetAddonDir()
+	if err != nil {
+		t.Fatalf("GetAddonDir: %v", err)
+	}
+	return filepath.Join(addonDir, "addons.txt")
 }
 
 func assertAddonsTxtLines(t *testing.T, path string, want []string) {
@@ -248,7 +253,7 @@ func TestSetupAddonsTxtTestRestoresAACPath(t *testing.T) {
 
 	t.Run("sub", func(t *testing.T) {
 		setupAddonsTxtTest(t)
-		if config.GetAACDir() == "" {
+		if _, err := config.GetAACDir(); err != nil {
 			t.Fatal("setup did not set general.aacpath")
 		}
 	})
@@ -279,4 +284,34 @@ func TestGetInstalledAddonNamesReturnsCopy(t *testing.T) {
 		t.Fatalf("mutating returned slice changed cache: %v", got)
 	}
 	assertAddonsTxtLines(t, path, seed)
+}
+
+func assertDirEmpty(t *testing.T, dir string) {
+	t.Helper()
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("read dir %s: %v", dir, err)
+	}
+	if len(entries) != 0 {
+		names := make([]string, 0, len(entries))
+		for _, e := range entries {
+			names = append(names, e.Name())
+		}
+		t.Fatalf("expected empty dir, found %v", names)
+	}
+}
+
+func TestCreateAddonsTxtWithoutAACPathWritesNothingToCWD(t *testing.T) {
+	cwd := t.TempDir()
+	t.Chdir(cwd)
+
+	prev := viper.Get("general.aacpath")
+	viper.Set("general.aacpath", nil)
+	t.Cleanup(func() { viper.Set("general.aacpath", prev) })
+
+	err := CreateAddonsTxt()
+	if !errors.Is(err, config.ErrAACPathNotSet) {
+		t.Fatalf("CreateAddonsTxt err = %v, want ErrAACPathNotSet", err)
+	}
+	assertDirEmpty(t, cwd)
 }

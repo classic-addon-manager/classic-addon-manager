@@ -7,5 +7,9 @@ import (
 )
 
 func ResetAddonSettings() error {
-	return os.Truncate(filepath.Join(config.GetAACDir(), "addon_settings"), 0)
+	aacDir, err := config.GetAACDir()
+	if err != nil {
+		return err
+	}
+	return os.Truncate(filepath.Join(aacDir, "addon_settings"), 0)
 }

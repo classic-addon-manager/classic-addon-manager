@@ -30,7 +30,11 @@ func (s *LocalAddonService) OpenDirectory(name string) error {
 		return fmt.Errorf("invalid addon directory: %q", name)
 	}
 
-	root, err := resolveAddonDirectory(config.GetAddonDir())
+	addonDir, err := config.GetAddonDir()
+	if err != nil {
+		return err
+	}
+	root, err := resolveAddonDirectory(addonDir)
 	if err != nil {
 		return err
 	}
@@ -65,6 +69,12 @@ func (s *LocalAddonService) UninstallAddon(name string) bool {
 		return false
 	}
 
+	addonDir, err := config.GetAddonDir()
+	if err != nil {
+		logger.Error("Error resolving addon directory:", err)
+		return false
+	}
+
 	wasManaged := findLocalAddonByName(name) != nil
 
 	if err := removeFromAddonsTxt(name); err != nil {
@@ -72,7 +82,7 @@ func (s *LocalAddonService) UninstallAddon(name string) bool {
 		return false
 	}
 
-	ok, err := removeAddonDirectory(filepath.Join(config.GetAddonDir(), name))
+	ok, err := removeAddonDirectory(filepath.Join(addonDir, name))
 	if err != nil {
 		logger.Error("Error removing addon directory:", err)
 		return false

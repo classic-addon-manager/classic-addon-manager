@@ -31,7 +31,11 @@ func setupInstallZipTest(t *testing.T) (addonDir string) {
 		setInstalledAddonNames(nil)
 	})
 
-	return config.GetAddonDir()
+	addonDir, err := config.GetAddonDir()
+	if err != nil {
+		t.Fatalf("GetAddonDir: %v", err)
+	}
+	return addonDir
 }
 
 func writeTestZip(t *testing.T, path string, files map[string]string) {
@@ -275,7 +279,10 @@ func TestInstallZipDotSlashReleaseRoot(t *testing.T) {
 
 func TestInstallZipClearsStaleExtraction(t *testing.T) {
 	addonDir := setupInstallZipTest(t)
-	cacheDir := config.GetCacheDir()
+	cacheDir, err := config.GetCacheDir()
+	if err != nil {
+		t.Fatalf("GetCacheDir: %v", err)
+	}
 	dest := filepath.Join(addonDir, "Retry")
 
 	stale := filepath.Join(cacheDir, "Retry")
@@ -333,7 +340,10 @@ func TestInstallZipUnsafeBasenamesRejected(t *testing.T) {
 	for _, zipName := range []string{"...zip", "..zip", ".zip", "....zip"} {
 		t.Run(zipName, func(t *testing.T) {
 			addonDir := setupInstallZipTest(t)
-			cacheDir := config.GetCacheDir()
+			cacheDir, err := config.GetCacheDir()
+			if err != nil {
+				t.Fatalf("GetCacheDir: %v", err)
+			}
 
 			sentinelParent := filepath.Join(filepath.Dir(cacheDir), "sentinel.txt")
 			if err := os.WriteFile(sentinelParent, []byte("sentinel"), 0644); err != nil {
@@ -395,5 +405,25 @@ func TestInstallZipNestedOnlyMainLuaRejected(t *testing.T) {
 	}
 	if file.FileExists(filepath.Join(addonDir, "addons.txt")) {
 		t.Fatal("addons.txt must not be created by a failed install")
+	}
+}
+
+func TestInstallZipWithoutCacheDirWritesNothingToCWD(t *testing.T) {
+	cwd := t.TempDir()
+	t.Chdir(cwd)
+
+	t.Setenv("LocalAppData", "")
+	t.Setenv("XDG_CACHE_HOME", "")
+	t.Setenv("HOME", "")
+
+	zipPath := filepath.Join(t.TempDir(), "NoCache.zip")
+	writeTestZip(t, zipPath, map[string]string{"root/main.lua": "x"})
+
+	if _, err := InstallZip(zipPath); err == nil {
+		t.Fatal("expected error when cache directory cannot be resolved")
+	}
+	assertDirEmpty(t, cwd)
+	if _, err := os.Stat(zipPath); err != nil {
+		t.Fatalf("source zip must not be moved: %v", err)
 	}
 }

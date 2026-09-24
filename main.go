@@ -59,26 +59,29 @@ func main() {
 		nativeui.ShowFatalError(fatalErrorTitle, err.Error()+". Open Settings, disable automatic path detection, and choose the ArcheAge Classic Documents path.")
 	}
 
-	aacDir := config.GetAACDir()
-	addonsTxtPath := filepath.Join(aacDir, "Addon", "addons.txt")
-	if aacDir == "" {
+	aacDir, aacErr := config.GetAACDir()
+	var addonsTxtPath string
+	if aacErr != nil {
 		if *addonUpdateMode {
-			logger.Error("Cannot check for updates", errors.New("ArcheAge Classic path is empty; disable automatic detection and choose a path in Settings"))
+			logger.Error("Cannot check for updates", aacErr)
 			logger.Sync()
 			os.Exit(1)
 		}
 		if err == nil {
-			nativeui.ShowFatalError(fatalErrorTitle, "The ArcheAge Classic path is empty. Open Settings, disable automatic path detection, and choose the ArcheAge Classic Documents path.")
+			nativeui.ShowFatalError(fatalErrorTitle, aacErr.Error())
 		}
-	} else if !file.FileExists(addonsTxtPath) {
-		logger.Info(fmt.Sprintf("addons.txt not found, creating it. Attempted path: %s", addonsTxtPath))
-		if err := addon.CreateAddonsTxt(); err != nil {
-			logger.Error("Error creating addons.txt:", err)
-			if *addonUpdateMode {
-				logger.Sync()
-				os.Exit(1)
+	} else {
+		addonsTxtPath = filepath.Join(aacDir, "Addon", "addons.txt")
+		if !file.FileExists(addonsTxtPath) {
+			logger.Info(fmt.Sprintf("addons.txt not found, creating it. Attempted path: %s", addonsTxtPath))
+			if err := addon.CreateAddonsTxt(); err != nil {
+				logger.Error("Error creating addons.txt:", err)
+				if *addonUpdateMode {
+					logger.Sync()
+					os.Exit(1)
+				}
+				nativeui.ShowFatalError(fatalErrorTitle, fmt.Sprintf("Error occurred while creating addons.txt: %s. Open Settings and verify the ArcheAge Classic path.", err))
 			}
-			nativeui.ShowFatalError(fatalErrorTitle, fmt.Sprintf("Error occurred while creating addons.txt: %s. Open Settings and verify the ArcheAge Classic path.", err))
 		}
 	}
 
@@ -175,9 +178,20 @@ func main() {
 }
 
 func startup(a *application.App) {
+	dataDir, err := config.GetDataDir()
+	if err != nil {
+		logger.Error("Cannot access the data directory:", err)
+		a.Dialog.Error().
+			SetTitle(fatalErrorTitle).
+			SetMessage(fmt.Sprintf("Cannot access the data directory: %s", err)).
+			Show()
+		return
+	}
+
 	auth.LoadFromDisk()
 
-	if !file.FileExists(filepath.Join(config.GetDataDir(), "managed_addons.json")) {
+	managedAddonsPath := filepath.Join(dataDir, "managed_addons.json")
+	if !file.FileExists(managedAddonsPath) {
 		jsonData, err := json.Marshal(addon.ManagedAddonsFile{
 			Version: addon.ManagedAddonsFileVersion,
 			Addons:  []addon.Addon{},
@@ -186,7 +200,7 @@ func startup(a *application.App) {
 			logger.Error("Error creating managed_addons.json:", err)
 			return
 		}
-		err = file.WriteJSON(filepath.Join(config.GetDataDir(), "managed_addons.json"), jsonData)
+		err = file.WriteJSON(managedAddonsPath, jsonData)
 		if err != nil {
 			a.Dialog.Error().
 				SetTitle(fatalErrorTitle).
@@ -196,7 +210,7 @@ func startup(a *application.App) {
 		}
 	}
 
-	err := addon.LoadManagedAddonsFile()
+	err = addon.LoadManagedAddonsFile()
 	if err != nil {
 		logger.Error("Error loading managed_addons.json:", err)
 	}

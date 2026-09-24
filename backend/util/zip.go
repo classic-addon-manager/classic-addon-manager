@@ -14,7 +14,12 @@ import (
 )
 
 func ExtractAddonRelease(src string, dest string) error {
-	tmpSrc := filepath.Join(config.GetCacheDir(), src)
+	cacheDir, err := config.GetCacheDir()
+	if err != nil {
+		return err
+	}
+
+	tmpSrc := filepath.Join(cacheDir, src)
 	if !file.FileExists(tmpSrc) {
 		return fmt.Errorf("file %s does not exist", tmpSrc)
 	}
@@ -25,7 +30,7 @@ func ExtractAddonRelease(src string, dest string) error {
 	}
 	defer archive.Close()
 
-	tmpDest := filepath.Join(config.GetCacheDir(), dest)
+	tmpDest := filepath.Join(cacheDir, dest)
 
 	for _, f := range archive.File {
 		fPath := filepath.Join(tmpDest, f.Name)
@@ -74,7 +79,16 @@ func extractFile(f *zip.File, dest string) error {
 }
 
 func MoveAddonRelease(addonName string) error {
-	src := filepath.Join(config.GetCacheDir(), addonName)
+	cacheDir, err := config.GetCacheDir()
+	if err != nil {
+		return err
+	}
+	addonDir, err := config.GetAddonDir()
+	if err != nil {
+		return err
+	}
+
+	src := filepath.Join(cacheDir, addonName)
 	entries, err := os.ReadDir(src)
 	if err != nil {
 		return fmt.Errorf("error reading extracted addon release: %w", err)
@@ -106,7 +120,7 @@ func MoveAddonRelease(addonName string) error {
 		return errors.New("no root directory containing main.lua found in addon release")
 	}
 
-	if err := replaceAddonDir(filepath.Join(src, rootDir), filepath.Join(config.GetAddonDir(), addonName)); err != nil {
+	if err := replaceAddonDir(filepath.Join(src, rootDir), filepath.Join(addonDir, addonName)); err != nil {
 		return err
 	}
 

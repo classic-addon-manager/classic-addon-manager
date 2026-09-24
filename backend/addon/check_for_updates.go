@@ -55,7 +55,12 @@ func CheckForUpdates() map[string]Addon {
 }
 
 func GenerateUpdateAddonLua(updates map[string]Addon) {
-	addonPath := filepath.Join(config.GetAddonDir(), "AddonUpdateNotification")
+	addonDir, err := config.GetAddonDir()
+	if err != nil {
+		logger.Error("Error resolving addon directory:", err)
+		return
+	}
+	addonPath := filepath.Join(addonDir, "AddonUpdateNotification")
 
 	if _, err := os.Stat(addonPath); os.IsNotExist(err) {
 		err = os.MkdirAll(addonPath, os.ModePerm)
