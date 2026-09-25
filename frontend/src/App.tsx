@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Toaster } from 'sonner'
 
 import { usePreferencesStore } from '@/stores/preferencesStore'
+import { useSettingsStore } from '@/stores/settingsStore'
 import { useUserStore } from '@/stores/userStore.ts'
 
 import UI from './UI.tsx'
@@ -11,11 +12,13 @@ function Bootstrap({ children }: { children: React.ReactNode }) {
   const bootstrapAuth = useUserStore(s => s.bootstrapAuth)
   const hydrated = usePreferencesStore(s => s.hydrated)
   const hydrate = usePreferencesStore(s => s.hydrate)
+  const loadConfig = useSettingsStore(s => s.loadConfig)
 
   useEffect(() => {
     void bootstrapAuth()
     void hydrate()
-  }, [bootstrapAuth, hydrate])
+    void loadConfig()
+  }, [bootstrapAuth, hydrate, loadConfig])
 
   if (!authBootstrapComplete || !hydrated) {
     return null

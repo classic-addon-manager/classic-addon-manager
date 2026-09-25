@@ -17,6 +17,8 @@ interface SettingsState {
   autoPathDetection: boolean
   aacPath: string
   isInitialized: boolean
+  isLoading: boolean
+  loadError: string | null
 
   // Actions
   setAutoPathDetection: (enabled: boolean) => void
@@ -29,6 +31,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   autoPathDetection: true,
   aacPath: '',
   isInitialized: false,
+  isLoading: false,
+  loadError: null,
 
   // Actions
   setAutoPathDetection: (enabled: boolean) => {
@@ -48,22 +52,23 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   },
 
   loadConfig: async () => {
-    const { isInitialized } = get()
-    if (!isInitialized) {
-      try {
-        const config: Settings = await ApplicationService.GetConfig()
-        set({
-          autoPathDetection: config.general?.autodetectpath ?? true,
-          aacPath: config.general?.aacpath ?? '',
-          isInitialized: true,
-        })
-      } catch (error) {
-        console.warn('Failed to load default path detection setting:', error)
-        set({ isInitialized: true })
-      }
+    const { isInitialized, isLoading } = get()
+    if (isInitialized || isLoading) {
+      return
     }
+    set({ isLoading: true, loadError: null })
+    const [config, err] = await safeCall<Settings>(ApplicationService.GetConfig())
+    if (err || !config) {
+      console.warn('Failed to load default path detection setting:', err)
+      set({ isLoading: false, loadError: err?.message ?? 'Failed to load settings' })
+      return
+    }
+    set({
+      autoPathDetection: config.general?.autodetectpath ?? true,
+      aacPath: config.general?.aacpath ?? '',
+      isInitialized: true,
+      isLoading: false,
+      loadError: null,
+    })
   },
 }))
-
-// Initialize settings when the store is created
-useSettingsStore.getState().loadConfig().catch(console.error)

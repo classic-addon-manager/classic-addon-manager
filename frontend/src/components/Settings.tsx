@@ -1,5 +1,5 @@
 import { AlertCircleIcon, FolderOpen, Settings2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import { Section } from '@/components/shared/Section'
 import { Button } from '@/components/ui/button'
@@ -22,17 +22,13 @@ export const Settings = () => {
     autoPathDetection,
     aacPath,
     isInitialized,
+    isLoading,
+    loadError,
     setAutoPathDetection,
     setAACPath,
     loadConfig,
   } = useSettingsStore()
   const [errDocsPath, setErrDocsPath] = useState('')
-
-  useEffect(() => {
-    if (!isInitialized) {
-      loadConfig()
-    }
-  }, [isInitialized, loadConfig])
 
   const openSelect = async () => {
     setErrDocsPath('')
@@ -76,6 +72,27 @@ export const Settings = () => {
             title="Documents directory"
             description="Where the addon manager looks for your ArcheAge Classic documents"
           >
+            {loadError && (
+              <div className="mx-4 mt-4 flex gap-2 rounded-lg border border-destructive/20 bg-destructive/10 p-3">
+                <AlertCircleIcon className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+                <div className="space-y-0.5">
+                  <div className="text-sm font-medium text-destructive">
+                    Failed to load settings
+                  </div>
+                  <p className="text-xs text-destructive/80">{loadError}</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="ml-auto shrink-0 self-center"
+                  onClick={() => void loadConfig()}
+                  disabled={isLoading}
+                >
+                  Retry
+                </Button>
+              </div>
+            )}
+
             <div className="flex items-center justify-between gap-6 px-4 py-3.5">
               <div className="min-w-0 space-y-1">
                 <div className="text-sm font-medium leading-none">Override automatic detection</div>
@@ -85,6 +102,7 @@ export const Settings = () => {
               </div>
               <Switch
                 checked={!autoPathDetection}
+                disabled={!isInitialized}
                 onCheckedChange={checked => {
                   setAutoPathDetection(!checked)
                   setErrDocsPath('')
@@ -92,7 +110,13 @@ export const Settings = () => {
               />
             </div>
 
-            {!autoPathDetection ? (
+            {!isInitialized ? (
+              loadError ? null : (
+                <div className="border-t border-border/60 px-4 py-3">
+                  <p className="text-xs text-muted-foreground">Loading settings…</p>
+                </div>
+              )
+            ) : !autoPathDetection ? (
               <div className="space-y-3 border-t border-border/60 bg-muted/15 px-4 py-4">
                 <div className="flex gap-2">
                   <Input
