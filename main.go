@@ -120,6 +120,8 @@ func main() {
 		}
 	}
 
+	loadPersistedState(func(message string) { nativeui.ShowFatalError(fatalErrorTitle, message) })
+
 	a := application.New(application.Options{
 		Name: "Classic Addon Manager",
 		Assets: application.AssetOptions{
@@ -139,17 +141,11 @@ func main() {
 		a.RegisterService(service)
 	}
 
-	// Server builds map no platform events, so ApplicationStarted is never
-	// emitted there: run the startup work directly, before the HTTP server
-	// starts accepting calls, instead of waiting for an event that never fires.
-	if application.System.IsServer() {
-		startup(a)
-	} else {
+	if !application.System.IsServer() {
 		a.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(event *application.ApplicationEvent) {
 			_ = event.Context()
 			registerDeeplink()
 			go startIPCServer(a)
-			startup(a)
 		})
 	}
 
@@ -182,14 +178,13 @@ func main() {
 	}
 }
 
-func startup(a *application.App) {
+// loadPersistedState must run before a.Run() so the frontend's first service
+// calls see the loaded auth session and managed addons.
+func loadPersistedState(showError func(message string)) {
 	dataDir, err := config.GetDataDir()
 	if err != nil {
 		logger.Error("Cannot access the data directory:", err)
-		a.Dialog.Error().
-			SetTitle(fatalErrorTitle).
-			SetMessage(fmt.Sprintf("Cannot access the data directory: %s", err)).
-			Show()
+		showError(fmt.Sprintf("Cannot access the data directory: %s", err))
 		return
 	}
 
@@ -207,10 +202,7 @@ func startup(a *application.App) {
 		}
 		err = file.WriteJSON(managedAddonsPath, jsonData)
 		if err != nil {
-			a.Dialog.Error().
-				SetTitle(fatalErrorTitle).
-				SetMessage(fmt.Sprintf("Error writing managed_addons.json: %s", err)).
-				Show()
+			showError(fmt.Sprintf("Error writing managed_addons.json: %s", err))
 			logger.Error("Error writing managed_addons.json:", err)
 		}
 	}
