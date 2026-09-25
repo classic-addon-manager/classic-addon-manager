@@ -1,6 +1,7 @@
 import { AlertCircleIcon, FolderOpen, Settings2 } from 'lucide-react'
-import { type ReactNode, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 
+import { Section } from '@/components/shared/Section'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
@@ -15,24 +16,6 @@ import { QuickActions } from './settings/QuickActions'
 const DIALOG_TITLE = 'Select ArcheAge Classic Documents directory'
 const SUCCESS_TITLE = 'Success'
 const ERROR_TITLE = 'Error during directory selection.'
-
-const Section = ({
-  title,
-  description,
-  children,
-}: {
-  title: string
-  description?: string
-  children: ReactNode
-}) => (
-  <section className="space-y-3">
-    <div className="px-1">
-      <h2 className="text-sm font-medium tracking-tight">{title}</h2>
-      {description && <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>}
-    </div>
-    <div className="overflow-hidden rounded-xl border border-border/60 bg-card/40">{children}</div>
-  </section>
-)
 
 export const Settings = () => {
   const {
