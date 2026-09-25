@@ -1,3 +1,7 @@
+import '@fontsource-variable/geist'
+import '@fontsource-variable/geist-mono'
+import '@fontsource-variable/geist-mono/wght-italic.css'
+import '@fontsource-variable/geist/wght-italic.css'
 import '@wailsio/runtime'
 import '@/global.css'
 

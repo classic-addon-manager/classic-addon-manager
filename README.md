@@ -151,6 +151,7 @@ With no arguments, the task bumps the patch version. It changes only version fie
 
 - **Desktop framework:** Wails v3 (Go + WebView2)
 - **Frontend:** React, TypeScript, Vite, Tailwind CSS v4, shadcn/ui
+- **Fonts:** Geist + Geist Mono
 - **State management:** Zustand + Jotai
 - **Backend:** Go, Viper (config), Zap (logging)
 - **Packaging:** NSIS (Windows), nfpm (Linux)
