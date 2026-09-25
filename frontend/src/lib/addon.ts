@@ -11,14 +11,15 @@ import { useUserStore } from '@/stores/userStore'
 type Rating = -1 | 0 | 1
 
 export function useAddonRating(addonName: string, addonAlias: string, enabled = true) {
-  const user = useUserStore(state => state.user)
+  const discordId = useUserStore(state => state.user.discord_id)
+  const isCurrentAccount = () => useUserStore.getState().user.discord_id === discordId
   const client = useQueryClient()
-  const queryKey = ['addon-rating', user.discord_id, addonName] as const
+  const queryKey = ['addon-rating', discordId, addonName] as const
   const mutationKey = queryKey
   const isSaving = useIsMutating({ mutationKey, exact: true }) > 0
   const query = useQuery({
     queryKey,
-    enabled: enabled && !!user.discord_id,
+    enabled: enabled && !!discordId,
     staleTime: 5 * 60 * 1000,
     queryFn: async (): Promise<Rating> => {
       const response = await apiClient.get(`/addon/${addonName}/my-rating`)
@@ -37,7 +38,7 @@ export function useAddonRating(addonName: string, addonAlias: string, enabled = 
       await client.cancelQueries({ queryKey, exact: true })
     },
     mutationFn: async (newRating: -1 | 1) => {
-      if (useUserStore.getState().user !== user) throw new Error('Account changed')
+      if (!isCurrentAccount()) throw new Error('Account changed')
       const response = await apiClient.post(`/addon/${addonName}/rate`, {
         is_like: newRating === 1,
       })
@@ -46,9 +47,9 @@ export function useAddonRating(addonName: string, addonAlias: string, enabled = 
     },
     onSuccess: async newRating => {
       // A completed write must not restore private data after an account change.
-      if (useUserStore.getState().user !== user) return
+      if (!isCurrentAccount()) return
       await client.cancelQueries({ queryKey, exact: true })
-      if (useUserStore.getState().user !== user) return
+      if (!isCurrentAccount()) return
       client.setQueryData(queryKey, newRating)
       toast({
         title: 'Addon rated',
@@ -58,7 +59,7 @@ export function useAddonRating(addonName: string, addonAlias: string, enabled = 
       await client.invalidateQueries({ queryKey, exact: true })
     },
     onError: () => {
-      if (useUserStore.getState().user !== user) return
+      if (!isCurrentAccount()) return
       toast({
         title: 'Error',
         description: 'Failed to rate addon, try again later',
@@ -70,7 +71,7 @@ export function useAddonRating(addonName: string, addonAlias: string, enabled = 
   const rateAddon = async (newRating: number): Promise<boolean> => {
     if (
       !enabled ||
-      !user.discord_id ||
+      !discordId ||
       (newRating !== -1 && newRating !== 1) ||
       client.getQueryData(queryKey) === newRating ||
       client.isMutating({ mutationKey, exact: true }) > 0
@@ -79,7 +80,7 @@ export function useAddonRating(addonName: string, addonAlias: string, enabled = 
     }
     try {
       await mutation.mutateAsync(newRating)
-      return useUserStore.getState().user === user
+      return isCurrentAccount()
     } catch {
       return false
     }
