@@ -29,7 +29,7 @@ interface AccordionItemData {
 
 interface DiagnosticData {
   issueCount: number
-  groupedIssues: Record<string, Array<{ type: string; error: string; file: string }>>
+  groupedIssues: Record<string, Array<{ type: string; error: string; file: string; count: number }>>
 }
 
 const Header = () => {
@@ -193,7 +193,14 @@ const DiagnosticResultsContent = ({ issueCount, groupedIssues }: DiagnosticData)
                     key={i}
                     className="rounded-md border border-zinc-700 px-4 py-3 font-mono text-sm bg-zinc-900/50"
                   >
-                    <p className="text-red-400 mb-1">Error: {issue.error}</p>
+                    <p className="text-red-400 mb-1 flex items-center gap-2">
+                      Error: {issue.error}
+                      {issue.count > 1 && (
+                        <Badge variant="secondary" className="ml-auto shrink-0">
+                          ×{issue.count}
+                        </Badge>
+                      )}
+                    </p>
                     <p className="text-zinc-400">
                       File: <span className="text-indigo-400">{issue.file}</span>
                     </p>
@@ -285,7 +292,7 @@ export const Troubleshooting = () => {
         // Group issues by addon
         const groupedIssues: Record<
           string,
-          Array<{ type: string; error: string; file: string }>
+          Array<{ type: string; error: string; file: string; count: number }>
         > = {}
         for (const issue of issuesArray) {
           if (!groupedIssues[issue.Addon]) {
@@ -295,6 +302,7 @@ export const Troubleshooting = () => {
             type: issue.Type,
             error: issue.Error,
             file: issue.File,
+            count: issue.Count,
           })
         }
 
