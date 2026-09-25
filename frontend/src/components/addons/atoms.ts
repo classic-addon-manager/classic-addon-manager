@@ -92,8 +92,10 @@ export const filteredAddonsAtom = atom(get => {
       return false
     }
     return (
+      item.manifest.name.toLowerCase().includes(searchQuery) ||
       item.manifest.alias.toLowerCase().includes(searchQuery) ||
-      item.manifest.description.toLowerCase().includes(searchQuery)
+      item.manifest.description.toLowerCase().includes(searchQuery) ||
+      item.manifest.author.toLowerCase().includes(searchQuery)
     )
   })
 })
