@@ -3,7 +3,7 @@ import { useState } from 'react'
 
 import { isManifestDialogOpenAtom, selectedManifestAtom } from '@/components/addons/atoms'
 import { addonIconUrl } from '@/lib/icon'
-import { daysAgo } from '@/lib/utils'
+import { daysAgo, NEW_ADDON_DAYS } from '@/lib/utils'
 
 import type { RemoteAddonItemProps } from './types'
 
@@ -12,7 +12,7 @@ export const useRemoteAddonItem = ({ manifest, installed }: RemoteAddonItemProps
   const setSelectedManifest = useSetAtom(selectedManifestAtom)
   const setDialogOpen = useSetAtom(isManifestDialogOpenAtom)
 
-  const isNew = daysAgo(manifest.added_at) < 32
+  const isNew = daysAgo(manifest.added_at) < NEW_ADDON_DAYS
   const iconUrl = addonIconUrl(manifest)
   const hasIcon = iconUrl !== null && failedIconUrl !== iconUrl
 

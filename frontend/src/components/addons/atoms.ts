@@ -2,7 +2,7 @@ import { atom } from 'jotai'
 
 import { addonCatalogQuery, fetchAddonCatalog } from '@/lib/catalog'
 import { queryClient } from '@/lib/queryClient'
-import { daysAgo } from '@/lib/utils'
+import { daysAgo, NEW_ADDON_DAYS } from '@/lib/utils'
 import type { AddonManifest } from '@/lib/wails'
 import { LocalAddonService, RemoteAddonService } from '@/lib/wails'
 
@@ -53,8 +53,8 @@ export const loadAddonsAtom = atom(null, async (get, set, force?: boolean) => {
 
     // Sort addons
     tmp.sort((a, b) => {
-      const aIsNew = daysAgo(a.manifest.added_at) < 32
-      const bIsNew = daysAgo(b.manifest.added_at) < 32
+      const aIsNew = daysAgo(a.manifest.added_at) < NEW_ADDON_DAYS
+      const bIsNew = daysAgo(b.manifest.added_at) < NEW_ADDON_DAYS
 
       if (aIsNew && !bIsNew) return -1
       if (!aIsNew && bIsNew) return 1

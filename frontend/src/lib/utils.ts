@@ -145,3 +145,6 @@ export function daysAgo(dateString: string): number {
   const diff = now.getTime() - date.getTime()
   return Math.floor(diff / (1000 * 60 * 60 * 24))
 }
+
+/** Number of days after `added_at` during which an addon counts as "new". */
+export const NEW_ADDON_DAYS = 32
