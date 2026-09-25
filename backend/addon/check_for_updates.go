@@ -2,10 +2,11 @@ package addon
 
 import (
 	_ "embed"
+	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
-	"sync"
 
 	"ClassicAddonManager/backend/api"
 	"ClassicAddonManager/backend/config"
@@ -16,42 +17,51 @@ import (
 //go:embed cam.lua
 var luaScript []byte
 
-func CheckForUpdates() map[string]Addon {
-	err := LoadManagedAddonsFile()
+// CheckForUpdates returns the managed addons with a newer release available.
+// A nil map signals a total failure: the caller must not regenerate the
+// update notification and lose the previously reported updates.
+func CheckForUpdates() (map[string]Addon, error) {
+	if err := LoadManagedAddonsFile(); err != nil {
+		return nil, fmt.Errorf("load managed addons: %w", err)
+	}
+
+	addons := localAddonsSnapshot()
+	updates := make(map[string]Addon)
+	if len(addons) == 0 {
+		return updates, nil
+	}
+
+	names := make([]string, 0, len(addons))
+	for name := range addons {
+		names = append(names, name)
+	}
+	slices.Sort(names)
+
+	releases, err := api.GetLatestReleasesBulk(names)
 	if err != nil {
-		logger.Error("Error loading managed addons file:", err)
+		return nil, fmt.Errorf("fetch latest releases: %w", err)
 	}
 
-	var (
-		wg      sync.WaitGroup
-		mu      sync.Mutex
-		updates = make(map[string]Addon)
-	)
-
-	for _, addon := range localAddonsSnapshot() {
-		wg.Add(1)
-		go func(a Addon) {
-			defer wg.Done()
-
-			release, err := api.GetAddonRelease(a.Name, "latest")
-			if err != nil {
-				logger.Error("Error getting latest release for "+a.Name+":", err)
-				return
-			}
-
-			mu.Lock()
-			defer mu.Unlock()
-
-			if release.TagName != a.Version {
-				updatedAddon := a
-				updatedAddon.Version = release.TagName
-				updates[a.Name] = updatedAddon
-			}
-		}(addon)
+	var missing []string
+	for name, a := range addons {
+		release, ok := releases[name]
+		if !ok || release.TagName == "" {
+			missing = append(missing, name)
+			continue
+		}
+		if release.TagName != a.Version {
+			updatedAddon := a
+			updatedAddon.Version = release.TagName
+			updates[name] = updatedAddon
+		}
 	}
 
-	wg.Wait()
-	return updates
+	if len(missing) > 0 {
+		slices.Sort(missing)
+		return updates, fmt.Errorf("no release info for: %s", strings.Join(missing, ", "))
+	}
+
+	return updates, nil
 }
 
 func GenerateUpdateAddonLua(updates map[string]Addon) {

@@ -1,13 +1,19 @@
 package addon
 
 import (
+	"encoding/json"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
+	"ClassicAddonManager/backend/api"
 	"ClassicAddonManager/backend/config"
 	"ClassicAddonManager/backend/file"
+	"ClassicAddonManager/backend/logger"
 )
 
 func TestGenerateUpdatesLuaQuotesEveryField(t *testing.T) {
@@ -136,6 +142,199 @@ func TestGenerateUpdateAddonLuaEmptyUpdatesRemovesUpdatesLua(t *testing.T) {
 	}
 
 	assertNoUpdateTempFiles(t, addonPath)
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
+
+func stubAPIClient(t *testing.T, transport http.RoundTripper) {
+	t.Helper()
+	original := api.Client
+	api.Client = &http.Client{Transport: transport}
+	t.Cleanup(func() { api.Client = original })
+}
+
+// setupCheckForUpdatesDataDir points the config dir at a fresh temp dir and
+// resets the managed addon cache. The logger singleton opens app.log on first
+// use and never closes it, so it is initialized while the config dir is the
+// shared temp dir (Windows cannot remove a temp dir holding an open file).
+func setupCheckForUpdatesDataDir(t *testing.T) {
+	t.Helper()
+	t.Setenv("APPDATA", os.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", os.TempDir())
+	logger.Info("starting update check test")
+
+	dataDir := t.TempDir()
+	t.Setenv("APPDATA", dataDir)
+	t.Setenv("XDG_CONFIG_HOME", dataDir)
+
+	t.Cleanup(func() {
+		localAddonsMu.Lock()
+		localAddons = nil
+		localAddonsMu.Unlock()
+	})
+}
+
+func seedManagedAddonsFile(t *testing.T, addons ...Addon) {
+	t.Helper()
+	data, err := json.Marshal(ManagedAddonsFile{Version: ManagedAddonsFileVersion, Addons: addons})
+	if err != nil {
+		t.Fatalf("marshal managed addons: %v", err)
+	}
+	fp, err := managedAddonsFilePath()
+	if err != nil {
+		t.Fatalf("managedAddonsFilePath: %v", err)
+	}
+	if err := os.WriteFile(fp, data, 0644); err != nil {
+		t.Fatalf("write managed_addons.json: %v", err)
+	}
+}
+
+func bulkReleasesBody(t *testing.T, tags map[string]string) io.Reader {
+	t.Helper()
+	var b strings.Builder
+	b.WriteString(`{"status":true,"data":{`)
+	first := true
+	for name, tag := range tags {
+		if !first {
+			b.WriteByte(',')
+		}
+		first = false
+		nameJSON, _ := json.Marshal(name)
+		b.Write(nameJSON)
+		b.WriteString(`:{"release":{"tag_name":` + `"` + tag + `"` + `,"zipball_url":"","body":"","published_at":"2026-01-01T00:00:00Z"},"tag":{}}`)
+	}
+	b.WriteString(`}}`)
+	return strings.NewReader(b.String())
+}
+
+func TestCheckForUpdatesUsesOneBulkRequest(t *testing.T) {
+	setupCheckForUpdatesDataDir(t)
+	seedManagedAddonsFile(t,
+		Addon{Name: "Alpha", Version: "1.0"},
+		Addon{Name: "Beta", Version: "1.0"},
+		Addon{Name: "Gamma", Version: "3.0"},
+	)
+
+	requestCount := 0
+	var gotNames []string
+	stubAPIClient(t, roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		requestCount++
+		if req.Method != http.MethodPost {
+			t.Errorf("request method = %s, want POST", req.Method)
+		}
+		if !strings.HasSuffix(req.URL.Path, "/latest_releases") {
+			t.Errorf("request path = %s, want suffix /latest_releases", req.URL.Path)
+		}
+		var body struct {
+			Addons []string `json:"addons"`
+		}
+		if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+			t.Errorf("decode request body: %v", err)
+		}
+		gotNames = body.Addons
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body: io.NopCloser(bulkReleasesBody(t, map[string]string{
+				"Alpha": "1.0",
+				"Beta":  "2.0",
+				"Gamma": "3.1",
+			})),
+		}, nil
+	}))
+
+	updates, err := CheckForUpdates()
+	if err != nil {
+		t.Fatalf("CheckForUpdates: %v", err)
+	}
+	if requestCount != 1 {
+		t.Fatalf("request count = %d, want 1", requestCount)
+	}
+	slices.Sort(gotNames)
+	if !slices.Equal(gotNames, []string{"Alpha", "Beta", "Gamma"}) {
+		t.Fatalf("requested addons = %v, want [Alpha Beta Gamma]", gotNames)
+	}
+	if len(updates) != 2 {
+		t.Fatalf("updates = %v, want 2 entries", updates)
+	}
+	if got := updates["Beta"]; got.Name != "Beta" || got.Version != "2.0" {
+		t.Fatalf("updates[Beta] = %+v, want {Name:Beta Version:2.0}", got)
+	}
+	if got := updates["Gamma"]; got.Name != "Gamma" || got.Version != "3.1" {
+		t.Fatalf("updates[Gamma] = %+v, want {Name:Gamma Version:3.1}", got)
+	}
+}
+
+func TestCheckForUpdatesReturnsErrorWhenBulkRequestFails(t *testing.T) {
+	setupCheckForUpdatesDataDir(t)
+	seedManagedAddonsFile(t, Addon{Name: "Alpha", Version: "1.0"})
+
+	stubAPIClient(t, roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusInternalServerError,
+			Body:       io.NopCloser(strings.NewReader("")),
+		}, nil
+	}))
+
+	updates, err := CheckForUpdates()
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if updates != nil {
+		t.Fatalf("updates = %v, want nil on total failure", updates)
+	}
+}
+
+func TestCheckForUpdatesReportsAddonsMissingFromResponse(t *testing.T) {
+	setupCheckForUpdatesDataDir(t)
+	seedManagedAddonsFile(t,
+		Addon{Name: "Alpha", Version: "1.0"},
+		Addon{Name: "Beta", Version: "1.0"},
+	)
+
+	stubAPIClient(t, roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(bulkReleasesBody(t, map[string]string{"Alpha": "2.0"})),
+		}, nil
+	}))
+
+	updates, err := CheckForUpdates()
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "Beta") {
+		t.Fatalf("error = %q, want it to name Beta", err)
+	}
+	if len(updates) != 1 {
+		t.Fatalf("updates = %v, want 1 entry", updates)
+	}
+	if got := updates["Alpha"]; got.Name != "Alpha" || got.Version != "2.0" {
+		t.Fatalf("updates[Alpha] = %+v, want {Name:Alpha Version:2.0}", got)
+	}
+}
+
+func TestCheckForUpdatesReturnsErrorWhenManagedAddonsFileMissing(t *testing.T) {
+	setupCheckForUpdatesDataDir(t)
+
+	stubAPIClient(t, roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		t.Errorf("unexpected request to %s", req.URL)
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(strings.NewReader(`{"status":true,"data":{}}`)),
+		}, nil
+	}))
+
+	updates, err := CheckForUpdates()
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if updates != nil {
+		t.Fatalf("updates = %v, want nil", updates)
+	}
 }
 
 func TestGenerateUpdateAddonLuaFailedWritePreservesUpdatesLua(t *testing.T) {

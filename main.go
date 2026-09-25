@@ -102,9 +102,19 @@ func main() {
 			logger.Sync()
 			os.Exit(1)
 		}
-		addon.GenerateUpdateAddonLua(
-			addon.CheckForUpdates(),
-		)
+		updates, err := addon.CheckForUpdates()
+		if updates == nil {
+			// Total failure: leave the previous notification in place.
+			logger.Error("Error checking for addon updates:", err)
+			logger.Sync()
+			os.Exit(1)
+		}
+		addon.GenerateUpdateAddonLua(updates)
+		if err != nil {
+			logger.Error("Error checking for addon updates:", err)
+			logger.Sync()
+			os.Exit(1)
+		}
 		logger.Sync()
 		os.Exit(0)
 	}
