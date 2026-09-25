@@ -1,10 +1,14 @@
 package addon
 
 import (
+	"ClassicAddonManager/backend/api"
+	"ClassicAddonManager/backend/config"
+	"ClassicAddonManager/backend/file"
 	"ClassicAddonManager/backend/logger"
 	"ClassicAddonManager/backend/shared"
 	"errors"
 	"os"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -428,5 +432,180 @@ func TestGetAddonManifestReturnedSliceIsCopy(t *testing.T) {
 	}
 	if second[0].Name != "original" {
 		t.Fatalf("mutating returned slice changed cache: got %q", second[0].Name)
+	}
+}
+
+// setupRemoteAddonTest prepares the AAC dir, cache dir, config dir, and
+// managed-addon state that InstallAddon/UpdateAddon touch.
+func setupRemoteAddonTest(t *testing.T) (addonDir string) {
+	t.Helper()
+
+	// The logger singleton opens app.log on first use and never closes it, so
+	// initialize it against the shared temp dir before pointing the config dir
+	// at t.TempDir() (Windows cannot remove a temp dir holding an open file).
+	t.Setenv("APPDATA", os.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", os.TempDir())
+	logger.Info("starting remote addon install test")
+	dataDir := t.TempDir()
+	t.Setenv("APPDATA", dataDir)
+	t.Setenv("XDG_CONFIG_HOME", dataDir)
+
+	localAddonsMu.Lock()
+	localAddons = make(map[string]Addon)
+	localAddonsMu.Unlock()
+	t.Cleanup(func() {
+		localAddonsMu.Lock()
+		localAddons = nil
+		localAddonsMu.Unlock()
+	})
+
+	return setupInstallZipTest(t)
+}
+
+// stubRemoteAddons replaces the release fetch and download/extract steps and
+// restores them via t.Cleanup.
+func stubRemoteAddons(t *testing.T, getRelease func(name, version string) (api.Release, error), download func(manifest shared.AddonManifest, version string) error) {
+	t.Helper()
+
+	origGet := getAddonRelease
+	origDownload := downloadAndExtract
+	getAddonRelease = getRelease
+	downloadAndExtract = download
+	t.Cleanup(func() {
+		getAddonRelease = origGet
+		downloadAndExtract = origDownload
+	})
+}
+
+// fakeExtractedRelease simulates a downloaded release by writing the extracted
+// layout MoveAddonRelease expects: <cache>/<name>/release-root/main.lua.
+func fakeExtractedRelease(mainLua string) func(manifest shared.AddonManifest, version string) error {
+	return func(manifest shared.AddonManifest, _ string) error {
+		cacheDir, err := config.GetCacheDir()
+		if err != nil {
+			return err
+		}
+		root := filepath.Join(cacheDir, manifest.Name, "release-root")
+		if err := os.MkdirAll(root, 0755); err != nil {
+			return err
+		}
+		return os.WriteFile(filepath.Join(root, "main.lua"), []byte(mainLua), 0644)
+	}
+}
+
+func TestInstallAddonReleaseMetadataFailureLeavesNothingInstalled(t *testing.T) {
+	addonDir := setupRemoteAddonTest(t)
+	manifest := shared.AddonManifest{Name: "MyAddon", Repo: "example/repo"}
+
+	fetchErr := errors.New("release fetch failed")
+	stubRemoteAddons(t,
+		func(_, _ string) (api.Release, error) {
+			return api.Release{}, fetchErr
+		},
+		fakeExtractedRelease("new main"),
+	)
+
+	ok, err := InstallAddon(manifest, "")
+	if err == nil || ok {
+		t.Fatalf("InstallAddon = (%v, %v), want (false, error)", ok, err)
+	}
+	if !errors.Is(err, fetchErr) {
+		t.Fatalf("InstallAddon error = %v, want %v", err, fetchErr)
+	}
+
+	if file.FileExists(filepath.Join(addonDir, manifest.Name)) {
+		t.Fatal("addon directory must not exist after a failed install")
+	}
+	if IsInstalled(manifest.Name) {
+		t.Fatal("IsInstalled = true, want false")
+	}
+	assertAddonsTxtLines(t, filepath.Join(addonDir, "addons.txt"), []string{})
+	if addon := FindLocalAddonByName(manifest.Name); addon != nil {
+		t.Fatalf("FindLocalAddonByName = %+v, want nil", addon)
+	}
+}
+
+func TestUpdateAddonReleaseMetadataFailureKeepsExistingInstall(t *testing.T) {
+	addonDir := setupRemoteAddonTest(t)
+	manifest := shared.AddonManifest{Name: "MyAddon", Repo: "example/repo"}
+	dest := filepath.Join(addonDir, manifest.Name)
+
+	if err := os.MkdirAll(dest, 0755); err != nil {
+		t.Fatalf("seed addon dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dest, "main.lua"), []byte("old"), 0644); err != nil {
+		t.Fatalf("seed main.lua: %v", err)
+	}
+	if err := file.WriteLines(filepath.Join(addonDir, "addons.txt"), []string{manifest.Name}); err != nil {
+		t.Fatalf("seed addons.txt: %v", err)
+	}
+	if _, err := ReadAddonsTxt(); err != nil {
+		t.Fatalf("load addons.txt: %v", err)
+	}
+	AddManagedAddon(manifest, api.Release{TagName: "v1"})
+
+	fetchErr := errors.New("release fetch failed")
+	stubRemoteAddons(t,
+		func(_, _ string) (api.Release, error) {
+			return api.Release{}, fetchErr
+		},
+		fakeExtractedRelease("new"),
+	)
+
+	ok, err := UpdateAddon(manifest, "v2")
+	if err == nil || ok {
+		t.Fatalf("UpdateAddon = (%v, %v), want (false, error)", ok, err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(dest, "main.lua"))
+	if err != nil {
+		t.Fatalf("read main.lua: %v", err)
+	}
+	if string(data) != "old" {
+		t.Fatalf("main.lua = %q, want untouched original %q", string(data), "old")
+	}
+	addon := FindLocalAddonByName(manifest.Name)
+	if addon == nil {
+		t.Fatal("managed addon entry must be kept")
+	}
+	if addon.Version != "v1" {
+		t.Fatalf("managed addon version = %q, want %q", addon.Version, "v1")
+	}
+}
+
+func TestInstallAddonRecordsManagedRelease(t *testing.T) {
+	addonDir := setupRemoteAddonTest(t)
+	manifest := shared.AddonManifest{Name: "MyAddon", Repo: "example/repo"}
+
+	stubRemoteAddons(t,
+		func(_, _ string) (api.Release, error) {
+			return api.Release{TagName: "v2.0.0"}, nil
+		},
+		fakeExtractedRelease("new main"),
+	)
+
+	ok, err := InstallAddon(manifest, "v2.0.0")
+	if err != nil || !ok {
+		t.Fatalf("InstallAddon = (%v, %v), want (true, nil)", ok, err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(addonDir, manifest.Name, "main.lua"))
+	if err != nil {
+		t.Fatalf("read main.lua: %v", err)
+	}
+	if string(data) != "new main" {
+		t.Fatalf("main.lua = %q, want %q", string(data), "new main")
+	}
+	assertAddonsTxtLines(t, filepath.Join(addonDir, "addons.txt"), []string{manifest.Name})
+
+	addon := FindLocalAddonByName(manifest.Name)
+	if addon == nil {
+		t.Fatal("managed addon entry must be recorded")
+	}
+	if !addon.IsManaged {
+		t.Fatal("managed addon entry must have IsManaged = true")
+	}
+	if addon.Version != "v2.0.0" {
+		t.Fatalf("managed addon version = %q, want %q", addon.Version, "v2.0.0")
 	}
 }

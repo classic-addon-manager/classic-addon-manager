@@ -26,7 +26,12 @@ func InstallAddon(manifest shared.AddonManifest, version string) (bool, error) {
 
 	logger.Info("Installing addon:" + manifest.Name + " from " + manifest.Repo + " version: " + version)
 
-	if err := downloadAndExtractAddon(manifest, version); err != nil {
+	release, err := fetchAddonRelease(manifest, version)
+	if err != nil {
+		return false, err
+	}
+
+	if err := downloadAndExtract(manifest, version); err != nil {
 		return false, err
 	}
 
@@ -39,9 +44,7 @@ func InstallAddon(manifest shared.AddonManifest, version string) (bool, error) {
 		return false, err
 	}
 
-	if err := updateAddonMetadata(manifest, version); err != nil {
-		return false, err
-	}
+	AddManagedAddon(manifest, release)
 
 	logger.Info(manifest.Name + " installed successfully")
 	return true, nil
@@ -55,7 +58,12 @@ func UpdateAddon(manifest shared.AddonManifest, version string) (bool, error) {
 
 	logger.Info("Updating addon:" + manifest.Name + " from " + manifest.Repo + " version: " + version)
 
-	if err := downloadAndExtractAddon(manifest, version); err != nil {
+	release, err := fetchAddonRelease(manifest, version)
+	if err != nil {
+		return false, err
+	}
+
+	if err := downloadAndExtract(manifest, version); err != nil {
 		return false, err
 	}
 
@@ -68,9 +76,7 @@ func UpdateAddon(manifest shared.AddonManifest, version string) (bool, error) {
 		return false, err
 	}
 
-	if err := updateAddonMetadata(manifest, version); err != nil {
-		return false, err
-	}
+	AddManagedAddon(manifest, release)
 
 	logger.Info(manifest.Name + " updated successfully")
 	return true, nil
@@ -96,6 +102,11 @@ type manifestFetch struct {
 var (
 	manifestInflight *manifestFetch
 	manifestGen      uint64
+)
+
+var (
+	getAddonRelease    = api.GetAddonRelease
+	downloadAndExtract = downloadAndExtractAddon
 )
 
 // GetAddonManifest returns the remote catalog, cached for addonManifestTTL.
@@ -233,16 +244,9 @@ func downloadAndExtractAddon(manifest shared.AddonManifest, version string) erro
 	return os.Remove(filepath.Join(cacheDir, zipName))
 }
 
-func updateAddonMetadata(manifest shared.AddonManifest, version string) error {
+func fetchAddonRelease(manifest shared.AddonManifest, version string) (api.Release, error) {
 	if version == "" {
 		version = "latest"
 	}
-
-	release, err := api.GetAddonRelease(manifest.Name, version)
-	if err != nil {
-		return err
-	}
-
-	AddManagedAddon(manifest, release)
-	return nil
+	return getAddonRelease(manifest.Name, version)
 }
