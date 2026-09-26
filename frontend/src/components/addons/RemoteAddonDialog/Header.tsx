@@ -19,10 +19,8 @@ export const Header = ({ manifest, release }: HeaderProps) => {
   const bannerUrl = `https://raw.githubusercontent.com/${manifest.repo}/${manifest.branch}/banner.png`
   const iconUrl = addonIconUrl(manifest)
 
-  // Tracked by URL rather than as booleans so viewing a dependency resets both without an effect.
+  // Tracked by URL rather than as a boolean so viewing a dependency resets it without an effect.
   const [loadedBannerUrl, setLoadedBannerUrl] = useState<string | null>(null)
-  const [failedIconUrl, setFailedIconUrl] = useState<string | null>(null)
-  const hasIcon = iconUrl !== null && failedIconUrl !== iconUrl
   const hasBanner = loadedBannerUrl === bannerUrl
 
   return (
@@ -51,13 +49,7 @@ export const Header = ({ manifest, release }: HeaderProps) => {
         )}
       >
         <div className="overflow-hidden rounded-xl ring-1 ring-primary/20">
-          <Icon
-            manifest={manifest}
-            iconUrl={iconUrl}
-            hasIcon={hasIcon}
-            onIconError={() => setFailedIconUrl(iconUrl)}
-            prominent
-          />
+          <Icon manifest={manifest} iconUrl={iconUrl} prominent />
         </div>
       </div>
 

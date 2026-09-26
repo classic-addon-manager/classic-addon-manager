@@ -10,7 +10,7 @@ import { useRemoteAddonItem } from './useRemoteAddonItem'
 import { WarningIcon } from './WarningIcon'
 
 export const Grid = ({ manifest, installed }: RemoteAddonItemProps) => {
-  const { hasIcon, isNew, iconUrl, openDialog, onIconError } = useRemoteAddonItem({
+  const { isNew, iconUrl, openDialog } = useRemoteAddonItem({
     manifest,
     installed,
   })
@@ -26,13 +26,7 @@ export const Grid = ({ manifest, installed }: RemoteAddonItemProps) => {
 
       <CardHeader className="items-center space-y-0 px-3 pb-0 pt-1 text-center">
         <div className="relative mx-auto mb-2 shrink-0">
-          <Icon
-            manifest={manifest}
-            iconUrl={iconUrl}
-            hasIcon={hasIcon}
-            onIconError={onIconError}
-            prominent
-          />
+          <Icon manifest={manifest} iconUrl={iconUrl} prominent />
           <NewBadge isNew={isNew} />
         </div>
         <CardTitle className="flex w-full items-center justify-center gap-1 text-sm leading-tight">

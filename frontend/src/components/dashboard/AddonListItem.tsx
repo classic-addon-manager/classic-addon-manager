@@ -1,8 +1,8 @@
 import { useAtomValue } from 'jotai'
-import { BlocksIcon, Check, Download, LoaderCircle } from 'lucide-react'
-import { useState } from 'react'
+import { Check, Download, LoaderCircle } from 'lucide-react'
 
 import { catalogIconMapAtom } from '@/components/dashboard/iconMap'
+import { AddonIconImage } from '@/components/shared/AddonIconImage'
 import { cn } from '@/lib/utils'
 import type { Addon } from '@/lib/wails'
 import { useAddonStore } from '@/stores/addonStore'
@@ -20,9 +20,7 @@ export const AddonListItem = ({ addon, isSelected, onClick }: AddonListItemProps
     addon.isManaged && latestRelease && latestRelease.tag_name !== addon.version
   )
 
-  const [failedIconUrl, setFailedIconUrl] = useState<string | null>(null)
   const iconUrl = useAtomValue(catalogIconMapAtom).get(addon.name) ?? null
-  const hasIcon = iconUrl !== null && failedIconUrl !== iconUrl
 
   return (
     <button
@@ -36,19 +34,13 @@ export const AddonListItem = ({ addon, isSelected, onClick }: AddonListItemProps
       )}
     >
       <div className="shrink-0">
-        {iconUrl && hasIcon ? (
-          <img
-            className="h-9 w-9 rounded-lg object-cover border border-border/50 shadow-xs"
-            src={iconUrl}
-            alt={`${addon.alias} icon`}
-            loading="lazy"
-            onError={() => setFailedIconUrl(iconUrl)}
-          />
-        ) : (
-          <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-background border border-border/50 shadow-xs">
-            <BlocksIcon className="h-4 w-4 opacity-40 stroke-[1.5]" />
-          </div>
-        )}
+        <AddonIconImage
+          src={iconUrl}
+          alt={`${addon.alias} icon`}
+          imageClassName="h-9 w-9 rounded-lg object-cover border border-border/50 shadow-xs"
+          fallbackClassName="flex items-center justify-center h-9 w-9 rounded-lg bg-background border border-border/50 shadow-xs"
+          fallbackIconClassName="h-4 w-4 opacity-40 stroke-[1.5]"
+        />
       </div>
 
       <div className="flex-1 min-w-0">

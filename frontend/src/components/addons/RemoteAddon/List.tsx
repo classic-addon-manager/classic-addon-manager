@@ -8,7 +8,7 @@ import { useRemoteAddonItem } from './useRemoteAddonItem'
 import { WarningIcon } from './WarningIcon'
 
 export const List = ({ manifest, installed }: RemoteAddonItemProps) => {
-  const { hasIcon, isNew, iconUrl, openDialog, onIconError } = useRemoteAddonItem({
+  const { isNew, iconUrl, openDialog } = useRemoteAddonItem({
     manifest,
     installed,
   })
@@ -20,12 +20,7 @@ export const List = ({ manifest, installed }: RemoteAddonItemProps) => {
     >
       <div className="flex items-center gap-3 col-span-5">
         <div className="relative shrink-0">
-          <Icon
-            manifest={manifest}
-            iconUrl={iconUrl}
-            hasIcon={hasIcon}
-            onIconError={onIconError}
-          />
+          <Icon manifest={manifest} iconUrl={iconUrl} />
           <NewBadge isNew={isNew} />
         </div>
         <div className="flex flex-col overflow-hidden">

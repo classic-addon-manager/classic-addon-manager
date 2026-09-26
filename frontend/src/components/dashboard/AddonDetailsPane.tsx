@@ -2,7 +2,6 @@ import { Browser } from '@wailsio/runtime'
 import { useAtom, useAtomValue } from 'jotai'
 import {
   AlertTriangleIcon,
-  BlocksIcon,
   BugIcon,
   CheckIcon,
   Download,
@@ -17,12 +16,13 @@ import {
   Trash2Icon,
   User,
 } from 'lucide-react'
-import { Suspense, useState } from 'react'
+import { Suspense } from 'react'
 
 import { AddonRatingButtons } from '@/components/dashboard/AddonRatingButtons'
 import { AddonRepositoryMatch } from '@/components/dashboard/AddonRepositoryMatch'
 import { localUpdateDialogOpenAtom } from '@/components/dashboard/atoms'
 import { catalogIconMapAtom } from '@/components/dashboard/iconMap'
+import { AddonIconImage } from '@/components/shared/AddonIconImage'
 import { Readme } from '@/components/shared/Readme'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -77,9 +77,7 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
 
   const latestRelease = latestReleasesMap.get(addon.name)
   const hasUpdate = addon.isManaged && latestRelease && latestRelease.published_at > addon.updatedAt
-  const [failedIconUrl, setFailedIconUrl] = useState<string | null>(null)
   const iconUrl = useAtomValue(catalogIconMapAtom).get(addon.name) ?? null
-  const hasIcon = iconUrl !== null && failedIconUrl !== iconUrl
 
   const handleReinstall = async () => {
     const [manifest, manifestError] = await safeCall<AddonManifest>(repoGetManifest(addon.name))
@@ -180,19 +178,13 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
       <div className="shrink-0 border-b px-6 py-5">
         <div className="flex items-start gap-4">
           <div className="shrink-0">
-            {iconUrl && hasIcon ? (
-              <img
-                className="h-14 w-14 rounded-xl object-cover border border-border/50 shadow-sm"
-                src={iconUrl}
-                alt={`${addon.alias} icon`}
-                loading="lazy"
-                onError={() => setFailedIconUrl(iconUrl)}
-              />
-            ) : (
-              <div className="flex items-center justify-center h-14 w-14 rounded-xl bg-muted border border-border/50">
-                <BlocksIcon className="h-7 w-7 opacity-40 stroke-[1.5]" />
-              </div>
-            )}
+            <AddonIconImage
+              src={iconUrl}
+              alt={`${addon.alias} icon`}
+              imageClassName="h-14 w-14 rounded-xl object-cover border border-border/50 shadow-sm"
+              fallbackClassName="flex items-center justify-center h-14 w-14 rounded-xl bg-muted border border-border/50"
+              fallbackIconClassName="h-7 w-7 opacity-40 stroke-[1.5]"
+            />
           </div>
 
           <div className="flex-1 min-w-0">
