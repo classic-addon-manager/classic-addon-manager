@@ -5,6 +5,7 @@ package nativeui
 /*
 #cgo pkg-config: gtk4
 #include <gtk/gtk.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 static void nativeui_alert_done(GObject *source, GAsyncResult *result, gpointer user_data) {
@@ -17,7 +18,10 @@ static void nativeui_alert_done(GObject *source, GAsyncResult *result, gpointer 
 }
 
 static void nativeui_show_fatal_error(const char *title, const char *message) {
-	gtk_init();
+	if (!gtk_init_check()) {
+		fprintf(stderr, "%s: %s\n", title, message);
+		return;
+	}
 
 	GMainLoop *loop = g_main_loop_new(NULL, FALSE);
 	GtkAlertDialog *dialog = gtk_alert_dialog_new("%s", title);
@@ -53,19 +57,23 @@ func HandleNativeErrorArgs(args []string) bool {
 	return true
 }
 
-// ShowFatalError displays a blocking GTK 4 error alert.
+// ShowFatalError displays a blocking GTK 4 error alert. In headless sessions
+// without a display, the error is reported on stderr instead.
 func ShowFatalError(title, message string) {
 	executable, err := os.Executable()
 	if err == nil {
 		cmd := exec.Command(executable, nativeErrorFlag, title, message)
+		// The child reports headless-session failures on stderr, forward it
+		// so the fallback stays observable in the parent's terminal.
+		cmd.Stderr = os.Stderr
 		if err = cmd.Start(); err == nil {
 			_ = cmd.Wait()
 			return
 		}
 	}
 
-	// A child could not be started. Keep the GUI-only contract by showing the
-	// same GTK 4 alert in this process instead of falling back to text.
+	// A child could not be started. Show the same alert in this process;
+	// headless sessions fall back to stderr inside showFatalErrorInProcess.
 	showFatalErrorInProcess(title, message)
 }
 
