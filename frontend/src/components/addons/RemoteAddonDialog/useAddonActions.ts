@@ -87,20 +87,6 @@ export const useAddonActions = ({
         })
       }
 
-      console.log(
-        `Found ${result.dependencies.length} total dependencies (including transitive) for ${manifest.alias}`
-      )
-
-      // Log dependency tree for debugging
-      if (result.dependencies.length > 0) {
-        console.log('Dependency tree:')
-        result.dependencies.forEach(dep => {
-          console.log(
-            `  ${'  '.repeat(dep.depth)}${dep.manifest.alias} (${dep.isInstalled ? 'installed' : 'not installed'})`
-          )
-        })
-      }
-
       return result.dependencies
     },
   })
@@ -217,7 +203,6 @@ export const useAddonActions = ({
 
 
   const handleDependencyClick = (depManifest: AddonManifest) => {
-    console.log('Clicked dependency:', depManifest.alias)
     onViewDependency(depManifest)
   }
 
