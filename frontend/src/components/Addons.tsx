@@ -27,12 +27,7 @@ export const Addons = () => {
         <RemoteAddonDialog
           manifest={selectedManifest}
           open={isDialogOpen}
-          onOpenChange={open => {
-            setDialogOpen(open)
-            if (!open) {
-              setTimeout(() => setSelectedManifest(null), 200)
-            }
-          }}
+          onOpenChange={setDialogOpen}
           onViewDependency={manifest => {
             setSelectedManifest(manifest)
             setDialogOpen(true)
