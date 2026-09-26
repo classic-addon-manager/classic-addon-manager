@@ -8,7 +8,8 @@ import {
 } from '@/components/developer/parse.ts'
 import type { DeclarationValues } from '@/components/developer/types.ts'
 import { SCHEMA_FIELD_KEYS } from '@/components/developer/types.ts'
-import { apiClient } from '@/lib/api'
+
+import { fetchJson, fetchParsed } from './fetchJson.ts'
 
 export type { ParseSaveResult, ParseValidateResult, ParseWithdrawResult }
 
@@ -20,10 +21,10 @@ export async function uploadIcon(file: File): Promise<UploadIconResult> {
   const form = new FormData()
   form.append('icon', file)
   try {
-    const response = await apiClient.postForm('/dev/addon/icon', form)
-    const body: unknown = await response.json()
+    const { status, body } = await fetchJson('/dev/addon/icon', { method: 'POST', body: form })
     if (
-      response.ok &&
+      status >= 200 &&
+      status < 300 &&
       typeof body === 'object' &&
       body !== null &&
       'data' in body &&
@@ -84,62 +85,35 @@ export async function validateDeclaration(
   submissionId: number | null
 ): Promise<ParseValidateResult> {
   const path = editorValidatePath(submissionId)
-  try {
-    const response = await apiClient.post(path, values)
-    let body: unknown
-    try {
-      body = await response.json()
-    } catch {
-      if (response.status === 401) {
-        return { status: 'unauthorized', message: 'Sign in to validate an addon.' }
-      }
-      return { status: 'error', message: 'Unexpected validation response.' }
-    }
-    return parseValidateResponse(response.status, body, declarationErrorKeys())
-  } catch {
-    return { status: 'error', message: 'Unexpected validation response.' }
-  }
+  return fetchParsed(
+    path,
+    { method: 'POST', body: values },
+    (status, body) => parseValidateResponse(status, body, declarationErrorKeys()),
+    'Sign in to validate an addon.',
+    'Unexpected validation response.'
+  )
 }
 
 export async function saveDeclaration(
   values: DeclarationValues,
   submissionId: number | null
 ): Promise<ParseSaveResult> {
-  try {
-    const save = editorSaveRequest(submissionId)
-    const response =
-      save.method === 'POST'
-        ? await apiClient.post(save.path, values)
-        : await apiClient.put(save.path, values)
-    let body: unknown
-    try {
-      body = await response.json()
-    } catch {
-      if (response.status === 401) {
-        return { status: 'unauthorized', message: 'Sign in to submit an addon.' }
-      }
-      return { status: 'error', message: 'Unexpected save response.' }
-    }
-    return parseSaveResponse(response.status, body, declarationErrorKeys())
-  } catch {
-    return { status: 'error', message: 'Unexpected save response.' }
-  }
+  const save = editorSaveRequest(submissionId)
+  return fetchParsed(
+    save.path,
+    { method: save.method, body: values },
+    (status, body) => parseSaveResponse(status, body, declarationErrorKeys()),
+    'Sign in to submit an addon.',
+    'Unexpected save response.'
+  )
 }
 
 export async function withdrawDeclaration(submissionId: number): Promise<ParseWithdrawResult> {
-  try {
-    const response = await apiClient.post(editorWithdrawPath(submissionId))
-    let body: unknown
-    try {
-      body = await response.json()
-    } catch {
-      if (response.status === 401) {
-        return { status: 'unauthorized', message: 'Sign in to withdraw a submission.' }
-      }
-      return { status: 'error', message: 'Unexpected withdraw response.' }
-    }
-    return parseWithdrawResponse(response.status, body)
-  } catch {
-    return { status: 'error', message: 'Unexpected withdraw response.' }
-  }
+  return fetchParsed(
+    editorWithdrawPath(submissionId),
+    { method: 'POST' },
+    parseWithdrawResponse,
+    'Sign in to withdraw a submission.',
+    'Unexpected withdraw response.'
+  )
 }

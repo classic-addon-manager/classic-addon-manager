@@ -1,6 +1,7 @@
 import { parseAddonValues, type ParseValuesResult } from '@/components/developer/parse.ts'
 import type { AddonSchema, EditorSource } from '@/components/developer/types.ts'
-import { apiClient } from '@/lib/api'
+
+import { fetchParsed } from './fetchJson.ts'
 
 export type { ParseValuesResult }
 
@@ -14,19 +15,11 @@ export async function getAddonValues(
       : source.type === 'addon'
         ? `addon_uuid=${encodeURIComponent(source.uuid)}`
         : `submission_id=${source.id}`
-  try {
-    const response = await apiClient.get(`/dev/addon/values?${query}`)
-    let body: unknown
-    try {
-      body = await response.json()
-    } catch {
-      if (response.status === 401) {
-        return { status: 'unauthorized', message: 'Sign in to load addon values.' }
-      }
-      return { status: 'error', message: 'Unexpected values response.' }
-    }
-    return parseAddonValues(response.status, body, schema)
-  } catch {
-    return { status: 'error', message: 'Unexpected values response.' }
-  }
+  return fetchParsed(
+    `/dev/addon/values?${query}`,
+    {},
+    (status, body) => parseAddonValues(status, body, schema),
+    'Sign in to load addon values.',
+    'Unexpected values response.'
+  )
 }
