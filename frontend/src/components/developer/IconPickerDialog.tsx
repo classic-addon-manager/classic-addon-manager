@@ -18,6 +18,10 @@ const iconSaveMutationKey = ['icon-picker-save'] as const
 
 function BlobImg({ file, className }: { file: File; className?: string }) {
   const setRef = useCallback(
+    /* React 19 ref-callback cleanup: returning revokeObjectURL from the ref
+     * callback only works on React 19+. If React is downgraded or the callback
+     * is refactored away from returning a cleanup function, the object URLs
+     * created here will leak. */
     (node: HTMLImageElement | null) => {
       if (!node) return
       const url = URL.createObjectURL(file)
