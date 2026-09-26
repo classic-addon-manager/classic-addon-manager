@@ -30,6 +30,13 @@ interface AddonState {
   unmanage: (addon: Addon) => Promise<boolean>
 }
 
+const countUpdates = (managedAddons: Array<Addon>, releases: Map<string, Release>) =>
+  managedAddons.reduce((count, addon) => {
+    const latestRelease = releases.get(addon.name)
+    if (!latestRelease) return count
+    return latestRelease.published_at > addon.updatedAt ? count + 1 : count
+  }, 0)
+
 export const useAddonStore = create<AddonState>((set, get) => {
   // Set when an update check is requested while another one is still running.
   let updateCheckQueued = false
@@ -109,12 +116,10 @@ export const useAddonStore = create<AddonState>((set, get) => {
           })
         )
 
+        // Keep the last good releases so badges survive a network hiccup, but recount for current addons.
         if (err || !releases) {
           console.error('[AddonStore] Failed to perform bulk update check:', err)
-          set({
-            latestReleasesMap: new Map<string, Release>(),
-            updatesAvailableCount: 0,
-          })
+          set({ updatesAvailableCount: countUpdates(managedAddons, get().latestReleasesMap) })
           return
         }
 
@@ -125,11 +130,7 @@ export const useAddonStore = create<AddonState>((set, get) => {
           )
         )
 
-        const updatesAvailableCount = managedAddons.reduce((count, addon) => {
-          const latestRelease = latestReleasesMap.get(addon.name)
-          if (!latestRelease) return count
-          return latestRelease.published_at > addon.updatedAt ? count + 1 : count
-        }, 0)
+        const updatesAvailableCount = countUpdates(managedAddons, latestReleasesMap)
 
         // A newer check is waiting, so these results may include addons that are gone.
         if (!updateCheckQueued) {
@@ -137,11 +138,8 @@ export const useAddonStore = create<AddonState>((set, get) => {
         }
       } catch (error) {
         console.error('[AddonStore] Unexpected error caught in performBulkUpdateCheck:', error)
-        set({
-          latestReleasesMap: new Map<string, Release>(),
-          updatesAvailableCount: 0,
-        })
       } finally {
+        // Keep the spinner up briefly so a fast check doesn't look like nothing happened.
         setTimeout(() => {
           set({ isCheckingForUpdates: false })
           if (updateCheckQueued) {
