@@ -71,7 +71,6 @@ export const loadAddonsAtom = atom(null, async (get, set, force?: boolean) => {
     })
 
     set(addonsAtom, tmp)
-    set(searchQueryAtom, '')
     set(addonsErrorAtom, null)
     set(isAddonsReadyAtom, true)
     return true
