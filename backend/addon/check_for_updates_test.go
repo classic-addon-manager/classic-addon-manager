@@ -88,7 +88,9 @@ func TestGenerateUpdateAddonLuaWritesAtomically(t *testing.T) {
 	}
 
 	updates := map[string]Addon{"SomeAddon": {Name: "SomeAddon", Version: "2.0"}}
-	GenerateUpdateAddonLua(updates)
+	if err := GenerateUpdateAddonLua(updates); err != nil {
+		t.Fatalf("GenerateUpdateAddonLua: %v", err)
+	}
 
 	gotMain, err := os.ReadFile(filepath.Join(addonPath, "main.lua"))
 	if err != nil {
@@ -127,7 +129,9 @@ func TestGenerateUpdateAddonLuaEmptyUpdatesRemovesUpdatesLua(t *testing.T) {
 		t.Fatalf("seed updates.lua: %v", err)
 	}
 
-	GenerateUpdateAddonLua(map[string]Addon{})
+	if err := GenerateUpdateAddonLua(map[string]Addon{}); err != nil {
+		t.Fatalf("GenerateUpdateAddonLua: %v", err)
+	}
 
 	if _, err := os.Stat(filepath.Join(addonPath, "updates.lua")); !os.IsNotExist(err) {
 		t.Fatalf("updates.lua should be removed, stat err = %v", err)
@@ -142,6 +146,18 @@ func TestGenerateUpdateAddonLuaEmptyUpdatesRemovesUpdatesLua(t *testing.T) {
 	}
 
 	assertNoUpdateTempFiles(t, addonPath)
+}
+
+func TestGenerateUpdateAddonLuaReportsAddonsTxtReadFailure(t *testing.T) {
+	addonsTxtPath := setupAddonsTxtTest(t)
+	if err := os.MkdirAll(addonsTxtPath, 0755); err != nil {
+		t.Fatalf("create directory in place of addons.txt: %v", err)
+	}
+
+	err := GenerateUpdateAddonLua(map[string]Addon{})
+	if err == nil || !strings.Contains(err.Error(), "read addons.txt") {
+		t.Fatalf("GenerateUpdateAddonLua error = %v, want addons.txt read failure", err)
+	}
 }
 
 type roundTripFunc func(*http.Request) (*http.Response, error)
@@ -359,7 +375,9 @@ func TestGenerateUpdateAddonLuaFailedWritePreservesUpdatesLua(t *testing.T) {
 		t.Fatalf("seed updates.lua: %v", err)
 	}
 
-	GenerateUpdateAddonLua(map[string]Addon{"SomeAddon": {Name: "SomeAddon", Version: "2.0"}})
+	if err := GenerateUpdateAddonLua(map[string]Addon{"SomeAddon": {Name: "SomeAddon", Version: "2.0"}}); err == nil {
+		t.Fatal("GenerateUpdateAddonLua should report failed main.lua write")
+	}
 
 	if info, err := os.Stat(filepath.Join(addonPath, "main.lua")); err != nil || !info.IsDir() {
 		t.Fatalf("main.lua should still be a directory, info = %v, err = %v", info, err)

@@ -91,17 +91,6 @@ func main() {
 	}
 
 	if *addonUpdateMode {
-		addonsTxt, err := os.OpenFile(addonsTxtPath, os.O_RDWR, 0)
-		if err != nil {
-			logger.Error("Cannot use addons.txt:", err)
-			logger.Sync()
-			os.Exit(1)
-		}
-		if err := addonsTxt.Close(); err != nil {
-			logger.Error("Cannot close addons.txt:", err)
-			logger.Sync()
-			os.Exit(1)
-		}
 		updates, err := addon.CheckForUpdates()
 		if updates == nil {
 			// Total failure: leave the previous notification in place.
@@ -109,7 +98,12 @@ func main() {
 			logger.Sync()
 			os.Exit(1)
 		}
-		addon.GenerateUpdateAddonLua(updates)
+		generationErr := addon.GenerateUpdateAddonLua(updates)
+		if generationErr != nil {
+			logger.Error("Error generating addon update notification:", generationErr)
+			logger.Sync()
+			os.Exit(1)
+		}
 		if err != nil {
 			logger.Error("Error checking for addon updates:", err)
 			logger.Sync()
@@ -184,7 +178,7 @@ func main() {
 	err = a.Run()
 
 	if err != nil {
-		println("Error:", err.Error())
+		logger.Error("Error running application:", err)
 	}
 }
 

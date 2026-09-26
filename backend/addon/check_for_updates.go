@@ -64,11 +64,11 @@ func CheckForUpdates() (map[string]Addon, error) {
 	return updates, nil
 }
 
-func GenerateUpdateAddonLua(updates map[string]Addon) {
+func GenerateUpdateAddonLua(updates map[string]Addon) error {
 	addonDir, err := config.GetAddonDir()
 	if err != nil {
 		logger.Error("Error resolving addon directory:", err)
-		return
+		return fmt.Errorf("resolve addon directory: %w", err)
 	}
 	addonPath := filepath.Join(addonDir, "AddonUpdateNotification")
 
@@ -76,37 +76,39 @@ func GenerateUpdateAddonLua(updates map[string]Addon) {
 		err = os.MkdirAll(addonPath, os.ModePerm)
 		if err != nil {
 			logger.Error("Error creating AddonUpdateNotification directory:", err)
-			return
+			return fmt.Errorf("create AddonUpdateNotification directory: %w", err)
 		}
 	}
 
 	if _, err := ReadAddonsTxt(); err != nil {
 		logger.Error("Error reading addons txt:", err)
-		return
+		return fmt.Errorf("read addons.txt: %w", err)
 	}
 
 	if err := AddToAddonsTxt("AddonUpdateNotification"); err != nil {
 		logger.Error("Error adding AddonUpdateNotification to addons.txt", err)
-		return
+		return fmt.Errorf("add AddonUpdateNotification to addons.txt: %w", err)
 	}
 
 	if err := file.WriteAtomic(filepath.Join(addonPath, "main.lua"), luaScript, 0644); err != nil {
 		logger.Error("Error writing AddonUpdateNotification main.lua:", err)
-		return
+		return fmt.Errorf("write AddonUpdateNotification main.lua: %w", err)
 	}
 
 	if len(updates) == 0 {
 		err := os.Remove(filepath.Join(addonPath, "updates.lua"))
 		if err != nil && !os.IsNotExist(err) {
 			logger.Error("Error removing old AddonUpdateNotification updates.lua:", err)
+			return fmt.Errorf("remove AddonUpdateNotification updates.lua: %w", err)
 		}
-		return
+		return nil
 	}
 
 	if err := file.WriteAtomic(filepath.Join(addonPath, "updates.lua"), generateUpdatesLua(updates), 0644); err != nil {
 		logger.Error("Error writing AddonUpdateNotification updates.lua:", err)
-		return
+		return fmt.Errorf("write AddonUpdateNotification updates.lua: %w", err)
 	}
+	return nil
 }
 
 func generateUpdatesLua(updates map[string]Addon) []byte {
