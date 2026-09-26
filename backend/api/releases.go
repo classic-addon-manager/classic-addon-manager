@@ -10,8 +10,6 @@ import (
 	"net/http"
 	"strconv"
 	"time"
-
-	"github.com/mitchellh/mapstructure"
 )
 
 func GetAddonRelease(name string, version string) (Release, error) {
@@ -51,33 +49,33 @@ func GetAddonRelease(name string, version string) (Release, error) {
 		return Release{}, errors.New(apiResponse.Message)
 	}
 
-	data := apiResponse.Data.(map[string]any)
-	r := data["release"].(map[string]any)
-	release := Release{
-		ZipballUrl:  r["zipball_url"].(string),
-		TagName:     r["tag_name"].(string),
-		Body:        r["body"].(string),
-		PublishedAt: time.Time{},
-		Tag:         Tag{},
+	var data struct {
+		Release *struct {
+			ZipballUrl  string    `json:"zipball_url"`
+			TagName     string    `json:"tag_name"`
+			Body        string    `json:"body"`
+			PublishedAt time.Time `json:"published_at"`
+		} `json:"release"`
+		Tag Tag `json:"tag"`
 	}
-
-	// Parse time from data.release.published_at
-	publishedAtStr := r["published_at"].(string)
-	release.PublishedAt, err = time.Parse(time.RFC3339, publishedAtStr)
-	if err != nil {
+	if err := json.Unmarshal(apiResponse.Data, &data); err != nil {
 		logger.Error("GetAddonRelease Error:", err)
 		return Release{}, err
 	}
 
-	tag := Tag{}
-	err = mapstructure.Decode(data["tag"], &tag)
-	if err != nil {
+	if data.Release == nil || data.Release.ZipballUrl == "" || data.Release.TagName == "" || data.Release.PublishedAt.IsZero() {
+		err := errors.New("release response is missing required fields")
 		logger.Error("GetAddonRelease Error:", err)
 		return Release{}, err
 	}
 
-	release.Tag = tag
-	return release, nil
+	return Release{
+		ZipballUrl:  data.Release.ZipballUrl,
+		TagName:     data.Release.TagName,
+		Body:        data.Release.Body,
+		PublishedAt: data.Release.PublishedAt,
+		Tag:         data.Tag,
+	}, nil
 }
 
 func GetLatestApplicationRelease() (ApplicationRelease, error) {
@@ -115,10 +113,16 @@ func GetLatestApplicationRelease() (ApplicationRelease, error) {
 		return ApplicationRelease{}, errors.New(apiResponse.Message)
 	}
 
-	data := apiResponse.Data.(map[string]any)
-	release := ApplicationRelease{
-		Version: data["version"].(string),
-		Url:     data["url"].(string),
+	var release ApplicationRelease
+	if err := json.Unmarshal(apiResponse.Data, &release); err != nil {
+		logger.Error("GetLatestApplicationRelease Error:", err)
+		return ApplicationRelease{}, err
+	}
+
+	if release.Version == "" || release.Url == "" {
+		err := errors.New("application release response is missing required fields")
+		logger.Error("GetLatestApplicationRelease Error:", err)
+		return ApplicationRelease{}, err
 	}
 
 	return release, nil

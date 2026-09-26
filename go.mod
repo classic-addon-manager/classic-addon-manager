@@ -4,7 +4,6 @@ go 1.25.0
 
 require (
 	github.com/Microsoft/go-winio v0.6.2
-	github.com/mitchellh/mapstructure v1.5.0
 	github.com/spf13/viper v1.21.0
 	github.com/wailsapp/wails/v3 v3.0.0-beta.5
 	go.uber.org/zap v1.28.0

@@ -1,11 +1,14 @@
 package api
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 type ApiResponse struct {
-	Status  bool   `json:"status"`
-	Message string `json:"message"`
-	Data    any    `json:"data"`
+	Status  bool            `json:"status"`
+	Message string          `json:"message"`
+	Data    json.RawMessage `json:"data"`
 }
 
 type Release struct {
