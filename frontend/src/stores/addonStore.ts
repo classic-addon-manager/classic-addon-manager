@@ -18,6 +18,7 @@ interface AddonState {
   performBulkUpdateCheck: () => Promise<void>
   updateInstalledAddons: () => Promise<void>
   refreshAfterAddonChange: () => Promise<void>
+  refreshAfterLocalChange: () => Promise<void>
 
   installWithDependencies: (
     manifest: AddonManifest,
@@ -25,24 +26,41 @@ interface AddonState {
   ) => Promise<InstallWithDependenciesResult>
   update: (manifest: AddonManifest, version: string) => Promise<InstallWithDependenciesResult>
 
-  uninstall: (addon: Addon) => Promise<boolean>
+  uninstall: (addon: Addon, options?: { skipRefresh?: boolean }) => Promise<boolean>
   unmanage: (addon: Addon) => Promise<boolean>
 }
 
 export const useAddonStore = create<AddonState>((set, get) => {
-  const refreshAfterAddonChange = async () => {
+  // Set when an update check is requested while another one is still running.
+  let updateCheckQueued = false
+
+  const refreshInstalledAddons = async () => {
     await queryClient.invalidateQueries({ queryKey: ['installed-addons'] })
-    await queryClient.invalidateQueries({ queryKey: ['addon-updates-bulk'] })
     try {
       await get().updateInstalledAddons()
     } catch (err) {
       console.error('[AddonStore] Failed to refresh installed addons:', err)
     }
+  }
+
+  const refreshUpdateState = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['addon-updates-bulk'] })
     try {
       await get().performBulkUpdateCheck()
     } catch (err) {
       console.error('[AddonStore] Failed to perform bulk update check:', err)
     }
+  }
+
+  const refreshAfterAddonChange = async () => {
+    await refreshInstalledAddons()
+    await refreshUpdateState()
+  }
+
+  // The update check needs the network, so local changes don't wait for it to finish.
+  const refreshAfterLocalChange = async () => {
+    await refreshInstalledAddons()
+    void refreshUpdateState()
   }
 
   return {
@@ -58,11 +76,13 @@ export const useAddonStore = create<AddonState>((set, get) => {
     setUpdatesAvailableCount: (count: number) => set({ updatesAvailableCount: count }),
 
     refreshAfterAddonChange,
+    refreshAfterLocalChange,
 
     performBulkUpdateCheck: async () => {
       const { isCheckingForUpdates, installedAddons } = get()
 
       if (isCheckingForUpdates) {
+        updateCheckQueued = true
         return
       }
 
@@ -111,7 +131,10 @@ export const useAddonStore = create<AddonState>((set, get) => {
           return latestRelease.published_at > addon.updatedAt ? count + 1 : count
         }, 0)
 
-        set({ latestReleasesMap, updatesAvailableCount })
+        // A newer check is waiting, so these results may include addons that are gone.
+        if (!updateCheckQueued) {
+          set({ latestReleasesMap, updatesAvailableCount })
+        }
       } catch (error) {
         console.error('[AddonStore] Unexpected error caught in performBulkUpdateCheck:', error)
         set({
@@ -121,6 +144,10 @@ export const useAddonStore = create<AddonState>((set, get) => {
       } finally {
         setTimeout(() => {
           set({ isCheckingForUpdates: false })
+          if (updateCheckQueued) {
+            updateCheckQueued = false
+            void get().performBulkUpdateCheck()
+          }
         }, 250)
       }
     },
@@ -159,14 +186,16 @@ export const useAddonStore = create<AddonState>((set, get) => {
       return result as InstallWithDependenciesResult
     },
 
-    uninstall: async (addon: Addon) => {
+    uninstall: async (addon: Addon, options?: { skipRefresh?: boolean }) => {
       const [result, err] = await safeCall(LocalAddonService.UninstallAddon(addon.name))
       if (err) {
         console.error('[AddonStore] Failed to uninstall addon:', err)
         throw err
       }
 
-      await get().updateInstalledAddons()
+      if (!options?.skipRefresh) {
+        await refreshAfterLocalChange()
+      }
 
       return result ?? false
     },
@@ -178,7 +207,7 @@ export const useAddonStore = create<AddonState>((set, get) => {
         throw err
       }
 
-      await get().updateInstalledAddons()
+      await refreshAfterLocalChange()
 
       return result ?? false
     },

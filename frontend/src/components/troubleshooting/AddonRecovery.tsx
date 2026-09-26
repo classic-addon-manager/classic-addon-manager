@@ -18,7 +18,7 @@ import { LocalAddonService } from '@/lib/wails'
 import { useAddonStore } from '@/stores/addonStore'
 
 export const AddonRecovery = () => {
-  const { installedAddons, uninstall } = useAddonStore()
+  const { installedAddons, uninstall, refreshAfterLocalChange } = useAddonStore()
   const [resetting, setResetting] = useState(false)
   const [uninstalling, setUninstalling] = useState(false)
   const [confirm, setConfirm] = useState<'reset' | 'uninstall' | null>(null)
@@ -61,7 +61,7 @@ export const AddonRecovery = () => {
       for (const a of installedAddons) {
         let uninstalled = false
         try {
-          uninstalled = await uninstall(a)
+          uninstalled = await uninstall(a, { skipRefresh: true })
         } catch {
           uninstalled = false
         }
@@ -84,6 +84,7 @@ export const AddonRecovery = () => {
 
       await resetAddonSettings()
     } finally {
+      await refreshAfterLocalChange()
       setUninstalling(false)
     }
   }
