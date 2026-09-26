@@ -111,7 +111,5 @@ export const DashboardToolbar = () => {
     </div>
   )
 
-  useTitleBarSlot(toolbarContent)
-
-  return null
+  return useTitleBarSlot(toolbarContent)
 }

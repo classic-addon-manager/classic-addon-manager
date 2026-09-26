@@ -138,7 +138,5 @@ export const AddonsToolbar = () => {
     </div>
   )
 
-  useTitleBarSlot(toolbarContent)
-
-  return null
+  return useTitleBarSlot(toolbarContent)
 }

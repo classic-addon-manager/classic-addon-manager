@@ -1,6 +1,6 @@
 import { Window } from '@wailsio/runtime'
-import { useAtomValue } from 'jotai'
-import { type MouseEvent, type ReactNode, useCallback, useEffect, useState } from 'react'
+import { useSetAtom } from 'jotai'
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 
 import aacLogo from '@/assets/images/aac-logo-wide.webp'
 import { titleBarSlotAtom } from '@/atoms/titleBarAtoms'
@@ -14,7 +14,8 @@ const WindowControlIcon = ({ children }: { children: ReactNode }) => (
 )
 
 export function TitleBar() {
-  const slotContent = useAtomValue(titleBarSlotAtom)
+  const setSlot = useSetAtom(titleBarSlotAtom)
+  const headerRef = useRef<HTMLElement>(null)
   const [isMaximised, setIsMaximised] = useState(false)
 
   const syncMaximisedState = useCallback(() => {
@@ -57,20 +58,26 @@ export function TitleBar() {
     }
   }, [syncMaximisedState])
 
-  const handleTitlebarDoubleClick = useCallback(
-    async (event: MouseEvent<HTMLElement>) => {
+  // A native listener is needed because the toolbar is portaled in, and React only bubbles its events to the toolbar's own parents.
+  useEffect(() => {
+    const header = headerRef.current
+    if (!header) return
+
+    const onDoubleClick = (event: globalThis.MouseEvent) => {
       if (event.target instanceof Element && event.target.closest('.no-drag')) {
         return
       }
-      await handleToggleMaximise()
-    },
-    [handleToggleMaximise]
-  )
+      void handleToggleMaximise()
+    }
+
+    header.addEventListener('dblclick', onDoubleClick)
+    return () => header.removeEventListener('dblclick', onDoubleClick)
+  }, [handleToggleMaximise])
 
   return (
     <header
+      ref={headerRef}
       className="drag-region grid h-14 shrink-0 grid-cols-[220px_1fr_auto] items-center border-b bg-background/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/70"
-      onDoubleClick={event => void handleTitlebarDoubleClick(event)}
     >
       <div className="flex items-center">
         <div className="flex items-center gap-3 rounded-md px-2 py-1">
@@ -78,7 +85,7 @@ export function TitleBar() {
         </div>
       </div>
 
-      <div className="grid min-w-0 flex-1 items-center px-4">{slotContent}</div>
+      <div ref={setSlot} className="grid min-w-0 flex-1 items-center px-4" />
 
       <div className="no-drag flex items-center gap-1 justify-self-end">
         <button

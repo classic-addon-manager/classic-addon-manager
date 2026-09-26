@@ -158,7 +158,5 @@ export function DeveloperToolbar({
     </div>
   )
 
-  useTitleBarSlot(toolbarContent)
-
-  return null
+  return useTitleBarSlot(toolbarContent)
 }
