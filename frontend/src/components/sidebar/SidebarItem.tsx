@@ -18,13 +18,10 @@ export const SidebarItem = ({
   onClick,
 }: SidebarItemProps) => {
   return (
-    <a
-      href="#"
-      className="relative flex items-center gap-3 rounded-lg px-3 py-2 group"
-      onClick={e => {
-        e.preventDefault()
-        onClick()
-      }}
+    <button
+      type="button"
+      className="relative flex w-full items-center gap-3 rounded-lg px-3 py-2 text-start cursor-pointer group"
+      onClick={onClick}
     >
       <div
         className={cn(
@@ -55,6 +52,6 @@ export const SidebarItem = ({
           </span>
         )}
       </div>
-    </a>
+    </button>
   )
 }
