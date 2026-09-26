@@ -73,9 +73,7 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
   const readmeQuery = useAddonReadme(addon.repo, addon.branch)
   const fallbackReadme = addon.description || 'No description provided'
   const readme =
-    !addon.repo || readmeQuery.isError || readmeQuery.data === null
-      ? fallbackReadme
-      : (readmeQuery.data ?? 'loading')
+    !addon.repo || readmeQuery.isError ? fallbackReadme : (readmeQuery.data ?? fallbackReadme)
 
   const latestRelease = latestReleasesMap.get(addon.name)
   const hasUpdate = addon.isManaged && latestRelease && latestRelease.published_at > addon.updatedAt
@@ -355,7 +353,7 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
 
       {addon.isManaged ? (
         <ScrollArea className="flex-1 min-h-0 px-6 py-4">
-          {readme === 'loading' ? (
+          {addon.repo && readmeQuery.isPending ? (
             <div className="flex flex-col items-center justify-center h-32 text-center text-muted-foreground">
               <PackageIcon className="w-10 h-10 mb-3 opacity-50" />
               <p className="text-sm font-medium">Loading description...</p>
