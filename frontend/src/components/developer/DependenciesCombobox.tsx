@@ -21,7 +21,7 @@ interface DependenciesComboboxProps {
   disabled?: boolean
 }
 
-export const DependenciesCombobox = ({
+const DependenciesComboboxContent = ({
   selected,
   onChange,
   invalid = false,
@@ -30,9 +30,7 @@ export const DependenciesCombobox = ({
   const [open, setOpen] = useState(false)
   const { data: manifests = [], isPending, isError, refetch } = useAddonCatalog()
 
-  if (disabled && open) {
-    setOpen(false)
-  }
+  const isOpen = open && !disabled
 
   const aliasFor = (name: string) =>
     manifests.find(manifest => manifest.name === name)?.alias ?? name
@@ -82,7 +80,7 @@ export const DependenciesCombobox = ({
   )
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={isOpen} onOpenChange={setOpen}>
       <PopoverAnchor asChild>
         <div
           className={cn(
@@ -100,7 +98,7 @@ export const DependenciesCombobox = ({
                   type="button"
                   variant="ghost"
                   disabled={disabled}
-                  aria-expanded={open}
+                  aria-expanded={isOpen}
                   aria-invalid={invalid || undefined}
                   aria-label={`Choose dependencies, ${selected.length} selected`}
                   className="absolute inset-0 z-0 h-auto w-auto justify-start rounded-md px-3"
@@ -163,3 +161,7 @@ export const DependenciesCombobox = ({
     </Popover>
   )
 }
+
+export const DependenciesCombobox = (props: DependenciesComboboxProps) => (
+  <DependenciesComboboxContent key={String(props.disabled ?? false)} {...props} />
+)
