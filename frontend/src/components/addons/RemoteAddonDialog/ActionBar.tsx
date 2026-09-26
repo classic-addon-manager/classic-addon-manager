@@ -1,11 +1,9 @@
 import { useIsMutating } from '@tanstack/react-query'
-import { DownloadIcon, LoaderCircle, ThumbsDownIcon, ThumbsUpIcon, Trash2Icon } from 'lucide-react'
+import { DownloadIcon, LoaderCircle, Trash2Icon } from 'lucide-react'
 
+import { RatingButtons } from '@/components/addons/RatingButtons.tsx'
 import { Button } from '@/components/ui/button.tsx'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip.tsx'
-import { cn } from '@/lib/utils.ts'
 import type { AddonManifest, Release } from '@/lib/wails'
-import { useUserStore } from '@/stores/userStore.ts'
 
 import { addonActionMutationKey } from './useAddonActions.ts'
 
@@ -16,89 +14,9 @@ interface ActionBarProps {
   isRatingDisabled: boolean
   isInstalled: boolean
   isLoadingRelease: boolean
-  onRate: (rating: number) => void
+  onRate: (rating: number) => Promise<boolean>
   onInstall: () => void
   onUninstall: () => void
-}
-
-const RatingButtons = ({
-  rating,
-  onRate,
-  disabled,
-}: {
-  rating: number
-  onRate: (rating: number) => void
-  disabled: boolean
-}) => {
-  const { isAuthenticated } = useUserStore()
-
-  if (!isAuthenticated()) {
-    return (
-      <Tooltip delayDuration={100}>
-        <TooltipTrigger className="cursor-not-allowed opacity-50">
-          <span className="flex items-center gap-1 p-2">
-            <ThumbsUpIcon className="h-5 w-5 text-muted-foreground" />
-            <ThumbsDownIcon className="h-5 w-5 text-muted-foreground" />
-          </span>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>Log in to rate addons</p>
-        </TooltipContent>
-      </Tooltip>
-    )
-  }
-
-  return (
-    <>
-      <Tooltip delayDuration={100}>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(
-              'h-8 w-9 transition-all duration-200 hover:scale-105 hover:bg-primary/10',
-              rating === 1 && 'bg-primary/10 ring-1 ring-inset ring-primary/40'
-            )}
-            onClick={() => onRate(1)}
-            aria-label="Like addon"
-            disabled={disabled}
-          >
-            <ThumbsUpIcon
-              className={cn('h-5 w-5', rating === 1 ? 'text-primary' : 'text-muted-foreground')}
-            />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>{rating === 1 ? 'Unlike' : 'Like'}</p>
-        </TooltipContent>
-      </Tooltip>
-      <Tooltip delayDuration={100}>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(
-              'h-8 w-9 transition-all duration-200 hover:scale-105 hover:bg-destructive/10',
-              rating === -1 && 'bg-destructive/10 ring-1 ring-inset ring-destructive/40'
-            )}
-            onClick={() => onRate(-1)}
-            aria-label="Dislike addon"
-            disabled={disabled}
-          >
-            <ThumbsDownIcon
-              className={cn(
-                'h-5 w-5',
-                rating === -1 ? 'text-destructive' : 'text-muted-foreground'
-              )}
-            />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>{rating === -1 ? 'Remove Dislike' : 'Dislike'}</p>
-        </TooltipContent>
-      </Tooltip>
-    </>
-  )
 }
 
 const InstallLabel = ({
