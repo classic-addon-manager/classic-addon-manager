@@ -18,7 +18,7 @@ export const Sidebar = () => {
   const version = useAtomValue(versionAtom)
   const updateAvailable = useAtomValue(updateAvailableAtom)
   const [, setUpdateDialogOpen] = useAtom(updateDialogOpenAtom)
-  const { updatesAvailableCount } = useAddonStore()
+  const updatesAvailableCount = useAddonStore(s => s.updatesAvailableCount)
   const isAuthenticated = useUserStore(s => s.user.discord_id !== '')
   const isAdmin = useUserStore(s => s.user.admin)
 
