@@ -376,17 +376,22 @@
 @keyframes streamCharFade {
   from {
     opacity: 0;
-    transform: translateY(1px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
 .chat-prose .stream-fade-char {
-  display: inline-block;
-  animation: streamCharFade 0.2s ease-out forwards;
+  animation: streamCharFade 0.2s ease-out both;
+}
+
+.stream-markdown-tail {
+  white-space: pre-wrap;
+}
+
+.chat-prose pre .stream-markdown-tail {
+  white-space: pre;
 }
 
 /* PublishAddonForm pass entrance */
