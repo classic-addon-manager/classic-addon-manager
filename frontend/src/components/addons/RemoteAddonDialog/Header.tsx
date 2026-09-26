@@ -5,12 +5,7 @@ import { useState } from 'react'
 import { Icon } from '@/components/addons/RemoteAddon/Icon.tsx'
 import { Button } from '@/components/ui/button.tsx'
 import { DialogTitle } from '@/components/ui/dialog'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip.tsx'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip.tsx'
 import { addonIconUrl } from '@/lib/icon'
 import { cn } from '@/lib/utils.ts'
 import type { AddonManifest, Release } from '@/lib/wails'
@@ -90,42 +85,38 @@ export const Header = ({ manifest, release }: HeaderProps) => {
               {release.tag_name}
             </span>
           )}
-          <TooltipProvider>
-            <Tooltip delayDuration={100}>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-muted-foreground hover:text-primary"
-                  onClick={() => Browser.OpenURL(`https://github.com/${manifest.repo}`)}
-                  aria-label="View code on GitHub"
-                >
-                  <GithubIcon className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>View code</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          <TooltipProvider>
-            <Tooltip delayDuration={100}>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-muted-foreground hover:text-primary"
-                  onClick={() => Browser.OpenURL(`https://github.com/${manifest.repo}/issues/new`)}
-                  aria-label="Report an issue"
-                >
-                  <BugIcon className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Report issue</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Tooltip delayDuration={100}>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-primary"
+                onClick={() => Browser.OpenURL(`https://github.com/${manifest.repo}`)}
+                aria-label="View code on GitHub"
+              >
+                <GithubIcon className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>View code</p>
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip delayDuration={100}>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-primary"
+                onClick={() => Browser.OpenURL(`https://github.com/${manifest.repo}/issues/new`)}
+                aria-label="Report an issue"
+              >
+                <BugIcon className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Report issue</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
     </div>

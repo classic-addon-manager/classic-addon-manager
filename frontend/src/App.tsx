@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Toaster } from 'sonner'
 
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { usePreferencesStore } from '@/stores/preferencesStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useUserStore } from '@/stores/userStore.ts'
@@ -29,7 +30,7 @@ function Bootstrap({ children }: { children: React.ReactNode }) {
 
 function App() {
   return (
-    <>
+    <TooltipProvider>
       <Toaster
         closeButton
         toastOptions={{
@@ -41,7 +42,7 @@ function App() {
       <Bootstrap>
         <UI />
       </Bootstrap>
-    </>
+    </TooltipProvider>
   )
 }
 

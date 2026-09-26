@@ -6,7 +6,7 @@ import { searchQueryAtom } from '@/components/dashboard/atoms'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useTitleBarSlot } from '@/hooks/useTitleBarSlot'
 import { useInstallZipAddon } from '@/lib/addon'
 import { useAddonStore } from '@/stores/addonStore'
@@ -60,32 +60,30 @@ export const DashboardToolbar = () => {
             )}
           </Button>
 
-          <TooltipProvider>
-            <Tooltip delayDuration={100}>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={installZip}
-                  disabled={isInstalling}
-                  className="flex items-center gap-1.5 transition-all duration-200 hover:shadow-md h-8"
-                >
-                  {isInstalling ? (
-                    <LoaderCircle className="size-3.5 animate-spin" />
-                  ) : (
-                    <Upload className="size-3.5" />
-                  )}
-                  Install ZIP
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p className="flex gap-2">
-                  <AlertTriangleIcon className="size-4" />
-                  Only install addons from sources you trust!
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Tooltip delayDuration={100}>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={installZip}
+                disabled={isInstalling}
+                className="flex items-center gap-1.5 transition-all duration-200 hover:shadow-md h-8"
+              >
+                {isInstalling ? (
+                  <LoaderCircle className="size-3.5 animate-spin" />
+                ) : (
+                  <Upload className="size-3.5" />
+                )}
+                Install ZIP
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p className="flex gap-2">
+                <AlertTriangleIcon className="size-4" />
+                Only install addons from sources you trust!
+              </p>
+            </TooltipContent>
+          </Tooltip>
         </div>
 
         {addonCount > 0 && (
