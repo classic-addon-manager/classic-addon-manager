@@ -1,10 +1,8 @@
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { useEffect, useState } from 'react'
-import { useDebouncedCallback } from 'use-debounce'
 
 import {
   filteredAddonsAtom,
-  searchQueryAtom,
   selectedAddonAtom,
   versionSelectAtom,
 } from '@/components/dashboard/atoms'
@@ -18,7 +16,6 @@ export function useDashboardController() {
     useAddonStore()
   const [isLoading, setIsLoading] = useState(true)
   const [selectedAddonSnapshot, setSelectedAddon] = useAtom(selectedAddonAtom)
-  const setSearchQuery = useSetAtom(searchQueryAtom)
   const filteredAddons = useAtomValue(filteredAddonsAtom)
   const versionSelectAddon = useAtomValue(versionSelectAtom)
 
@@ -26,10 +23,6 @@ export function useDashboardController() {
     ? (installedAddons.find(addon => addon.name === selectedAddonSnapshot.name) ??
       selectedAddonSnapshot)
     : null
-
-  const debouncedSetSearch = useDebouncedCallback((value: string) => {
-    setSearchQuery(value)
-  }, 300)
 
   useEffect(() => {
     const loadAddons = async () => {
@@ -52,7 +45,6 @@ export function useDashboardController() {
     selectedAddon,
     setSelectedAddon,
     versionSelectAddon,
-    debouncedSetSearch,
     performBulkUpdateCheck,
     handleInstallZip: installZip,
   }
