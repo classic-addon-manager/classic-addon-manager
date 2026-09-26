@@ -82,7 +82,7 @@ For a browser with working bindings and events, run the app in server mode:
 wails3 task run:server
 ```
 
-Then open http://localhost:8080. Server mode serves the same frontend and all service bindings over HTTP, with events delivered over WebSocket.
+For live development in a browser instead, run `wails3 task dev:server` and open http://localhost:8080. This starts Vite for frontend hot module replacement and Air for Go rebuilds/restarts.
 
 ### Frontend Linting and Formatting
 

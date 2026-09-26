@@ -67,9 +67,21 @@ tasks:
       EXE_EXT: '{{if eq OS "windows"}}.exe{{end}}'
 
   dev:server:
-    summary: Runs the server-mode app with rebuild+restart on source changes (air watches Go files, vite serves live frontend)
+    summary: Runs the server-mode app with Go restarts via Air and frontend HMR via Vite
+    cmds:
+      - task: common:build:frontend
+      - task: dev:server:watch
+
+  dev:server:watch:
+    internal: true
     deps:
-      - task: common:install:frontend:deps
+      - task: common:dev:frontend
+      - task: dev:server:air
+
+  dev:server:air:
+    internal: true
+    env:
+      FRONTEND_DEVSERVER_URL: 'http://127.0.0.1:{{.VITE_PORT}}'
     cmds:
       - ~/go/bin/air -c build/air.server.toml
 
