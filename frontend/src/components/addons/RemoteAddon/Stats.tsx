@@ -14,7 +14,7 @@ export const Stats = ({ manifest, compact = false }: StatsProps) => (
     <div className="flex items-center gap-0.5" title={`${manifest.downloads} downloads`}>
       <DownloadIcon className={compact ? 'h-2.5 w-2.5' : 'w-3 h-3'} /> {manifest.downloads}
     </div>
-    {manifest.like_percentage && (
+    {manifest.like_percentage !== null && manifest.like_percentage !== undefined && (
       <div className="flex items-center gap-0.5" title={`${manifest.like_percentage}% likes`}>
         <HeartIcon className={compact ? 'h-2.5 w-2.5' : 'w-3 h-3'} /> {manifest.like_percentage}%
       </div>
