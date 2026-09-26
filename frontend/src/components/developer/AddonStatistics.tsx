@@ -429,12 +429,19 @@ function seriesInWindow(series: SnapshotPoint[], days: number): ChartPoint[] {
   return points.some(point => point.subscribers !== null) ? points : []
 }
 
+const snapshotDayFormatOptions: Intl.DateTimeFormatOptions = {
+  month: 'short',
+  day: 'numeric',
+  timeZone: 'UTC',
+}
+
+const ratioFormat = new Intl.NumberFormat(undefined, {
+  style: 'percent',
+  maximumFractionDigits: 1,
+})
+
 function formatSnapshotDay(takenOn: string): string {
-  return new Date(`${takenOn}T00:00:00Z`).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    timeZone: 'UTC',
-  })
+  return new Date(`${takenOn}T00:00:00Z`).toLocaleDateString(undefined, snapshotDayFormatOptions)
 }
 
 function formatTooltipDay(value: unknown): string {
@@ -442,8 +449,5 @@ function formatTooltipDay(value: unknown): string {
 }
 
 function formatRatio(value: number): string {
-  return new Intl.NumberFormat(undefined, {
-    style: 'percent',
-    maximumFractionDigits: 1,
-  }).format(value)
+  return ratioFormat.format(value)
 }
