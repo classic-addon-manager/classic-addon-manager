@@ -84,11 +84,7 @@ export const UserBar = () => {
         description: 'Failed to sign out. Session persists.',
         icon: AlertTriangleIcon,
       })
-      return
     }
-    setTimeout(() => {
-      window.location.href = '/'
-    }, 100)
   }
 
   if (!isAuthenticated()) {
