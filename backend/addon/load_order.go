@@ -1,7 +1,6 @@
 package addon
 
 import (
-	"ClassicAddonManager/backend/file"
 	"ClassicAddonManager/backend/logger"
 
 	"fmt"
@@ -114,18 +113,9 @@ func SortAddonsTxt() error {
 		return nil
 	}
 
-	if writeErr := file.WriteLines(txtPath, ordered); writeErr != nil {
-		logger.Error("SortAddonsTxt: failed to write addons.txt:", writeErr)
-		// Rollback the in-memory cache from disk if the write failed.
-		rollback, readErr := readAddonsTxtLines(txtPath)
-		if readErr != nil {
-			logger.Error("SortAddonsTxt: failed to re-read addons.txt after failed write:", readErr)
-			return writeErr
-		}
-		installedAddonNames = rollback
-		return writeErr
+	if err := writeAddonsTxtLocked(ordered); err != nil {
+		logger.Error("SortAddonsTxt: failed to write addons.txt:", err)
+		return err
 	}
-
-	installedAddonNames = ordered
 	return nil
 }

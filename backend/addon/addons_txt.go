@@ -14,6 +14,7 @@ import (
 var (
 	installedAddonNames   []string
 	installedAddonNamesMu sync.RWMutex
+	writeAddonsTxtLines   = file.WriteLines
 )
 
 func GetInstalledAddonNames() []string {
@@ -81,11 +82,32 @@ func ReadAddonsTxt() ([]string, error) {
 	return withoutUpdateNotification(lines), nil
 }
 
+// writeAddonsTxtLocked writes the full list, including any update notification.
+// The caller must hold installedAddonNamesMu.
+func writeAddonsTxtLocked(names []string) error {
+	path, err := addonsTxtPath()
+	if err != nil {
+		return err
+	}
+
+	installedAddonNames = names
+	if err := writeAddonsTxtLines(path, names); err != nil {
+		lines, readErr := readAddonsTxtLines(path)
+		if readErr != nil {
+			logger.Error("Error re-reading addons.txt after failed write:", readErr)
+		} else {
+			installedAddonNames = lines
+		}
+		return err
+	}
+	return nil
+}
+
 func AddToAddonsTxt(addonName string) error {
 	installedAddonNamesMu.Lock()
 	defer installedAddonNamesMu.Unlock()
 
-	path, err := addonsTxtPath()
+	_, err := addonsTxtPath()
 	if err != nil {
 		logger.Error("Error resolving addons.txt path:", err)
 		return err
@@ -96,24 +118,11 @@ func AddToAddonsTxt(addonName string) error {
 		return nil // Already exists, nothing to do
 	}
 
-	// Add to slice
-	installedAddonNames = append(installedAddonNames, addonName)
-
-	// Write to file
-	err = file.WriteLines(path, installedAddonNames)
+	err = writeAddonsTxtLocked(append(installedAddonNames, addonName))
 	if err != nil {
 		logger.Error("Error adding addon to addons.txt:", err)
-		// Rollback the in-memory change if file write fails
-		lines, readErr := readAddonsTxtLines(path)
-		if readErr != nil {
-			logger.Error("Error re-reading addons.txt after failed write:", readErr)
-			return err
-		}
-		installedAddonNames = lines
-		return err
 	}
-
-	return nil
+	return err
 }
 
 func CreateAddonsTxt() error {
@@ -136,7 +145,7 @@ func RemoveFromAddonsTxt(addonName string) error {
 	installedAddonNamesMu.Lock()
 	defer installedAddonNamesMu.Unlock()
 
-	path, err := addonsTxtPath()
+	_, err := addonsTxtPath()
 	if err != nil {
 		logger.Error("Error resolving addons.txt path:", err)
 		return err
@@ -147,21 +156,10 @@ func RemoveFromAddonsTxt(addonName string) error {
 	if idx < 0 {
 		return nil
 	}
-	installedAddonNames = slices.Delete(installedAddonNames, idx, idx+1)
-
-	// Write to file
-	err = file.WriteLines(path, installedAddonNames)
+	names := slices.Delete(slices.Clone(installedAddonNames), idx, idx+1)
+	err = writeAddonsTxtLocked(names)
 	if err != nil {
 		logger.Error("Error removing addon from addons.txt:", err)
-		// Rollback the in-memory change if file write fails
-		lines, readErr := readAddonsTxtLines(path)
-		if readErr != nil {
-			logger.Error("Error re-reading addons.txt after failed write:", readErr)
-			return err
-		}
-		installedAddonNames = lines
-		return err
 	}
-
-	return nil
+	return err
 }

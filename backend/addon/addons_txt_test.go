@@ -130,6 +130,82 @@ func TestSortAddonsTxtPreservesUpdateNotification(t *testing.T) {
 	}
 }
 
+func TestAddonsTxtWriteFailureRestoresCacheFromDisk(t *testing.T) {
+	tests := []struct {
+		name    string
+		seed    []string
+		written []string
+		write   func() error
+	}{
+		{
+			name:    "add",
+			seed:    []string{"First", updateNotification},
+			written: []string{"First", updateNotification, "Second"},
+			write:   func() error { return AddToAddonsTxt("Second") },
+		},
+		{
+			name:    "remove",
+			seed:    []string{"First", updateNotification, "Second"},
+			written: []string{updateNotification, "Second"},
+			write:   func() error { return RemoveFromAddonsTxt("First") },
+		},
+		{
+			name:    "sort",
+			seed:    []string{"Second", updateNotification, "First"},
+			written: []string{"First", "Second", updateNotification},
+			write:   SortAddonsTxt,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			path := setupAddonsTxtTest(t)
+			if err := file.WriteLines(path, test.seed); err != nil {
+				t.Fatalf("seed addons.txt: %v", err)
+			}
+			if _, err := ReadAddonsTxt(); err != nil {
+				t.Fatalf("ReadAddonsTxt: %v", err)
+			}
+
+			if test.name == "sort" {
+				localAddonsMu.Lock()
+				previous := localAddons
+				localAddons = map[string]Addon{
+					"Second": {Name: "Second", Dependencies: []string{"First"}},
+				}
+				localAddonsMu.Unlock()
+				t.Cleanup(func() {
+					localAddonsMu.Lock()
+					localAddons = previous
+					localAddonsMu.Unlock()
+				})
+				setInstalledAddonNames([]string{"Stale"})
+			}
+
+			writeFailure := errors.New("write failed")
+			previousWriter := writeAddonsTxtLines
+			writeAddonsTxtLines = func(gotPath string, names []string) error {
+				if gotPath != path || !slices.Equal(names, test.written) {
+					t.Errorf("writeAddonsTxtLines(%q, %v), want (%q, %v)", gotPath, names, path, test.written)
+				}
+				return writeFailure
+			}
+			t.Cleanup(func() { writeAddonsTxtLines = previousWriter })
+
+			if err := test.write(); !errors.Is(err, writeFailure) {
+				t.Fatalf("%s error = %v, want %v", test.name, err, writeFailure)
+			}
+			assertAddonsTxtLines(t, path, test.seed)
+			installedAddonNamesMu.RLock()
+			cached := slices.Clone(installedAddonNames)
+			installedAddonNamesMu.RUnlock()
+			if !slices.Equal(cached, test.seed) {
+				t.Fatalf("cached names = %v, want %v", cached, test.seed)
+			}
+		})
+	}
+}
+
 func TestReadAddonsTxtFiltersEveryUpdateNotification(t *testing.T) {
 	path := setupAddonsTxtTest(t)
 
