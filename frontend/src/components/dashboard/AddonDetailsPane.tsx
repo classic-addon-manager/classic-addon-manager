@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { toast } from '@/components/ui/toast'
+import { hasAddonUpdate } from '@/lib/addonUpdate'
 import { notifyDependencyResult } from '@/lib/notifyDependencyResult'
 import { repoGetManifest, useAddonReadme } from '@/lib/repo'
 import { formatToLocalTime, safeCall } from '@/lib/utils'
@@ -76,7 +77,7 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
     !addon.repo || readmeQuery.isError ? fallbackReadme : (readmeQuery.data ?? fallbackReadme)
 
   const latestRelease = latestReleasesMap.get(addon.name)
-  const hasUpdate = addon.isManaged && latestRelease && latestRelease.published_at > addon.updatedAt
+  const hasUpdate = hasAddonUpdate(addon, latestRelease)
   const iconUrl = useAtomValue(catalogIconMapAtom).get(addon.name) ?? null
 
   const handleReinstall = async () => {

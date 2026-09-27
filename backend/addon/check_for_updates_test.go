@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"ClassicAddonManager/backend/api"
 	"ClassicAddonManager/backend/config"
@@ -281,6 +282,38 @@ func TestCheckForUpdatesUsesOneBulkRequest(t *testing.T) {
 	}
 	if got := updates["Gamma"]; got.Name != "Gamma" || got.Version != "3.1" {
 		t.Fatalf("updates[Gamma] = %+v, want {Name:Gamma Version:3.1}", got)
+	}
+}
+
+func TestCheckForUpdatesDetectsSameTagRepublish(t *testing.T) {
+	setupCheckForUpdatesDataDir(t)
+	publishedAt := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	seedManagedAddonsFile(t,
+		Addon{Name: "Republished", Version: "1.0", UpdatedAt: publishedAt.Add(-time.Hour)},
+		Addon{Name: "Current", Version: "1.0", UpdatedAt: publishedAt},
+		Addon{Name: "Legacy", Version: "1.0"},
+	)
+
+	stubAPIClient(t, roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body: io.NopCloser(bulkReleasesBody(t, map[string]string{
+				"Republished": "1.0",
+				"Current":     "1.0",
+				"Legacy":      "1.0",
+			})),
+		}, nil
+	}))
+
+	updates, err := CheckForUpdates()
+	if err != nil {
+		t.Fatalf("CheckForUpdates: %v", err)
+	}
+	if len(updates) != 1 {
+		t.Fatalf("updates = %v, want only Republished", updates)
+	}
+	if _, ok := updates["Republished"]; !ok {
+		t.Fatalf("updates = %v, want Republished", updates)
 	}
 }
 

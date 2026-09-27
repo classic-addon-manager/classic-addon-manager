@@ -14,6 +14,7 @@ import { LocalAddonUpdateDialog } from '@/components/dashboard/LocalAddonUpdateD
 import { useDashboardController } from '@/components/dashboard/useDashboardController'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { hasAddonUpdate } from '@/lib/addonUpdate'
 import type { Addon } from '@/lib/wails'
 import { useAddonStore } from '@/stores/addonStore'
 
@@ -118,11 +119,9 @@ export const Dashboard = () => {
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
       <DashboardToolbar />
-      {selectedAddon &&
-        latestReleaseForSelected &&
-        latestReleaseForSelected.published_at > selectedAddon.updatedAt && (
-          <LocalAddonUpdateDialog addon={selectedAddon} release={latestReleaseForSelected} />
-        )}
+      {selectedAddon && hasAddonUpdate(selectedAddon, latestReleaseForSelected) && (
+        <LocalAddonUpdateDialog addon={selectedAddon} release={latestReleaseForSelected} />
+      )}
 
       {versionSelectAddon && <LocalAddonVersionSelectDialog addon={versionSelectAddon} />}
 

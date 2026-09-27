@@ -49,7 +49,7 @@ func CheckForUpdates() (map[string]Addon, error) {
 			missing = append(missing, name)
 			continue
 		}
-		if release.TagName != a.Version {
+		if hasUpdate(a, release) {
 			updatedAddon := a
 			updatedAddon.Version = release.TagName
 			updates[name] = updatedAddon
@@ -62,6 +62,18 @@ func CheckForUpdates() (map[string]Addon, error) {
 	}
 
 	return updates, nil
+}
+
+// hasUpdate reports whether a release should be offered as an update for an
+// installed addon. A new tag always counts. The same tag counts only if it was
+// re-published after the addon was installed. Addons saved without a publish
+// time are compared by tag alone. The frontend uses the same rule in
+// frontend/src/lib/addonUpdate.ts.
+func hasUpdate(a Addon, release api.Release) bool {
+	if release.TagName != a.Version {
+		return true
+	}
+	return !a.UpdatedAt.IsZero() && release.PublishedAt.After(a.UpdatedAt)
 }
 
 func GenerateUpdateAddonLua(updates map[string]Addon) error {

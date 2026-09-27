@@ -30,6 +30,7 @@ type Addon struct {
 	Author       string    `json:"author"`
 	Repo         string    `json:"repo"`
 	IsManaged    bool      `json:"isManaged"`
+	// Publish time of the installed release, used to notice when the same tag is re-published.
 	UpdatedAt    time.Time `json:"updatedAt"`
 	Branch       string    `json:"branch,omitempty"`
 	Dependencies []string  `json:"dependencies"`

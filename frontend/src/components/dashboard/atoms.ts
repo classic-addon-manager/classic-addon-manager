@@ -1,7 +1,8 @@
 import { atom } from 'jotai'
 import { atomWithStore } from 'jotai-zustand'
 
-import type { Addon, Release } from '@/lib/wails'
+import { hasAddonUpdate } from '@/lib/addonUpdate'
+import type { Addon } from '@/lib/wails'
 import { useAddonStore } from '@/stores/addonStore'
 
 export const searchQueryAtom = atom<string>('')
@@ -11,13 +12,6 @@ export const localUpdateDialogOpenAtom = atom(false)
 export const versionSelectAtom = atom<Addon | null>(null)
 
 const addonStoreAtom = atomWithStore(useAddonStore)
-
-const hasUpdate = (addon: Addon, latestReleasesMap: Map<string, Release>) => {
-  if (!addon.isManaged) return false
-  const release = latestReleasesMap.get(addon.name)
-  if (!release) return false
-  return release.published_at > addon.updatedAt
-}
 
 export const filteredAddonsAtom = atom(get => {
   const searchQuery = get(searchQueryAtom).toLowerCase()
@@ -37,8 +31,8 @@ export const filteredAddonsAtom = atom(get => {
 
   // Sort addons with available updates to the top, preserve original order otherwise
   return [...filtered].sort((a, b) => {
-    const aHasUpdate = hasUpdate(a, latestReleasesMap)
-    const bHasUpdate = hasUpdate(b, latestReleasesMap)
+    const aHasUpdate = hasAddonUpdate(a, latestReleasesMap.get(a.name))
+    const bHasUpdate = hasAddonUpdate(b, latestReleasesMap.get(b.name))
     if (aHasUpdate && !bHasUpdate) return -1
     if (!aHasUpdate && bHasUpdate) return 1
     return a.name.localeCompare(b.name)

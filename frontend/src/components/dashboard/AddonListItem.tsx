@@ -3,6 +3,7 @@ import { Check, Download, LoaderCircle } from 'lucide-react'
 
 import { catalogIconMapAtom } from '@/components/dashboard/iconMap'
 import { AddonIconImage } from '@/components/shared/AddonIconImage'
+import { hasAddonUpdate } from '@/lib/addonUpdate'
 import { cn } from '@/lib/utils'
 import type { Addon } from '@/lib/wails'
 import { useAddonStore } from '@/stores/addonStore'
@@ -15,10 +16,7 @@ interface AddonListItemProps {
 
 export const AddonListItem = ({ addon, isSelected, onClick }: AddonListItemProps) => {
   const { latestReleasesMap, isCheckingForUpdates } = useAddonStore()
-  const latestRelease = latestReleasesMap.get(addon.name)
-  const hasUpdate = Boolean(
-    addon.isManaged && latestRelease && latestRelease.tag_name !== addon.version
-  )
+  const hasUpdate = hasAddonUpdate(addon, latestReleasesMap.get(addon.name))
 
   const iconUrl = useAtomValue(catalogIconMapAtom).get(addon.name) ?? null
 

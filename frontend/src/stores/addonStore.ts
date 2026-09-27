@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 
+import { hasAddonUpdate } from '@/lib/addonUpdate'
 import { queryClient } from '@/lib/queryClient'
 import { safeCall } from '@/lib/utils.ts'
 import type { Addon, AddonManifest, InstallWithDependenciesResult, Release } from '@/lib/wails'
@@ -31,11 +32,7 @@ interface AddonState {
 }
 
 const countUpdates = (managedAddons: Array<Addon>, releases: Map<string, Release>) =>
-  managedAddons.reduce((count, addon) => {
-    const latestRelease = releases.get(addon.name)
-    if (!latestRelease) return count
-    return latestRelease.published_at > addon.updatedAt ? count + 1 : count
-  }, 0)
+  managedAddons.filter(addon => hasAddonUpdate(addon, releases.get(addon.name))).length
 
 export const useAddonStore = create<AddonState>((set, get) => {
   // Set when an update check is requested while another one is still running.
