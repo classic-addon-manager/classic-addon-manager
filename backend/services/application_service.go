@@ -9,10 +9,14 @@ import (
 	"ClassicAddonManager/backend/logger"
 	"ClassicAddonManager/backend/shared"
 	"ClassicAddonManager/backend/util"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
+	"strconv"
+	"strings"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -46,25 +50,71 @@ func (s *ApplicationService) ClearAuthToken() error {
 	return auth.DeleteFromDisk()
 }
 
+// ErrSelfUpdateUnsupported is returned when the app cannot replace itself on the current platform.
+var ErrSelfUpdateUnsupported = errors.New("automatic updates are only supported on Windows, please download the new version manually")
+
+// Swapped out in tests so both the supported and unsupported paths can be exercised on any machine.
+var selfUpdateOS = runtime.GOOS
+
+const (
+	updateReplaceAttempts = 30
+	updateFailureFileName = "update-failed.txt"
+)
+
+func updateTempDir() string {
+	return filepath.Join(os.TempDir(), "ClassicAddonManager")
+}
+
+// SelfUpdateSupported tells the frontend whether the Update Now action can work on this platform.
+func (s *ApplicationService) SelfUpdateSupported() bool {
+	return selfUpdateOS == "windows"
+}
+
+// ConsumeUpdateFailure returns the report left behind by a failed update, if any, and removes it
+// so it is only shown once.
+func (s *ApplicationService) ConsumeUpdateFailure() (string, error) {
+	return consumeUpdateFailure(filepath.Join(updateTempDir(), updateFailureFileName))
+}
+
+func consumeUpdateFailure(path string) (string, error) {
+	data, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	if err := os.Remove(path); err != nil {
+		logger.Error("Error removing update failure report:", err)
+	}
+	return strings.TrimSpace(string(data)), nil
+}
+
 func (s *ApplicationService) SelfUpdate(updateURL string) error {
-	// Current exe path
+	if !s.SelfUpdateSupported() {
+		return ErrSelfUpdateUnsupported
+	}
+
 	exePath, err := os.Executable()
 	if err != nil {
 		logger.Error("Error getting executable path:", err)
 		return err
 	}
 
-	tmpDir := filepath.Join(os.TempDir(), "ClassicAddonManager")
+	tmpDir := updateTempDir()
 	err = os.MkdirAll(tmpDir, 0755)
 	if err != nil {
 		return fmt.Errorf("error creating temporary directory: %s", err)
 	}
 
-	// Download the new version
+	failurePath := filepath.Join(tmpDir, updateFailureFileName)
+	if err := os.Remove(failurePath); err != nil && !errors.Is(err, os.ErrNotExist) {
+		logger.Error("Error removing old update failure report:", err)
+	}
+
 	logger.Info(fmt.Sprintf("Downloading update from %s", updateURL))
 	newExePath := filepath.Join(tmpDir, "ClassicAddonManager.new.exe")
 
-	// Remove newExePath if it exists
 	if _, err := os.Stat(newExePath); err == nil {
 		err = os.Remove(newExePath)
 		if err != nil {
@@ -80,24 +130,21 @@ func (s *ApplicationService) SelfUpdate(updateURL string) error {
 		return err
 	}
 
-	// Create update batch script
 	scriptPath := filepath.Join(tmpDir, "update.bat")
-	scriptContent := fmt.Sprintf(`@echo off
-timeout /t 1 /nobreak > NUL
-echo Updating Classic Addon Manager...
-copy /Y "%s" "%s"
-start "" "%s"
-del "%s"
-exit
-`, newExePath, exePath, exePath, scriptPath)
+	script := buildWindowsUpdateScript(windowsUpdateScript{
+		NewExePath:  newExePath,
+		TargetPath:  exePath,
+		FailurePath: failurePath,
+		Attempts:    updateReplaceAttempts,
+		Relaunch:    true,
+	})
 
-	err = os.WriteFile(scriptPath, []byte(scriptContent), 0755)
+	err = os.WriteFile(scriptPath, []byte(script), 0755)
 	if err != nil {
 		logger.Error("Error creating update script:", err)
 		return err
 	}
 
-	// Run the update script and exit
 	cmd := exec.Command("cmd", "/C", scriptPath)
 	err = cmd.Start()
 	if err != nil {
@@ -110,6 +157,50 @@ exit
 	os.Exit(0)
 
 	return nil
+}
+
+type windowsUpdateScript struct {
+	NewExePath  string
+	TargetPath  string
+	FailurePath string
+	Attempts    int
+	Relaunch    bool
+}
+
+// buildWindowsUpdateScript creates a batch file that keeps trying to copy the downloaded version
+// over the running one, since Windows refuses the copy until the app has fully closed.
+// If every attempt fails, the downloaded file and the script are left in place and a report is
+// written so the app can tell the user what happened the next time it starts.
+func buildWindowsUpdateScript(opts windowsUpdateScript) string {
+	escape := func(value string) string { return strings.ReplaceAll(value, "%", "%%") }
+
+	relaunch := ""
+	if opts.Relaunch {
+		relaunch = `start "" "%TARGET%"` + "\r\n"
+	}
+
+	lines := []string{
+		"@echo off",
+		"setlocal",
+		`set "SOURCE=` + escape(opts.NewExePath) + `"`,
+		`set "TARGET=` + escape(opts.TargetPath) + `"`,
+		`set "FAILURE=` + escape(opts.FailurePath) + `"`,
+		"set /a ATTEMPT=0",
+		":retry",
+		`copy /Y "%SOURCE%" "%TARGET%" > NUL 2>&1`,
+		"if not errorlevel 1 goto success",
+		"set /a ATTEMPT+=1",
+		"if %ATTEMPT% GEQ " + strconv.Itoa(opts.Attempts) + " goto failed",
+		"ping -n 2 127.0.0.1 > NUL",
+		"goto retry",
+		":success",
+		`del "%SOURCE%" > NUL 2>&1`,
+		relaunch + `(goto) 2>nul & del "%~f0"`,
+		":failed",
+		`> "%FAILURE%" echo The update could not replace "%TARGET%" after %ATTEMPT% attempts. The downloaded version was kept at "%SOURCE%" and can be copied over manually.`,
+		relaunch + "exit /b 1",
+	}
+	return strings.Join(lines, "\r\n") + "\r\n"
 }
 
 func (s *ApplicationService) SelectAndValidateDocsPath(title string) (string, error) {

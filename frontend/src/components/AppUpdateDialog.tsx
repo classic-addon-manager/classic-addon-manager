@@ -1,5 +1,5 @@
 import { useAtom, useAtomValue } from 'jotai'
-import { ArrowRight, ArrowUpCircle, Download, LoaderCircle } from 'lucide-react'
+import { AlertTriangleIcon, ArrowRight, ArrowUpCircle, Download, LoaderCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import semver from 'semver'
 
@@ -19,6 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { toast } from '@/components/ui/toast'
 import { ApplicationService } from '@/lib/wails'
 
 export const AppUpdateDialog = () => {
@@ -28,6 +29,19 @@ export const AppUpdateDialog = () => {
   const [open, setOpen] = useAtom(updateDialogOpenAtom)
   const [, setUpdateCheckComplete] = useAtom(updateCheckCompleteAtom)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [selfUpdateSupported, setSelfUpdateSupported] = useState(true)
+
+  useEffect(() => {
+    ApplicationService.SelfUpdateSupported()
+      .then(setSelfUpdateSupported)
+      .catch(error => console.error('Failed to check update support:', error))
+
+    ApplicationService.ConsumeUpdateFailure()
+      .then(report => {
+        if (report) toast({ title: 'Update failed', description: report, icon: AlertTriangleIcon })
+      })
+      .catch(error => console.error('Failed to read update failure report:', error))
+  }, [])
 
   useEffect(() => {
     const checkForUpdates = async () => {
@@ -49,13 +63,18 @@ export const AppUpdateDialog = () => {
   }, [currentVersion, setUpdateAvailable, setUpdateInformation, setOpen, setUpdateCheckComplete])
 
   const handleUpdate = async () => {
-    if (!updateInformation || isUpdating) return
+    if (!updateInformation || isUpdating || !selfUpdateSupported) return
 
     setIsUpdating(true)
     try {
       await ApplicationService.SelfUpdate(updateInformation.url)
     } catch (error) {
       console.error('Update failed:', error)
+      toast({
+        title: 'Update failed',
+        description: error instanceof Error ? error.message : String(error),
+        icon: AlertTriangleIcon,
+      })
       setIsUpdating(false)
     }
   }
@@ -98,13 +117,20 @@ export const AppUpdateDialog = () => {
           </span>
         </div>
 
+        {!selfUpdateSupported && (
+          <p className="text-sm text-white/60">
+            Automatic updates are only available on Windows. Please download the new version
+            manually.
+          </p>
+        )}
+
         <DialogFooter className="gap-2">
           <Button variant="ghost" onClick={() => setOpen(false)} disabled={isUpdating}>
             Later
           </Button>
           <Button
             onClick={handleUpdate}
-            disabled={isUpdating}
+            disabled={isUpdating || !selfUpdateSupported}
             className="bg-emerald-900 hover:bg-emerald-800 text-white shadow-md shadow-emerald-900/20"
           >
             {isUpdating ? (
