@@ -85,6 +85,14 @@ func extractFile(f *zip.File, dest string) error {
 }
 
 func MoveAddonRelease(addonName string) error {
+	return moveAddonRelease(addonName, nil)
+}
+
+func MoveAddonReleaseWithCommit(addonName string, commit func() error) error {
+	return moveAddonRelease(addonName, commit)
+}
+
+func moveAddonRelease(addonName string, commit func() error) error {
 	cacheDir, err := config.GetCacheDir()
 	if err != nil {
 		return err
@@ -126,7 +134,7 @@ func MoveAddonRelease(addonName string) error {
 		return errors.New("no root directory containing main.lua found in addon release")
 	}
 
-	if err := replaceAddonDir(filepath.Join(src, rootDir), filepath.Join(addonDir, addonName)); err != nil {
+	if err := replaceAddonDirWithCommit(filepath.Join(src, rootDir), filepath.Join(addonDir, addonName), commit); err != nil {
 		return err
 	}
 
@@ -141,6 +149,10 @@ func MoveAddonRelease(addonName string) error {
 // .data directory is carried over, and only then is the staged copy swapped
 // into place. Any failure before the swap leaves dest untouched.
 func replaceAddonDir(releaseRoot, dest string) error {
+	return replaceAddonDirWithCommit(releaseRoot, dest, nil)
+}
+
+func replaceAddonDirWithCommit(releaseRoot, dest string, commit func() error) error {
 	parent := filepath.Dir(dest)
 	if err := os.MkdirAll(parent, os.ModePerm); err != nil {
 		return fmt.Errorf("failed to create addon directory: %w", err)
@@ -161,7 +173,7 @@ func replaceAddonDir(releaseRoot, dest string) error {
 		return err
 	}
 
-	return swapDirectories(stage, dest, os.Rename)
+	return swapDirectoriesWithCommit(stage, dest, os.Rename, commit)
 }
 
 // carryOverAddonData replaces the staged release's .data with a copy of the
@@ -195,6 +207,10 @@ func carryOverAddonData(dest, stage string, stat func(string) (os.FileInfo, erro
 // restored, if the restore also fails the backup is retained and both errors
 // are reported.
 func swapDirectories(stage, dest string, rename func(oldpath, newpath string) error) error {
+	return swapDirectoriesWithCommit(stage, dest, rename, nil)
+}
+
+func swapDirectoriesWithCommit(stage, dest string, rename func(oldpath, newpath string) error, commit func() error) error {
 	var backup string
 	if _, err := os.Stat(dest); err == nil {
 		placeholder, err := os.MkdirTemp(filepath.Dir(dest), filepath.Base(dest)+".backup-")
@@ -221,6 +237,36 @@ func swapDirectories(stage, dest string, rename func(oldpath, newpath string) er
 		}
 		_ = os.RemoveAll(stage)
 		return fmt.Errorf("failed to move staged addon into place: %w", err)
+	}
+	if commit != nil {
+		if err := commit(); err != nil {
+			if backup == "" {
+				if removeErr := os.RemoveAll(dest); removeErr != nil {
+					return fmt.Errorf("commit addon installation: %w, additionally failed to remove new addon: %v", err, removeErr)
+				}
+			} else {
+				placeholder, reserveErr := os.MkdirTemp(filepath.Dir(dest), filepath.Base(dest)+".failed-")
+				if reserveErr != nil {
+					return fmt.Errorf("commit addon installation: %w, additionally failed to reserve rollback path (previous addon at %q): %v", err, backup, reserveErr)
+				}
+				if removeErr := os.Remove(placeholder); removeErr != nil {
+					return fmt.Errorf("commit addon installation: %w, additionally failed to release rollback path (previous addon at %q): %v", err, backup, removeErr)
+				}
+				if moveErr := rename(dest, placeholder); moveErr != nil {
+					return fmt.Errorf("commit addon installation: %w, additionally failed to move new addon aside (previous addon at %q): %v", err, backup, moveErr)
+				}
+				if restoreErr := rename(backup, dest); restoreErr != nil {
+					if moveErr := rename(placeholder, dest); moveErr != nil {
+						return fmt.Errorf("commit addon installation: %w, additionally failed to restore previous addon from %q: %v; new addon remains at %q: %v", err, backup, restoreErr, placeholder, moveErr)
+					}
+					return fmt.Errorf("commit addon installation: %w, additionally failed to restore previous addon from %q: %v", err, backup, restoreErr)
+				}
+				if removeErr := os.RemoveAll(placeholder); removeErr != nil {
+					logger.Error("Failed to remove replaced addon after rollback:", removeErr)
+				}
+			}
+			return fmt.Errorf("commit addon installation: %w", err)
+		}
 	}
 
 	if backup != "" {

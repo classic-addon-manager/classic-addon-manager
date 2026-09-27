@@ -216,13 +216,14 @@ func SaveManagedAddonsToDisk() {
 	saveManagedAddonsToDiskLocked()
 }
 
-func saveManagedAddonsToDiskLocked() {
+func saveManagedAddonsToDiskLocked() error {
 	// A nil map means LoadManagedAddonsFile never ran: this process holds no
 	// ownership data, so writing would replace managed_addons.json with an empty
 	// file and silently discard what another instance owns.
 	if localAddons == nil {
-		logger.Error("Refusing to save managed addons: managed_addons.json was never loaded")
-		return
+		err := errors.New("refusing to save managed addons: managed_addons.json was never loaded")
+		logger.Error("Refusing to save managed addons:", err)
+		return err
 	}
 
 	managedAddons := make([]Addon, 0, len(localAddons))
@@ -238,22 +239,70 @@ func saveManagedAddonsToDiskLocked() {
 	data, err := json.Marshal(fileData)
 	if err != nil {
 		logger.Error("Error marshalling managed addons:", err)
-		return
+		return err
 	}
 
 	fp, err := managedAddonsFilePath()
 	if err != nil {
 		logger.Error("Error resolving managed addons file path:", err)
-		return
+		return err
 	}
 
 	err = file.WriteJSON(fp, data)
 	if err != nil {
 		logger.Error("Error writing managed addons to disk:", err)
-		return
+		return err
 	}
 
 	logger.Info("Managed addons saved to disk")
+	return nil
+}
+
+func removeManagedAddonAfterZipInstall(name string) error {
+	localAddonsMu.Lock()
+	defer localAddonsMu.Unlock()
+
+	addon, exists := localAddons[name]
+	if !exists {
+		return nil
+	}
+	delete(localAddons, name)
+	if err := saveManagedAddonsToDiskLocked(); err != nil {
+		localAddons[name] = addon
+		return fmt.Errorf("save managed metadata after replacing %q: %w", name, err)
+	}
+	return nil
+}
+
+func existingAddonName(name string) (string, error) {
+	addonDir, err := config.GetAddonDir()
+	if err != nil {
+		return "", err
+	}
+	installed, err := os.Stat(filepath.Join(addonDir, name))
+	if os.IsNotExist(err) {
+		return name, nil
+	}
+	if err != nil {
+		return "", err
+	}
+	entries, err := os.ReadDir(addonDir)
+	if err != nil {
+		return "", err
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		info, err := entry.Info()
+		if err != nil {
+			return "", err
+		}
+		if os.SameFile(installed, info) {
+			return entry.Name(), nil
+		}
+	}
+	return name, nil
 }
 
 func InstallZip(zipPath string) (string, error) {
@@ -263,6 +312,16 @@ func InstallZip(zipPath string) (string, error) {
 	if addonName == "" || addonName == "." || addonName == ".." ||
 		strings.HasSuffix(addonName, ".") || strings.HasSuffix(addonName, " ") {
 		return "", fmt.Errorf("invalid addon name derived from zip file name %q", fileName)
+	}
+	if strings.EqualFold(addonName, "AddonUpdateNotification") {
+		return "", fmt.Errorf("addon name %q is reserved for update notifications", addonName)
+	}
+	addonName, err := existingAddonName(addonName)
+	if err != nil {
+		return "", fmt.Errorf("resolve existing addon name: %w", err)
+	}
+	if strings.EqualFold(addonName, "AddonUpdateNotification") {
+		return "", fmt.Errorf("addon name %q is reserved for update notifications", addonName)
 	}
 
 	cacheDir, err := config.GetCacheDir()
@@ -297,7 +356,9 @@ func InstallZip(zipPath string) (string, error) {
 	}
 
 	// Move the extracted addon from cache to the addon directory
-	if err := util.MoveAddonRelease(addonName); err != nil {
+	if err := util.MoveAddonReleaseWithCommit(addonName, func() error {
+		return removeManagedAddonAfterZipInstall(addonName)
+	}); err != nil {
 		return "", err
 	}
 

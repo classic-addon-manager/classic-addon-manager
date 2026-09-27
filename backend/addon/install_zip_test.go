@@ -1,11 +1,16 @@
 package addon
 
 import (
+	"ClassicAddonManager/backend/api"
 	"ClassicAddonManager/backend/config"
 	"ClassicAddonManager/backend/file"
+	"ClassicAddonManager/backend/logger"
+	"ClassicAddonManager/backend/shared"
 	"archive/zip"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -120,6 +125,288 @@ func TestInstallZipOverExistingPreservesData(t *testing.T) {
 	}
 
 	assertAddonsTxtLines(t, filepath.Join(addonDir, "addons.txt"), []string{"MyZip"})
+}
+
+func TestInstallZipRejectsUpdateNotificationName(t *testing.T) {
+	addonDir := setupInstallZipTest(t)
+	for _, name := range []string{"AddonUpdateNotification", "addonupdatenotification"} {
+		t.Run(name, func(t *testing.T) {
+			dest := filepath.Join(addonDir, name)
+			if err := os.MkdirAll(dest, 0755); err != nil {
+				t.Fatalf("seed destination: %v", err)
+			}
+			if err := os.WriteFile(filepath.Join(dest, "main.lua"), []byte("original"), 0644); err != nil {
+				t.Fatalf("seed main.lua: %v", err)
+			}
+			zipPath := filepath.Join(t.TempDir(), name+".zip")
+			writeTestZip(t, zipPath, map[string]string{"root/main.lua": "replacement"})
+
+			if _, err := InstallZip(zipPath); err == nil || !strings.Contains(err.Error(), "reserved") {
+				t.Fatalf("InstallZip error = %v, want reserved-name error", err)
+			}
+			data, err := os.ReadFile(filepath.Join(dest, "main.lua"))
+			if err != nil || string(data) != "original" {
+				t.Fatalf("sentinel main.lua = %q, err = %v; want original", data, err)
+			}
+			if _, err := os.Stat(zipPath); err != nil {
+				t.Fatalf("zip moved despite rejection: %v", err)
+			}
+		})
+	}
+	if file.FileExists(filepath.Join(addonDir, "addons.txt")) {
+		t.Fatal("reserved-name install must not create addons.txt")
+	}
+}
+
+func TestInstallZipRejectsAliasOfUpdateNotification(t *testing.T) {
+	addonDir := setupInstallZipTest(t)
+	sentinel := filepath.Join(addonDir, "AddonUpdateNotification")
+	if err := os.MkdirAll(sentinel, 0755); err != nil {
+		t.Fatalf("create sentinel: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(sentinel, "main.lua"), []byte("original"), 0644); err != nil {
+		t.Fatalf("seed sentinel: %v", err)
+	}
+	alias := filepath.Join(addonDir, "OrdinaryAddon")
+	if runtime.GOOS == "windows" {
+		if output, err := exec.Command("cmd", "/c", "mklink", "/J", alias, sentinel).CombinedOutput(); err != nil {
+			t.Skipf("cannot create directory junction: %v (%s)", err, output)
+		}
+	} else if err := os.Symlink(sentinel, alias); err != nil {
+		t.Skipf("cannot create directory symlink: %v", err)
+	}
+	resolved, err := existingAddonName("OrdinaryAddon")
+	if err != nil {
+		t.Fatalf("resolve alias: %v", err)
+	}
+	if resolved != "AddonUpdateNotification" {
+		t.Fatalf("resolved alias = %q, want sentinel name", resolved)
+	}
+
+	zipPath := filepath.Join(t.TempDir(), "OrdinaryAddon.zip")
+	writeTestZip(t, zipPath, map[string]string{"root/main.lua": "replacement"})
+	if _, err := InstallZip(zipPath); err == nil || !strings.Contains(err.Error(), "reserved") {
+		t.Fatalf("InstallZip error = %v, want reserved-name error", err)
+	}
+	data, err := os.ReadFile(filepath.Join(sentinel, "main.lua"))
+	if err != nil || string(data) != "original" {
+		t.Fatalf("sentinel main.lua = %q, err = %v; want original", data, err)
+	}
+	if _, err := os.Stat(zipPath); err != nil {
+		t.Fatalf("zip moved despite rejection: %v", err)
+	}
+	if file.FileExists(filepath.Join(addonDir, "addons.txt")) {
+		t.Fatal("alias install must not create addons.txt")
+	}
+}
+
+func TestInstallZipOverManagedAddonClearsMetadata(t *testing.T) {
+	addonDir := setupInstallZipTest(t)
+	dataDir := t.TempDir()
+	t.Setenv("APPDATA", dataDir)
+	t.Setenv("XDG_CONFIG_HOME", dataDir)
+	localAddonsMu.Lock()
+	localAddons = make(map[string]Addon)
+	localAddonsMu.Unlock()
+	t.Cleanup(func() {
+		localAddonsMu.Lock()
+		localAddons = nil
+		localAddonsMu.Unlock()
+	})
+
+	AddManagedAddon(shared.AddonManifest{Name: "ManagedZip", Repo: "example/repo", Dependencies: []string{"Dependency"}}, api.Release{TagName: "v1"})
+	zipPath := filepath.Join(t.TempDir(), "ManagedZip.zip")
+	writeTestZip(t, zipPath, map[string]string{"root/main.lua": "local replacement"})
+
+	if name, err := InstallZip(zipPath); err != nil || name != "ManagedZip" {
+		t.Fatalf("InstallZip = %q, %v", name, err)
+	}
+	if addon := FindLocalAddonByName("ManagedZip"); addon != nil {
+		t.Fatalf("managed metadata remains in memory: %+v", addon)
+	}
+	if err := LoadManagedAddonsFile(); err != nil {
+		t.Fatalf("reload managed metadata: %v", err)
+	}
+	if addon := FindLocalAddonByName("ManagedZip"); addon != nil {
+		t.Fatalf("managed metadata remains on disk: %+v", addon)
+	}
+	addons := GetAddons()
+	if len(addons) != 1 || addons[0].Name != "ManagedZip" || addons[0].IsManaged || addons[0].Version != "" || addons[0].Repo != "" || len(addons[0].Dependencies) != 0 {
+		t.Fatalf("installed addon status = %+v, want unmanaged without remote version", addons)
+	}
+	if data, err := os.ReadFile(filepath.Join(addonDir, "ManagedZip", "main.lua")); err != nil || string(data) != "local replacement" {
+		t.Fatalf("installed main.lua = %q, err = %v", data, err)
+	}
+}
+
+func TestInstallZipDifferentCaseReconcilesManagedAddon(t *testing.T) {
+	t.Setenv("APPDATA", os.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", os.TempDir())
+	logger.Info("starting zip case test")
+	addonDir := setupInstallZipTest(t)
+	dataDir := t.TempDir()
+	t.Setenv("APPDATA", dataDir)
+	t.Setenv("XDG_CONFIG_HOME", dataDir)
+	localAddonsMu.Lock()
+	localAddons = make(map[string]Addon)
+	localAddonsMu.Unlock()
+	t.Cleanup(func() {
+		localAddonsMu.Lock()
+		localAddons = nil
+		localAddonsMu.Unlock()
+	})
+
+	AddManagedAddon(shared.AddonManifest{Name: "ManagedZip", Repo: "example/repo"}, api.Release{TagName: "v1"})
+	installedPath := filepath.Join(addonDir, "ManagedZip")
+	if err := os.MkdirAll(installedPath, 0755); err != nil {
+		t.Fatalf("create existing addon: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(installedPath, "main.lua"), []byte("original"), 0644); err != nil {
+		t.Fatalf("seed existing addon: %v", err)
+	}
+	if err := AddToAddonsTxt("ManagedZip"); err != nil {
+		t.Fatalf("add existing addon to addons.txt: %v", err)
+	}
+
+	zipPath := filepath.Join(t.TempDir(), "managedzip.zip")
+	writeTestZip(t, zipPath, map[string]string{"root/main.lua": "local replacement"})
+	lowerPath := filepath.Join(addonDir, "managedzip")
+	lowerInfo, lowerErr := os.Stat(lowerPath)
+	originalInfo, err := os.Stat(installedPath)
+	if err != nil {
+		t.Fatalf("stat existing addon: %v", err)
+	}
+	replacesExisting := lowerErr == nil && os.SameFile(originalInfo, lowerInfo)
+	if lowerErr != nil && !os.IsNotExist(lowerErr) {
+		t.Fatalf("stat differently cased addon: %v", lowerErr)
+	}
+
+	name, err := InstallZip(zipPath)
+	if err != nil {
+		t.Fatalf("InstallZip: %v", err)
+	}
+	if replacesExisting {
+		if name != "ManagedZip" {
+			t.Fatalf("installed name = %q, want existing spelling", name)
+		}
+		if addon := FindLocalAddonByName("ManagedZip"); addon != nil {
+			t.Fatalf("managed metadata remains in memory: %+v", addon)
+		}
+		if err := LoadManagedAddonsFile(); err != nil {
+			t.Fatalf("reload managed metadata: %v", err)
+		}
+		if addon := FindLocalAddonByName("ManagedZip"); addon != nil {
+			t.Fatalf("managed metadata remains on disk: %+v", addon)
+		}
+		addons := GetAddons()
+		if len(addons) != 1 || addons[0].Name != "ManagedZip" || addons[0].IsManaged || addons[0].Version != "" || addons[0].Repo != "" {
+			t.Fatalf("installed addon status = %+v, want one unmanaged addon", addons)
+		}
+		assertAddonsTxtLines(t, filepath.Join(addonDir, "addons.txt"), []string{"ManagedZip"})
+	} else {
+		if name != "managedzip" {
+			t.Fatalf("installed name = %q, want separate addon", name)
+		}
+		if addon := FindLocalAddonByName("ManagedZip"); addon == nil || addon.Version != "v1" {
+			t.Fatalf("unreplaced managed metadata = %+v, want version v1", addon)
+		}
+		assertAddonsTxtLines(t, filepath.Join(addonDir, "addons.txt"), []string{"ManagedZip", "managedzip"})
+	}
+	data, err := os.ReadFile(filepath.Join(addonDir, name, "main.lua"))
+	if err != nil || string(data) != "local replacement" {
+		t.Fatalf("installed main.lua = %q, err = %v", data, err)
+	}
+}
+
+func TestInstallZipFailedReplacementKeepsManagedMetadata(t *testing.T) {
+	setupInstallZipTest(t)
+	dataDir := t.TempDir()
+	t.Setenv("APPDATA", dataDir)
+	t.Setenv("XDG_CONFIG_HOME", dataDir)
+	localAddonsMu.Lock()
+	localAddons = make(map[string]Addon)
+	localAddonsMu.Unlock()
+	t.Cleanup(func() {
+		localAddonsMu.Lock()
+		localAddons = nil
+		localAddonsMu.Unlock()
+	})
+
+	AddManagedAddon(shared.AddonManifest{Name: "ManagedZip"}, api.Release{TagName: "v1"})
+	zipPath := filepath.Join(t.TempDir(), "ManagedZip.zip")
+	writeTestZip(t, zipPath, map[string]string{"main.lua": "invalid layout"})
+	if _, err := InstallZip(zipPath); err == nil {
+		t.Fatal("expected validation error")
+	}
+	if err := LoadManagedAddonsFile(); err != nil {
+		t.Fatalf("reload managed metadata: %v", err)
+	}
+	if addon := FindLocalAddonByName("ManagedZip"); addon == nil || !addon.IsManaged || addon.Version != "v1" {
+		t.Fatalf("managed metadata after failed install = %+v, want version v1", addon)
+	}
+}
+
+func TestInstallZipReportsManagedMetadataWriteFailure(t *testing.T) {
+	addonDir := setupInstallZipTest(t)
+	dataDir := t.TempDir()
+	t.Setenv("APPDATA", dataDir)
+	t.Setenv("XDG_CONFIG_HOME", dataDir)
+	localAddonsMu.Lock()
+	localAddons = make(map[string]Addon)
+	localAddonsMu.Unlock()
+	t.Cleanup(func() {
+		localAddonsMu.Lock()
+		localAddons = nil
+		localAddonsMu.Unlock()
+	})
+
+	AddManagedAddon(shared.AddonManifest{Name: "ManagedZip"}, api.Release{TagName: "v1"})
+	installedPath := filepath.Join(addonDir, "ManagedZip")
+	if err := os.MkdirAll(installedPath, 0755); err != nil {
+		t.Fatalf("create existing addon: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(installedPath, "main.lua"), []byte("original"), 0644); err != nil {
+		t.Fatalf("seed existing addon: %v", err)
+	}
+	if err := AddToAddonsTxt("ManagedZip"); err != nil {
+		t.Fatalf("add existing addon to addons.txt: %v", err)
+	}
+	metadataPath, err := managedAddonsFilePath()
+	if err != nil {
+		t.Fatalf("managedAddonsFilePath: %v", err)
+	}
+	backupPath := metadataPath + ".backup"
+	if err := os.Rename(metadataPath, backupPath); err != nil {
+		t.Fatalf("backup managed metadata: %v", err)
+	}
+	if err := os.Mkdir(metadataPath, 0755); err != nil {
+		t.Fatalf("block metadata path: %v", err)
+	}
+
+	zipPath := filepath.Join(t.TempDir(), "ManagedZip.zip")
+	writeTestZip(t, zipPath, map[string]string{"root/main.lua": "local replacement"})
+	if _, err := InstallZip(zipPath); err == nil || !strings.Contains(err.Error(), "save managed metadata") {
+		t.Fatalf("InstallZip error = %v, want managed metadata persistence error", err)
+	}
+	if addon := FindLocalAddonByName("ManagedZip"); addon == nil || !addon.IsManaged || addon.Version != "v1" {
+		t.Fatalf("in-memory metadata after failed save = %+v, want version v1", addon)
+	}
+	if data, err := os.ReadFile(filepath.Join(installedPath, "main.lua")); err != nil || string(data) != "original" {
+		t.Fatalf("restored main.lua = %q, err = %v", data, err)
+	}
+	assertAddonsTxtLines(t, filepath.Join(addonDir, "addons.txt"), []string{"ManagedZip"})
+	if err := os.Remove(metadataPath); err != nil {
+		t.Fatalf("remove blocked metadata path: %v", err)
+	}
+	if err := os.Rename(backupPath, metadataPath); err != nil {
+		t.Fatalf("restore managed metadata: %v", err)
+	}
+	if err := LoadManagedAddonsFile(); err != nil {
+		t.Fatalf("reload managed metadata: %v", err)
+	}
+	if addon := FindLocalAddonByName("ManagedZip"); addon == nil || !addon.IsManaged || addon.Version != "v1" {
+		t.Fatalf("persisted metadata after failed save = %+v, want version v1", addon)
+	}
 }
 
 func TestInstallZipMalformedReleaseLeavesDest(t *testing.T) {
