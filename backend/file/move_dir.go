@@ -33,6 +33,11 @@ func MoveDir(src string, dest string) error {
 }
 
 func CopyDir(src string, dest string) error {
+	srcInfo, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+
 	entries, err := os.ReadDir(src)
 	if err != nil {
 		return err
@@ -51,19 +56,11 @@ func CopyDir(src string, dest string) error {
 				return err
 			}
 		} else {
-			info, err := entry.Info()
-			if err != nil {
-				return err
-			}
-			data, err := os.ReadFile(srcPath)
-			if err != nil {
-				return err
-			}
-			if err := os.WriteFile(destPath, data, info.Mode().Perm()); err != nil {
+			if err := CopyFile(srcPath, destPath); err != nil {
 				return err
 			}
 		}
 	}
 
-	return nil
+	return os.Chmod(dest, srcInfo.Mode().Perm())
 }

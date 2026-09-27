@@ -7,13 +7,13 @@ import (
 	"path/filepath"
 )
 
-func MoveFile(src string, dest string) error {
+func CopyFile(src string, dest string) error {
 	srcInfo, err := os.Stat(src)
 	if err != nil {
 		return fmt.Errorf("source file does not exist: %s", src)
 	}
 	if !srcInfo.Mode().IsRegular() {
-		return fmt.Errorf("cannot move non-regular file: %s", src)
+		return fmt.Errorf("cannot copy non-regular file: %s", src)
 	}
 
 	destDir := filepath.Dir(dest)
@@ -54,6 +54,9 @@ func MoveFile(src string, dest string) error {
 	// Preserve modified time
 	if err := os.Chtimes(dest, srcInfo.ModTime(), srcInfo.ModTime()); err != nil {
 		return fmt.Errorf("error setting modified time: %s", err)
+	}
+	if err := os.Chmod(dest, srcInfo.Mode().Perm()); err != nil {
+		return fmt.Errorf("error setting destination permissions: %w", err)
 	}
 
 	return nil

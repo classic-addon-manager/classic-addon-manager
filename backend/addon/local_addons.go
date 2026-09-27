@@ -337,7 +337,7 @@ func InstallZip(zipPath string) (string, error) {
 
 	// Copy the zip file to the cache directory
 	cachePath := filepath.Join(cacheDir, addonName+".zip")
-	err = file.MoveFile(zipPath, cachePath)
+	err = file.CopyFile(zipPath, cachePath)
 	if err != nil {
 		logger.Error("failed to copy zip file to cache directory", err)
 		return "", err
