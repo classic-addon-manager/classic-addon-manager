@@ -14,6 +14,10 @@ import (
 )
 
 func ExtractAddonRelease(src string, dest string) error {
+	return extractAddonRelease(src, dest, logger.Info)
+}
+
+func extractAddonRelease(src string, dest string, logInfo func(string)) error {
 	cacheDir, err := config.GetCacheDir()
 	if err != nil {
 		return err
@@ -31,33 +35,35 @@ func ExtractAddonRelease(src string, dest string) error {
 	defer archive.Close()
 
 	tmpDest := filepath.Join(cacheDir, dest)
+	var files, directories int
 
 	for _, f := range archive.File {
 		fPath := filepath.Join(tmpDest, f.Name)
-		logger.Info("Extracting: " + fPath)
 
 		if !strings.HasPrefix(fPath, filepath.Clean(tmpDest)+string(os.PathSeparator)) {
 			return fmt.Errorf("%s: invalid file path", fPath)
 		}
 
 		if f.FileInfo().IsDir() {
-			logger.Info("Creating directory: " + fPath)
 			err := os.MkdirAll(fPath, os.ModePerm)
 			if err != nil {
-				return err
+				return fmt.Errorf("create directory %q: %w", fPath, err)
 			}
+			directories++
 			continue
 		}
 
 		if err = os.MkdirAll(filepath.Dir(fPath), os.ModePerm); err != nil {
-			return err
+			return fmt.Errorf("create parent directory for %q: %w", fPath, err)
 		}
 
 		if err := extractFile(f, fPath); err != nil {
-			return err
+			return fmt.Errorf("extract %q: %w", fPath, err)
 		}
+		files++
 	}
 
+	logInfo(fmt.Sprintf("Extracted archive %q to %q: %d files, %d directories", tmpSrc, tmpDest, files, directories))
 	return nil
 }
 

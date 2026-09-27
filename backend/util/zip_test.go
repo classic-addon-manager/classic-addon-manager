@@ -2,7 +2,9 @@ package util
 
 import (
 	"ClassicAddonManager/backend/config"
+	"archive/zip"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -11,6 +13,77 @@ import (
 
 	"github.com/spf13/viper"
 )
+
+func TestExtractAddonReleaseLogsOneSummary(t *testing.T) {
+	_, cacheDir := setupAddonDirs(t)
+	archivePath := filepath.Join(cacheDir, "large.zip")
+	archiveFile, err := os.Create(archivePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	archive := zip.NewWriter(archiveFile)
+	for index := 0; index < 200; index++ {
+		entry, err := archive.Create(fmt.Sprintf("root/file-%03d.lua", index))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := entry.Write([]byte("content")); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := archive.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := archiveFile.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	var messages []string
+	if err := extractAddonRelease("large.zip", "large", func(message string) {
+		messages = append(messages, message)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if len(messages) != 1 || !strings.Contains(messages[0], "200 files, 0 directories") {
+		t.Fatalf("expected one archive summary, got %v", messages)
+	}
+	if got := readTestFile(t, filepath.Join(cacheDir, "large", "root", "file-199.lua")); got != "content" {
+		t.Fatalf("last extracted file = %q", got)
+	}
+}
+
+func TestExtractAddonReleaseFailureIdentifiesEntryWithoutSuccessLog(t *testing.T) {
+	_, cacheDir := setupAddonDirs(t)
+	archiveFile, err := os.Create(filepath.Join(cacheDir, "invalid.zip"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	archive := zip.NewWriter(archiveFile)
+	entry, err := archive.Create("../outside.lua")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := entry.Write([]byte("content")); err != nil {
+		t.Fatal(err)
+	}
+	if err := archive.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := archiveFile.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	var messages []string
+	err = extractAddonRelease("invalid.zip", "invalid", func(message string) {
+		messages = append(messages, message)
+	})
+	if err == nil || !strings.Contains(err.Error(), "outside.lua") {
+		t.Fatalf("expected entry-specific path error, got %v", err)
+	}
+	if len(messages) != 0 {
+		t.Fatalf("failed extraction logged success: %v", messages)
+	}
+}
 
 // viper state is process-global: these tests must not run in parallel.
 func setupAddonDirs(t *testing.T) (addonDir, cacheDir string) {
