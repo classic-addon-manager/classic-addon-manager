@@ -103,14 +103,16 @@ func (s *RemoteAddonService) ResolveDependencies(ad shared.AddonManifest) (share
 
 	dependencyByName := make(map[string]shared.DependencyInfo)
 
-	var walk func(name string, depth int, lineage map[string]struct{})
-	walk = func(name string, depth int, lineage map[string]struct{}) {
+	path := map[string]struct{}{ad.Name: {}}
+
+	var walk func(name string, depth int)
+	walk = func(name string, depth int) {
 		if depth > maxDependencyDepth {
 			result.Errors = append(result.Errors, fmt.Sprintf("Maximum dependency depth exceeded for: %s", name))
 			return
 		}
 
-		if _, circular := lineage[name]; circular {
+		if _, circular := path[name]; circular {
 			result.Errors = append(result.Errors, fmt.Sprintf("Circular dependency detected: %s", name))
 			return
 		}
@@ -131,22 +133,15 @@ func (s *RemoteAddonService) ResolveDependencies(ad shared.AddonManifest) (share
 			}
 		}
 
-		nextLineage := make(map[string]struct{}, len(lineage)+1)
-		for key := range lineage {
-			nextLineage[key] = struct{}{}
-		}
-		nextLineage[name] = struct{}{}
-
+		path[name] = struct{}{}
 		for _, depName := range manifest.Dependencies {
-			walk(depName, depth+1, nextLineage)
+			walk(depName, depth+1)
 		}
+		delete(path, name)
 	}
 
-	rootLineage := map[string]struct{}{
-		ad.Name: {},
-	}
 	for _, depName := range ad.Dependencies {
-		walk(depName, 0, rootLineage)
+		walk(depName, 0)
 	}
 
 	dependencies := make([]shared.DependencyInfo, 0, len(dependencyByName))
@@ -182,6 +177,11 @@ func (s *RemoteAddonService) InstallAddonWithDependencies(ad shared.AddonManifes
 
 // installDep, parent, and sort failures are recorded on the returned result.
 // Only ResolveDependencies in the callers returns a Go error.
+//
+// Dependencies that are already installed are left alone, even when a newer
+// version exists. Installing one addon should not silently change another
+// addon the user already has, outdated addons are updated through the normal
+// update flow instead.
 func applyDependenciesThenParent(
 	ad shared.AddonManifest,
 	resolution shared.DependencyResolutionResult,

@@ -438,3 +438,61 @@ func TestResolveDependencies_EmptyCatalogIsValid(t *testing.T) {
 		t.Fatalf("expected errors to contain %q, got %v", want, result.Errors)
 	}
 }
+
+func TestResolveDependencies_CycleAndSharedDependency(t *testing.T) {
+	t.Setenv("APPDATA", os.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", os.TempDir())
+
+	aacPath := t.TempDir()
+	prevValue := viper.Get("general.aacpath")
+	viper.Set("general.aacpath", aacPath)
+	t.Cleanup(func() { viper.Set("general.aacpath", prevValue) })
+
+	addonDir := filepath.Join(aacPath, "Addon")
+	if err := os.MkdirAll(addonDir, 0755); err != nil {
+		t.Fatalf("create addon dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(addonDir, "addons.txt"), []byte{}, 0644); err != nil {
+		t.Fatalf("write addons.txt: %v", err)
+	}
+
+	// "shared" is reached through both a and b without being a cycle,
+	// "loop" points back to main, which is a real cycle.
+	orig := getAddonManifest
+	t.Cleanup(func() { getAddonManifest = orig })
+	getAddonManifest = func() ([]shared.AddonManifest, error) {
+		return []shared.AddonManifest{
+			{Name: "a", Dependencies: []string{"shared"}},
+			{Name: "b", Dependencies: []string{"shared"}},
+			{Name: "shared", Dependencies: []string{"loop"}},
+			{Name: "loop", Dependencies: []string{"main"}},
+		}, nil
+	}
+
+	s := &RemoteAddonService{}
+	result, err := s.ResolveDependencies(shared.AddonManifest{
+		Name:         "main",
+		Dependencies: []string{"a", "b"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	for _, e := range result.Errors {
+		if e != "Circular dependency detected: main" {
+			t.Fatalf("unexpected error %q in %v", e, result.Errors)
+		}
+	}
+	if len(result.Errors) != 2 {
+		t.Fatalf("expected the main cycle reported once per path, got %v", result.Errors)
+	}
+
+	names := make([]string, 0, len(result.Dependencies))
+	for _, d := range result.Dependencies {
+		names = append(names, d.Manifest.Name)
+	}
+	want := []string{"loop", "shared", "a", "b"}
+	if !slices.Equal(names, want) {
+		t.Fatalf("expected dependency order %v, got %v", want, names)
+	}
+}
