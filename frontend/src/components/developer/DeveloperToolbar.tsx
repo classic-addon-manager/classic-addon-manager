@@ -1,6 +1,7 @@
 import { LoaderCircle, Plus, RefreshCw } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
+import { isStandaloneSubmission } from '@/components/developer/ownedAddons'
 import { Button } from '@/components/ui/button'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useTitleBarSlot } from '@/hooks/useTitleBarSlot'
@@ -99,11 +100,9 @@ export function DeveloperToolbar({
     onScopeChange(value as DeveloperScope)
   }
 
-  // Same visibility rule as the workspace nav: 'update' submissions whose addon
-  // is already published are folded into that addon and hidden from the count.
   const publishedNames = new Set(data.addons.map(addon => addon.name))
-  const visibleSubmissionCount = data.submissions.filter(
-    submission => !(submission.kind === 'update' && publishedNames.has(submission.payload.name))
+  const visibleSubmissionCount = data.submissions.filter(submission =>
+    isStandaloneSubmission(submission, publishedNames)
   ).length
 
   const toolbarContent = (

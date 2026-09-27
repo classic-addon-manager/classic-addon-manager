@@ -36,15 +36,16 @@ export function sourcesToOwned(
   const manifestByName = new Map(manifests.map(manifest => [manifest.name, manifest]))
   const published = new Set(sources.addons.map(addon => addon.name))
   const historyByName = new Map<string, SourceSubmission[]>()
-  const standalone: SourceSubmission[] = []
+  const standalone: OwnedSubmission[] = []
 
   for (const submission of sources.submissions) {
-    if (submission.kind === 'update' && published.has(submission.name)) {
+    const owned = toOwnedSubmission(submission)
+    if (isStandaloneSubmission(owned, published)) {
+      standalone.push(owned)
+    } else {
       const list = historyByName.get(submission.name)
       if (list) list.push(submission)
       else historyByName.set(submission.name, [submission])
-    } else {
-      standalone.push(submission)
     }
   }
 
@@ -52,11 +53,19 @@ export function sourcesToOwned(
     addons: sources.addons.map(addon =>
       toOwnedAddon(addon, manifestByName.get(addon.name), historyByName.get(addon.name) ?? [])
     ),
-    submissions: [
-      ...standalone.map(toOwnedSubmission),
-      ...[...historyByName.values()].flat().map(toOwnedSubmission),
-    ],
+    submissions: [...standalone, ...[...historyByName.values()].flat().map(toOwnedSubmission)],
   }
+}
+
+/**
+ * Update submissions for an addon that is already published belong to that
+ * addon's review history, so they are not listed or counted on their own.
+ */
+export function isStandaloneSubmission(
+  submission: Pick<OwnedSubmission, 'kind' | 'payload'>,
+  publishedNames: ReadonlySet<string>
+): boolean {
+  return !(submission.kind === 'update' && publishedNames.has(submission.payload.name))
 }
 
 function toOwnedAddon(

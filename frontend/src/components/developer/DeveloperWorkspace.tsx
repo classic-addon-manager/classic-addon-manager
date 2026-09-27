@@ -17,7 +17,7 @@ import { withdrawDeclaration } from '@/components/developer/declarationApi.ts'
 import { DetailField } from '@/components/developer/DetailField'
 import type { DeveloperScope } from '@/components/developer/DeveloperToolbar'
 import { listOf, textOf, valuesToForm } from '@/components/developer/formValues.ts'
-import { statusTone } from '@/components/developer/ownedAddons'
+import { isStandaloneSubmission, statusTone } from '@/components/developer/ownedAddons'
 import type { OwnedSubmission } from '@/components/developer/ownedParse'
 import { StatusChip } from '@/components/developer/StatusChip'
 import type { SubmissionStatus } from '@/components/developer/types.ts'
@@ -73,9 +73,8 @@ export function DeveloperWorkspace({
     addon: null,
     submission,
   }))
-  const visibleSubmissionEntries = submissionEntries.filter(
-    entry =>
-      !(entry.submission.kind === 'update' && publishedNames.has(entry.submission.payload.name))
+  const visibleSubmissionEntries = submissionEntries.filter(entry =>
+    isStandaloneSubmission(entry.submission, publishedNames)
   )
   const entries = [...addonEntries, ...submissionEntries]
   const fallbackEntry =
