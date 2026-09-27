@@ -1,28 +1,14 @@
-import { ArrowLeft, Check, CheckIcon, CircleAlert, Code2, LoaderCircle } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { ArrowLeft, Check, CircleAlert, Code2, LoaderCircle } from 'lucide-react'
+import { useRef, useState } from 'react'
 
-import {
-  AddonDeclarationFields,
-  type SetDeclarationValue,
-} from '@/components/developer/AddonDeclarationFields'
+import { AddonDeclarationFields } from '@/components/developer/AddonDeclarationFields'
+import { AlreadyOpenDialog } from '@/components/developer/AlreadyOpenDialog'
 import {
   INITIAL_PUBLISH_FORM,
   isPublishFormDirty,
   type PublishFormState,
 } from '@/components/developer/constants'
-import {
-  FORM_FIELD_ORDER,
-  scrollFirstFieldErrorIntoView,
-} from '@/components/developer/declarationFields'
-import { valuesToForm } from '@/components/developer/formValues.ts'
-import {
-  getAddonSchema,
-  requireAddonSchema,
-  schemaZeroValues,
-} from '@/components/developer/schema.ts'
-import type { AddonSchema } from '@/components/developer/types.ts'
-import { type FieldErrors, submitAddon, validateAddon } from '@/components/developer/validate'
-import { getAddonValues } from '@/components/developer/values.ts'
+import { useDeclarationForm } from '@/components/developer/useDeclarationForm'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,7 +20,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
-import { toast } from '@/components/ui/toast'
 import { cn } from '@/lib/utils'
 
 interface PublishAddonFormProps {
@@ -47,81 +32,17 @@ export const PublishAddonForm = ({
   initial = INITIAL_PUBLISH_FORM,
 }: PublishAddonFormProps) => {
   const mainRef = useRef<HTMLElement>(null)
-  const [form, setForm] = useState<PublishFormState>(initial)
-  const [submissionId, setSubmissionId] = useState<number | null>(null)
   const [nameLocked, setNameLocked] = useState(false)
-  const [editable, setEditable] = useState(true)
-  const [alreadyOpenId, setAlreadyOpenId] = useState<number | null>(null)
   const [discardOpen, setDiscardOpen] = useState(false)
-  const [validating, setValidating] = useState(false)
-  const [validated, setValidated] = useState(false)
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
-  const [validationError, setValidationError] = useState(false)
-  const [publishing, setPublishing] = useState(false)
-  const [resuming, setResuming] = useState(false)
-  const [publishError, setPublishError] = useState<string | null>(null)
-  const busy = validating || publishing || resuming || !editable
-
-  const [schema, setSchema] = useState<AddonSchema | null>(null)
-  const [schemaError, setSchemaError] = useState<string | null>(null)
-  useEffect(() => {
-    let cancelled = false
-    void getAddonSchema().then(result => {
-      if (cancelled) return
-      if (result.status !== 'ok') {
-        setSchemaError(result.message)
-        return
-      }
-      setSchema(result.schema)
-      setForm(prev => ({
-        ...prev,
-        values: { ...schemaZeroValues(result.schema), ...prev.values },
-      }))
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  const setField = <K extends 'iconAssetId' | 'iconUrl'>(
-    key: K,
-    value: PublishFormState[K] | ((prev: PublishFormState[K]) => PublishFormState[K])
-  ) => {
-    setForm(prev => {
-      const nextValue =
-        typeof value === 'function'
-          ? (value as (prev: PublishFormState[K]) => PublishFormState[K])(prev[key])
-          : value
-      if (Object.is(nextValue, prev[key])) return prev
-      return { ...prev, [key]: nextValue }
-    })
-    setValidated(false)
-    setValidationError(false)
-    setFieldErrors(prev => {
-      if (!prev.icon) return prev
-      const next = { ...prev }
-      delete next.icon
-      return next
-    })
-    setPublishError(null)
-  }
-
-  const setValue: SetDeclarationValue = (key, value) => {
-    setForm(prev => {
-      const nextValue = typeof value === 'function' ? value(prev.values[key]) : value
-      if (Object.is(nextValue, prev.values[key])) return prev
-      return { ...prev, values: { ...prev.values, [key]: nextValue } }
-    })
-    setValidated(false)
-    setValidationError(false)
-    setFieldErrors(prev => {
-      if (!prev[key]) return prev
-      const next = { ...prev }
-      delete next[key]
-      return next
-    })
-    setPublishError(null)
-  }
+  const declaration = useDeclarationForm({
+    initial,
+    resumeSource: id => ({ type: 'submission', id, kind: 'new', name: '' }),
+    onResumed: kind => setNameLocked(kind === 'update'),
+    onSubmitted: onClose,
+    scrollContainer: mainRef,
+  })
+  const { form, schema, submissionId, busy, validated, validating, submitting, failCopy } =
+    declaration
 
   const handleBack = () => {
     if (isPublishFormDirty(form, initial)) {
@@ -131,137 +52,8 @@ export const PublishAddonForm = ({
     onClose()
   }
 
-  const applyInvalidResult = (fields: FieldErrors): void => {
-    const hasFields = FORM_FIELD_ORDER.some(key => !!fields[key]?.length)
-    if (hasFields) {
-      setFieldErrors(fields)
-      requestAnimationFrame(() => {
-        scrollFirstFieldErrorIntoView(fields, mainRef.current)
-      })
-      return
-    }
-    setValidationError(true)
-  }
-
-  const resumeSubmission = async (id: number) => {
-    if (busy) return
-    setResuming(true)
-    try {
-      const schema = await requireAddonSchema()
-      if (!schema) {
-        setPublishError('This source is unavailable.')
-        return
-      }
-      const result = await getAddonValues({ type: 'submission', id, kind: 'new', name: '' }, schema)
-      if (result.status !== 'ok') {
-        setPublishError(result.message)
-        return
-      }
-      setSubmissionId(id)
-      setNameLocked(result.kind === 'update')
-      setForm(valuesToForm(result.values))
-      setValidated(false)
-      setValidationError(false)
-      setFieldErrors({})
-      setPublishError(null)
-    } finally {
-      setResuming(false)
-    }
-  }
-
-  const handleValidate = async () => {
-    if (busy) return
-    setValidating(true)
-    setPublishError(null)
-    setFieldErrors({})
-    setValidationError(false)
-    let validationPassed = false
-    try {
-      const result = await validateAddon(form, submissionId)
-      if (result.status === 'not_open') {
-        setEditable(false)
-        setSubmissionId(null)
-        setPublishError('This submission is no longer open.')
-        return
-      }
-      if (result.status === 'already_open') {
-        setAlreadyOpenId(result.id)
-        return
-      }
-      if (result.status === 'error') {
-        setValidationError(true)
-        return
-      }
-      if (result.status === 'valid') {
-        validationPassed = true
-        return
-      }
-      applyInvalidResult(result.fields)
-    } catch {
-      setValidationError(true)
-    } finally {
-      setValidated(validationPassed)
-      setValidating(false)
-    }
-  }
-
-  const handlePublish = async () => {
-    if (busy) return
-    setPublishing(true)
-    setPublishError(null)
-    setFieldErrors({})
-    try {
-      const result = await submitAddon(form, submissionId)
-      if (result.status === 'submitted') {
-        const created = submissionId === null
-        toast({
-          title: created ? 'Addon submitted' : 'Submission updated',
-          description: created ? "It's now in review." : 'Your changes were saved.',
-          icon: CheckIcon,
-        })
-        onClose()
-        return
-      }
-      if (result.status === 'already_open') {
-        setAlreadyOpenId(result.id)
-        return
-      }
-      if (result.status === 'invalid') {
-        setValidated(false)
-        applyInvalidResult(result.fields)
-        return
-      }
-      if (result.status === 'not_open') {
-        setEditable(false)
-        setSubmissionId(null)
-        setPublishError('This submission is no longer open.')
-        return
-      }
-      setPublishError(result.message)
-    } catch {
-      setPublishError("Couldn't publish this addon.")
-    } finally {
-      setPublishing(false)
-    }
-  }
-
-  const handlePrimaryAction = () => {
-    if (busy) return
-    if (validated) {
-      void handlePublish()
-      return
-    }
-    void handleValidate()
-  }
-
-  const hasFieldErrors = FORM_FIELD_ORDER.some(key => !!fieldErrors[key]?.length)
-  const failHeader = publishError !== null || (!validated && (hasFieldErrors || validationError))
-  const successHeader = validated && publishError === null
-  const failCopy = hasFieldErrors
-    ? 'Fix the highlighted fields.'
-    : publishError !== null
-      ? publishError
-      : "Couldn't validate this addon."
+  const failHeader = failCopy !== null
+  const successHeader = validated && declaration.publishError === null
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -334,14 +126,14 @@ export const PublishAddonForm = ({
             <AddonDeclarationFields
               schema={schema}
               form={form}
-              setValue={setValue}
-              setField={setField}
-              fieldErrors={fieldErrors}
+              setValue={declaration.setValue}
+              setField={declaration.setField}
+              fieldErrors={declaration.fieldErrors}
               busy={busy}
               lockedFields={nameLocked ? ['name'] : []}
             />
           ) : (
-            <p className="text-sm text-muted-foreground">{schemaError ?? 'Loading…'}</p>
+            <p className="text-sm text-muted-foreground">{declaration.schemaError ?? 'Loading…'}</p>
           )}
         </div>
       </main>
@@ -358,14 +150,14 @@ export const PublishAddonForm = ({
           <Button
             type="button"
             disabled={busy}
-            onClick={handlePrimaryAction}
+            onClick={declaration.primaryAction}
             className={cn(
               'w-32',
               validated &&
                 'bg-emerald-600 text-emerald-50 hover:bg-emerald-700 focus-visible:border-emerald-600 focus-visible:ring-emerald-400/50 publish-cta-scale'
             )}
           >
-            {publishing ? (
+            {submitting ? (
               <>
                 <LoaderCircle className="animate-spin" />
                 {submissionId === null ? 'Publish' : 'Update'}
@@ -402,36 +194,11 @@ export const PublishAddonForm = ({
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog
-        open={alreadyOpenId !== null}
-        onOpenChange={open => {
-          if (!open) setAlreadyOpenId(null)
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Submission already exists</AlertDialogTitle>
-            <AlertDialogDescription>
-              You already have an open or rejected submission for this name.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setAlreadyOpenId(null)}>
-              Keep editing
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                const id = alreadyOpenId
-                setAlreadyOpenId(null)
-                if (id === null) return
-                void resumeSubmission(id)
-              }}
-            >
-              Resume existing
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <AlreadyOpenDialog
+        open={declaration.alreadyOpen}
+        onDismiss={declaration.dismissAlreadyOpen}
+        onResume={declaration.resumeAlreadyOpen}
+      />
     </div>
   )
 }
