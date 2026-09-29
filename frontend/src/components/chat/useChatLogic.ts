@@ -171,7 +171,7 @@ export const useChatLogic = () => {
         ...(token && { token }),
       })
 
-      const eventSource = new EventSource(`https://aac.gaijin.dev/ai/chat/stream?${params}`)
+      const eventSource = new EventSource(`${API_URL}/ai/chat/stream?${params}`)
       activeEventSourceRef.current = eventSource
 
       eventSource.onmessage = event => {
