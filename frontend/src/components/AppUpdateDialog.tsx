@@ -67,7 +67,7 @@ export const AppUpdateDialog = () => {
 
     setIsUpdating(true)
     try {
-      await ApplicationService.SelfUpdate(updateInformation.url)
+      await ApplicationService.SelfUpdate(updateInformation.url, updateInformation.checksum)
     } catch (error) {
       console.error('Update failed:', error)
       toast({

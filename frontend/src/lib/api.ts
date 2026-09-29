@@ -1,7 +1,7 @@
 import { ApplicationService } from '@/lib/wails'
 import { useUserStore } from '@/stores/userStore.ts'
 
-const API_URL = 'https://aac.gaijin.dev'
+export const API_URL = 'https://aac.gaijin.dev'
 
 function createHeaders(version: string, token: string): Record<string, string> {
   return {

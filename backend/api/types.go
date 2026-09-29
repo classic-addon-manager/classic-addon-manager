@@ -27,6 +27,7 @@ type Tag struct {
 }
 
 type ApplicationRelease struct {
-	Version string `json:"version"`
-	Url     string `json:"url"`
+	Version  string `json:"version"`
+	Url      string `json:"url"`
+	Checksum string `json:"checksum"`
 }

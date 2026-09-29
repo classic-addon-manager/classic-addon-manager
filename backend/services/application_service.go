@@ -9,8 +9,11 @@ import (
 	"ClassicAddonManager/backend/logger"
 	"ClassicAddonManager/backend/shared"
 	"ClassicAddonManager/backend/util"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -90,7 +93,57 @@ func consumeUpdateFailure(path string) (string, error) {
 	return strings.TrimSpace(string(data)), nil
 }
 
-func (s *ApplicationService) SelfUpdate(updateURL string) error {
+// ErrUpdateVerificationFailed is returned when the downloaded update does not match the published checksum.
+var ErrUpdateVerificationFailed = errors.New("the update download could not be verified, please try again later or download the new version manually")
+
+// verifyUpdateChecksum compares the file's SHA-256 with the checksum published for the release.
+// Releases published before checksums existed have none, so those are allowed through with a warning.
+// A file that does not match is deleted so it can never be installed.
+func verifyUpdateChecksum(path string, expected string) error {
+	expected = strings.TrimSpace(expected)
+	if expected == "" {
+		logger.Warn("No checksum available for this update, skipping verification")
+		return nil
+	}
+
+	actual, err := fileSHA256(path)
+	if err != nil {
+		logger.Error("Error hashing downloaded update:", err)
+		removeUpdateFile(path)
+		return ErrUpdateVerificationFailed
+	}
+
+	if !strings.EqualFold(actual, expected) {
+		logger.Error("Update checksum mismatch:", fmt.Errorf("expected %s, got %s", strings.ToLower(expected), actual))
+		removeUpdateFile(path)
+		return ErrUpdateVerificationFailed
+	}
+
+	logger.Info("Update checksum verified: " + actual)
+	return nil
+}
+
+func fileSHA256(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	hash := sha256.New()
+	if _, err := io.Copy(hash, f); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(hash.Sum(nil)), nil
+}
+
+func removeUpdateFile(path string) {
+	if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+		logger.Error("Error removing rejected update file:", err)
+	}
+}
+
+func (s *ApplicationService) SelfUpdate(updateURL string, checksum string) error {
 	if !s.SelfUpdateSupported() {
 		return ErrSelfUpdateUnsupported
 	}
@@ -127,6 +180,10 @@ func (s *ApplicationService) SelfUpdate(updateURL string) error {
 	err = util.DownloadFile(updateURL, newExePath)
 	if err != nil {
 		logger.Error("Error downloading update:", err)
+		return err
+	}
+
+	if err := verifyUpdateChecksum(newExePath, checksum); err != nil {
 		return err
 	}
 

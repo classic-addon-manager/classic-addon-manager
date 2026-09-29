@@ -72,13 +72,25 @@ func TestGetAddonReleaseDecoding(t *testing.T) {
 }
 
 func TestGetLatestApplicationReleaseDecoding(t *testing.T) {
-	t.Run("valid payload", func(t *testing.T) {
+	t.Run("payload without checksum from older API", func(t *testing.T) {
 		respondWith(t, `{"status":true,"data":{"version":"2.0.0","url":"https://example.com/app"}}`)
 		release, err := GetLatestApplicationRelease()
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		want := ApplicationRelease{Version: "2.0.0", Url: "https://example.com/app"}
+		if release != want {
+			t.Fatalf("got %+v, want %+v", release, want)
+		}
+	})
+
+	t.Run("payload with checksum", func(t *testing.T) {
+		respondWith(t, `{"status":true,"data":{"version":"v3.1.3","url":"https://example.com/app.exe","checksum":"dee8d8f1b6bc508dbd76be223792b2128c04d305685b6d5c9a144bb7012f94a0"}}`)
+		release, err := GetLatestApplicationRelease()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		want := ApplicationRelease{Version: "v3.1.3", Url: "https://example.com/app.exe", Checksum: "dee8d8f1b6bc508dbd76be223792b2128c04d305685b6d5c9a144bb7012f94a0"}
 		if release != want {
 			t.Fatalf("got %+v, want %+v", release, want)
 		}
