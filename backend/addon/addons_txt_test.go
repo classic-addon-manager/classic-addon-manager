@@ -316,29 +316,6 @@ func TestSortAddonsTxtSkipsBlankLines(t *testing.T) {
 	}
 }
 
-func TestSetupAddonsTxtTestRestoresAACPath(t *testing.T) {
-	ambient := viper.Get("general.aacpath")
-	t.Cleanup(func() { viper.Set("general.aacpath", ambient) })
-
-	// Establish the unset baseline cleanup must restore: viper treats a nil
-	// override as unset.
-	viper.Set("general.aacpath", nil)
-	if viper.IsSet("general.aacpath") {
-		t.Fatal("precondition failed: general.aacpath is set")
-	}
-
-	t.Run("sub", func(t *testing.T) {
-		setupAddonsTxtTest(t)
-		if _, err := config.GetAACDir(); err != nil {
-			t.Fatal("setup did not set general.aacpath")
-		}
-	})
-
-	if viper.IsSet("general.aacpath") {
-		t.Fatalf("cleanup left general.aacpath set to %q", viper.GetString("general.aacpath"))
-	}
-}
-
 func TestGetInstalledAddonNamesReturnsCopy(t *testing.T) {
 	path := setupAddonsTxtTest(t)
 

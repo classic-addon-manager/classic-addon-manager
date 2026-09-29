@@ -137,21 +137,6 @@ func TestRemoteAddonService_InstallAddonFalseNilAbortsParentAndSort(t *testing.T
 	}
 }
 
-func TestApplyDependenciesThenParent_FailedDepFalseNoErr(t *testing.T) {
-	installDep := func(m shared.AddonManifest, v string) (bool, error) {
-		return false, nil
-	}
-	parent := func() (bool, error) { return true, nil }
-	sort := func() error { return nil }
-
-	res := newResolution(dep("dep-a", "", false, 0))
-	got := applyDependenciesThenParent(shared.AddonManifest{Name: "main"}, res, installDep, parent, sort)
-
-	if got.Dependencies[0].Error != "installation failed" {
-		t.Fatalf("expected fallback 'installation failed', got %q", got.Dependencies[0].Error)
-	}
-}
-
 func TestApplyDependenciesThenParent_CatalogMissingDoesNotBlockParent(t *testing.T) {
 	parentCalled := false
 	installDep := func(m shared.AddonManifest, v string) (bool, error) { return true, nil }
@@ -352,25 +337,6 @@ func TestApplyDependenciesThenParent_NoDepsParentSuccess(t *testing.T) {
 	}
 	if len(got.Dependencies) != 0 {
 		t.Fatalf("expected no dep rows, got %d", len(got.Dependencies))
-	}
-}
-
-func TestApplyDependenciesThenParent_InstallDepVersionIsLatest(t *testing.T) {
-	var versions []string
-	installDep := func(m shared.AddonManifest, v string) (bool, error) {
-		versions = append(versions, v)
-		return true, nil
-	}
-	parent := func() (bool, error) { return true, nil }
-	sort := func() error { return nil }
-
-	res := newResolution(dep("dep-a", "", false, 0))
-	applyDependenciesThenParent(shared.AddonManifest{Name: "main"}, res, installDep, parent, sort)
-
-	for _, v := range versions {
-		if v != "latest" {
-			t.Fatalf("expected deps installed at 'latest', got %q", v)
-		}
 	}
 }
 

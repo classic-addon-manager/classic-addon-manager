@@ -105,8 +105,9 @@ func TestGenerateUpdateAddonLuaWritesAtomically(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read updates.lua: %v", err)
 	}
-	if want := string(generateUpdatesLua(updates)); string(gotUpdates) != want {
-		t.Fatalf("updates.lua = %q, want %q", gotUpdates, want)
+	const wantUpdates = "{\n    [\"SomeAddon\"] = {name=\"SomeAddon\", version=\"2.0\"}, \n}\n"
+	if string(gotUpdates) != wantUpdates {
+		t.Fatalf("updates.lua = %q, want %q", gotUpdates, wantUpdates)
 	}
 
 	assertNoUpdateTempFiles(t, addonPath)
