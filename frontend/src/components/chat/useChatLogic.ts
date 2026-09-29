@@ -5,6 +5,7 @@ import { marked } from 'marked'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { versionAtom } from '@/atoms/applicationAtoms'
+import { API_URL } from '@/lib/api.ts'
 import { useUserStore } from '@/stores/userStore'
 
 import { copyToClipboard, generateMessageId, parseMarkdown } from './chatUtils'
