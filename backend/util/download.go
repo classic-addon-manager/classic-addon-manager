@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"time"
 )
 
@@ -20,6 +21,7 @@ func DownloadFile(url string, path string) error {
 		return err
 	}
 	req.Header.Set("X-Client", api.GetClientHeader())
+	req.Header.Set("X-Client-OS", runtime.GOOS)
 	req.Header.Set("Accept", "application/octet-stream, */*")
 	if token := auth.GetToken(); token != "" {
 		req.Header.Set("X-Token", token)

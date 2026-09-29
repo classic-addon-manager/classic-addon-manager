@@ -6,6 +6,7 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"runtime"
 	"time"
 )
 
@@ -26,6 +27,7 @@ func NewApiRequest(ctx context.Context, method string, path string, body io.Read
 	}
 
 	req.Header.Set("X-Client", GetClientHeader())
+	req.Header.Set("X-Client-OS", runtime.GOOS)
 	req.Header.Set("Accept", "application/json")
 	if body != nil || method != http.MethodGet {
 		req.Header.Set("Content-Type", "application/json")

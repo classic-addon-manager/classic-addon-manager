@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -17,6 +18,9 @@ func TestDownloadFileSuccess(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if got := r.Header.Get("X-Client"); got != api.GetClientHeader() {
 			t.Errorf("X-Client = %q, want %q", got, api.GetClientHeader())
+		}
+		if got := r.Header.Get("X-Client-OS"); got != runtime.GOOS {
+			t.Errorf("X-Client-OS = %q, want %q", got, runtime.GOOS)
 		}
 		if got := r.Header.Get("Accept"); got != "application/octet-stream, */*" {
 			t.Errorf("Accept = %q, want %q", got, "application/octet-stream, */*")

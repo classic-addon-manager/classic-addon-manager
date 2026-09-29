@@ -6,6 +6,7 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"runtime"
 	"testing"
 )
 
@@ -97,6 +98,9 @@ func TestApiRequestHeaders(t *testing.T) {
 
 			if tt.wantClient && req.Header.Get("X-Client") == "" {
 				t.Error("X-Client header missing")
+			}
+			if got := req.Header.Get("X-Client-OS"); got != runtime.GOOS {
+				t.Errorf("X-Client-OS = %q, want %q", got, runtime.GOOS)
 			}
 
 			token, hasToken := req.Header["X-Token"]

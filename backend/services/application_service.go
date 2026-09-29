@@ -32,6 +32,10 @@ func (s *ApplicationService) GetVersion() string {
 	return shared.Version
 }
 
+func (s *ApplicationService) GetOS() string {
+	return runtime.GOOS
+}
+
 func (s *ApplicationService) GetLatestRelease() (api.ApplicationRelease, error) {
 	release, err := api.GetLatestApplicationRelease()
 	if err != nil {

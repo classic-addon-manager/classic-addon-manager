@@ -3,19 +3,21 @@ import { useUserStore } from '@/stores/userStore.ts'
 
 export const API_URL = 'https://aac.gaijin.dev'
 
-function createHeaders(version: string, token: string): Record<string, string> {
+function createHeaders(version: string, token: string, os: string): Record<string, string> {
   return {
     'Content-Type': 'application/json',
     Accept: 'application/json',
     'X-Client': version,
+    'X-Client-OS': os,
     'X-Token': token,
   }
 }
 
-function createFormHeaders(version: string, token: string): Record<string, string> {
+function createFormHeaders(version: string, token: string, os: string): Record<string, string> {
   return {
     Accept: 'application/json',
     'X-Client': version,
+    'X-Client-OS': os,
     'X-Token': token,
   }
 }
@@ -23,6 +25,7 @@ function createFormHeaders(version: string, token: string): Record<string, strin
 class ApiClient {
   private static instance: ApiClient | null = null
   private version: string | null = null
+  private os = 'unknown'
   private readonly initPromise: Promise<void>
 
   private constructor() {
@@ -35,6 +38,12 @@ class ApiClient {
     } catch (error) {
       console.error('Failed to initialize API client with version:', error)
       this.version = 'unknown'
+    }
+
+    try {
+      this.os = await ApplicationService.GetOS()
+    } catch (error) {
+      console.error('Failed to initialize API client with OS:', error)
     }
   }
 
@@ -54,7 +63,7 @@ class ApiClient {
 
     return fetch(API_URL + url, {
       method: 'GET',
-      headers: createHeaders(this.version!, this.getToken()),
+      headers: createHeaders(this.version!, this.getToken(), this.os),
     })
   }
 
@@ -63,7 +72,7 @@ class ApiClient {
 
     return fetch(API_URL + url, {
       method: 'POST',
-      headers: createHeaders(this.version!, this.getToken()),
+      headers: createHeaders(this.version!, this.getToken(), this.os),
       ...(data === undefined ? {} : { body: JSON.stringify(data) }),
     })
   }
@@ -73,7 +82,7 @@ class ApiClient {
 
     return fetch(API_URL + url, {
       method: 'POST',
-      headers: createFormHeaders(this.version!, this.getToken()),
+      headers: createFormHeaders(this.version!, this.getToken(), this.os),
       body: data,
     })
   }
@@ -83,7 +92,7 @@ class ApiClient {
 
     return fetch(API_URL + url, {
       method: 'PUT',
-      headers: createHeaders(this.version!, this.getToken()),
+      headers: createHeaders(this.version!, this.getToken(), this.os),
       body: JSON.stringify(data),
     })
   }
