@@ -111,6 +111,8 @@ To build a production package:
 wails3 task build:prod
 ```
 
+To build a Linux AppImage, run `wails3 task linux:create:appimage` on Linux. The task writes `bin/classic-addon-manager-<architecture>.AppImage`. AppImage generation downloads the linuxdeploy and AppRun tools as needed.
+
 To build the server binary (no GUI window, serves the frontend and all bindings over HTTP):
 
 ```

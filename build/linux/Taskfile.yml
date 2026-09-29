@@ -44,6 +44,19 @@ tasks:
       - task: generate:dotdesktop
       - task: generate:deb
 
+  create:appimage:
+    summary: Creates a production AppImage
+    platforms: [linux]
+    deps:
+      - task: build
+        vars:
+          PRODUCTION: "true"
+      - task: generate:dotdesktop
+    cmds:
+      - mkdir -p build/linux/appimage bin
+      - cp build/appicon.png build/linux/appimage/{{.APP_NAME}}.png
+      - bash build/linux/appimage/package.sh "{{.ROOT_DIR}}/{{.BIN_DIR}}/{{.APP_NAME}}" "{{.ROOT_DIR}}/build/linux/appimage/{{.APP_NAME}}.png" "{{.ROOT_DIR}}/build/linux/{{.APP_NAME}}.desktop" "{{.ROOT_DIR}}/bin" "{{.ROOT_DIR}}/build/linux/appimage/build"
+
   generate:deb:
     summary: Creates a deb package
     cmds:

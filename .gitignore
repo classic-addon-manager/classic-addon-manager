@@ -1,6 +1,8 @@
 build/bin
 bin/
 build/linux/*.desktop
+build/linux/appimage/build/
+build/linux/appimage/*.png
 build/darwin
 build/ios
 build/windows/installer
