@@ -1,6 +1,6 @@
 import { Browser } from '@wailsio/runtime'
 import { useAtom, useAtomValue } from 'jotai'
-import { ArrowUpCircle, Globe, ShieldCheck } from 'lucide-react'
+import { ArrowUpCircle, Globe } from 'lucide-react'
 import { useEffect } from 'react'
 
 import { updateAvailableAtom, updateDialogOpenAtom, versionAtom } from '@/atoms/applicationAtoms'
@@ -20,7 +20,6 @@ export const Sidebar = () => {
   const [, setUpdateDialogOpen] = useAtom(updateDialogOpenAtom)
   const updatesAvailableCount = useAddonStore(s => s.updatesAvailableCount)
   const isAuthenticated = useUserStore(s => s.user.discord_id !== '')
-  const isAdmin = useUserStore(s => s.user.admin)
 
   useEffect(() => {
     if (!isAuthenticated && activeItem === 'developer') {
@@ -51,15 +50,6 @@ export const Sidebar = () => {
             isActive={false}
             onClick={() => Browser.OpenURL('https://aa-classic.com')}
           />
-          {isAdmin && (
-            <SidebarItem
-              key="admin"
-              name="Admin Dashboard"
-              icon={ShieldCheck}
-              isActive={false}
-              onClick={() => Browser.OpenURL('https://aac.gaijin.dev/admin/')}
-            />
-          )}
         </nav>
       </div>
 
