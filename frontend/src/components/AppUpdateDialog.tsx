@@ -29,7 +29,7 @@ export const AppUpdateDialog = () => {
   const [open, setOpen] = useAtom(updateDialogOpenAtom)
   const [, setUpdateCheckComplete] = useAtom(updateCheckCompleteAtom)
   const [isUpdating, setIsUpdating] = useState(false)
-  const [selfUpdateSupported, setSelfUpdateSupported] = useState(true)
+  const [selfUpdateSupported, setSelfUpdateSupported] = useState(false)
 
   useEffect(() => {
     ApplicationService.SelfUpdateSupported()
@@ -119,8 +119,8 @@ export const AppUpdateDialog = () => {
 
         {!selfUpdateSupported && (
           <p className="text-sm text-white/60">
-            Automatic updates are only available on Windows. Please download the new version
-            manually.
+            Automatic updates require Windows or a Linux AppImage. Please update other installations
+            manually using their package manager or a fresh download.
           </p>
         )}
 

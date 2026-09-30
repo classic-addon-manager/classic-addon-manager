@@ -1,4 +1,4 @@
-package services
+package updater
 
 import (
 	"errors"
@@ -17,21 +17,21 @@ func setSelfUpdateOS(t *testing.T, goos string) {
 	t.Cleanup(func() { selfUpdateOS = orig })
 }
 
-func TestSelfUpdateUnsupportedPlatform(t *testing.T) {
+func TestSelfUpdateRejectsNonAppImageInstallation(t *testing.T) {
 	setSelfUpdateOS(t, "linux")
-	service := &ApplicationService{}
+	t.Setenv("APPIMAGE", "")
 
-	if service.SelfUpdateSupported() {
-		t.Fatal("expected self-update to be unsupported on linux")
+	if SelfUpdateSupported() {
+		t.Fatal("expected self-update to be unsupported without an AppImage")
 	}
-	if err := service.SelfUpdate("http://127.0.0.1:1/never-downloaded", ""); !errors.Is(err, ErrSelfUpdateUnsupported) {
+	if err := SelfUpdate("http://127.0.0.1:1/never-downloaded", ""); !errors.Is(err, ErrSelfUpdateUnsupported) {
 		t.Fatalf("expected ErrSelfUpdateUnsupported, got %v", err)
 	}
 }
 
 func TestSelfUpdateSupportedOnWindows(t *testing.T) {
 	setSelfUpdateOS(t, "windows")
-	if !(&ApplicationService{}).SelfUpdateSupported() {
+	if !SelfUpdateSupported() {
 		t.Fatal("expected self-update to be supported on windows")
 	}
 }
@@ -126,7 +126,7 @@ func TestSelfUpdateRejectsDownloadedFileWithWrongChecksum(t *testing.T) {
 	}))
 	defer server.Close()
 
-	err := (&ApplicationService{}).SelfUpdate(server.URL, strings.Repeat("0", 64))
+	err := SelfUpdate(server.URL, strings.Repeat("0", 64))
 	if !errors.Is(err, ErrUpdateVerificationFailed) {
 		t.Fatalf("expected ErrUpdateVerificationFailed, got %v", err)
 	}

@@ -32,13 +32,13 @@ A desktop application for managing addons in **ArcheAge**. Browse, install, upda
 You can get Classic Addon Manager in one of these ways:
 
 - **ArcheAge launcher**: Click the **Addons** button in the launcher.
-- **GitHub Releases**: Download the latest `classic-addon-manager.exe` from the [Releases page](https://github.com/classic-addon-manager/classic-addon-manager/releases).
-- **In-app self-update**: The app notifies you when a new version is available and can update itself.
+- **GitHub Releases**: Download `classic-addon-manager.exe` for Windows or the `.AppImage` for Linux from the [Releases page](https://github.com/classic-addon-manager/classic-addon-manager/releases).
+- **In-app self-update**: The app notifies you when a new version is available. Windows executables and writable Linux AppImages can update themselves and restart automatically.
 
 ### Supported Platforms
 
 - **Windows**: Full support (.exe installer)
-- **Linux**: Supported (.deb package), but designed primarily for Windows. Some features may not work
+- **Linux**: Supported as an AppImage, but designed primarily for Windows. Some features may not work
 
 ---
 
