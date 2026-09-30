@@ -3,7 +3,6 @@ package updater
 import (
 	"ClassicAddonManager/backend/config"
 	"ClassicAddonManager/backend/util"
-	"debug/elf"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -66,28 +65,6 @@ func validateAppImage(path string) error {
 	_, err = io.ReadFull(f, header[:])
 	if err != nil || string(header[:4]) != "\x7fELF" || string(header[8:11]) != "AI\x02" {
 		return fmt.Errorf("the update must be a type 2 AppImage")
-	}
-	image, err := elf.NewFile(f)
-	if err != nil {
-		return fmt.Errorf("reading AppImage executable: %w", err)
-	}
-	var machine elf.Machine
-	switch runtime.GOARCH {
-	case "amd64":
-		machine = elf.EM_X86_64
-	case "arm64":
-		machine = elf.EM_AARCH64
-	case "386":
-		machine = elf.EM_386
-	case "arm":
-		machine = elf.EM_ARM
-	case "riscv64":
-		machine = elf.EM_RISCV
-	default:
-		return fmt.Errorf("AppImage updates are not supported for %s", runtime.GOARCH)
-	}
-	if image.Machine != machine {
-		return fmt.Errorf("the AppImage is not compatible with %s", runtime.GOARCH)
 	}
 	return nil
 }

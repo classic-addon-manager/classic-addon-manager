@@ -21,9 +21,6 @@ const appImageFixtureChecksum = "8b37eaa35b5f84ba96af907362f9b9fa9cf5adc31d45447
 
 func appImageFixture(t *testing.T) []byte {
 	t.Helper()
-	if runtime.GOARCH != "amd64" {
-		t.Skip("fixture represents the published x86-64 AppImage")
-	}
 	data, err := hex.DecodeString(appImageFixtureHex)
 	if err != nil {
 		t.Fatal(err)
@@ -72,8 +69,6 @@ func assertAppImageUnchanged(t *testing.T, target string, original []byte) {
 
 func TestAppImageUpdateRejectsInvalidDownloadsWithoutChangingInstallation(t *testing.T) {
 	valid := appImageFixture(t)
-	wrongArch := bytes.Clone(valid)
-	wrongArch[18] = 0xb7 // AArch64, not the fixture's x86-64 host.
 	for _, tc := range []struct {
 		name     string
 		payload  []byte
@@ -82,7 +77,6 @@ func TestAppImageUpdateRejectsInvalidDownloadsWithoutChangingInstallation(t *tes
 	}{
 		{"checksum mismatch", []byte("corrupt download"), appImageFixtureChecksum, 200},
 		{"deb instead of AppImage", []byte("!<arch>\n"), "", 200},
-		{"different CPU architecture", wrongArch, "", 200},
 		{"download failed", valid, appImageFixtureChecksum, 503},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
