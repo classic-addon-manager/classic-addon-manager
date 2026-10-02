@@ -93,6 +93,7 @@ def stage(appdir, binary):
         raise RuntimeError("Install the GIO TLS modules before packaging")
     copy_path(gio_modules, appdir)
     copy_path(Path("/etc/fonts"), appdir)
+    copy_path(Path("/usr/share/fontconfig"), appdir)
 
     # Use original module paths so linuxdeploy also finds their package licenses.
     libraries = [p.resolve() for root in (plugins, gio_modules) for p in root.rglob("*.so")]
@@ -169,6 +170,15 @@ def relocate(appdir, binary):
         if data.startswith(b"\x7fELF") and RUNTIME_PATH.search(data):
             candidate.write_bytes(RUNTIME_PATH.sub(lambda m: b"././" + m.group()[4:], data))
 
+    # Fontconfig also reads its compiled conf.avail directory independently of
+    # FONTCONFIG_PATH. Pair that directory with the bundled parser, not the host.
+    fontconfig = appdir / "usr/lib/libfontconfig.so.1"
+    data = fontconfig.read_bytes()
+    old = b"/usr/share/fontconfig/conf.avail\x00"
+    if old not in data:
+        raise RuntimeError("Unsupported Fontconfig configuration directory")
+    fontconfig.write_bytes(data.replace(old, b"././" + old[4:]))
+
     # Mesa loads these too; an older bundled Wayland core can hide newer
     # driver-required symbols (e.g. wl_display_create_queue_with_name).
     for component in ("client", "server"):
@@ -182,6 +192,20 @@ def relocate(appdir, binary):
     bwrap.rename(real_bwrap)
     bwrap.write_text(Path(__file__).with_name("bwrap").read_text())
     bwrap.chmod(0o755)
+
+    # Resolve bundled dependencies per ELF, not through the process environment.
+    # LD_LIBRARY_PATH leaks into host executables such as the sandbox's /bin/bash
+    # and can load an older bundled readline into a newer host shell.
+    for executable in (appdir / "usr").rglob("*"):
+        if executable.is_symlink() or not executable.is_file():
+            continue
+        with executable.open("rb") as stream:
+            if stream.read(4) != b"\x7fELF":
+                continue
+        relative = os.path.relpath(appdir / "usr/lib", executable.parent)
+        library_path = "$ORIGIN" if relative == "." else f"$ORIGIN/{relative}:$ORIGIN"
+        subprocess.run(["patchelf", "--force-rpath", "--set-rpath", library_path,
+                        str(executable)], check=True)
     # Discard linuxdeploy's initial launcher backup. Its output pass must wrap
     # our launcher, not resurrect the original symlink straight to the binary.
     (appdir / "AppRun.wrapped").unlink(missing_ok=True)

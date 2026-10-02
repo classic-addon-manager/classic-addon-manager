@@ -45,13 +45,14 @@ rm -- "$app_dir/runtime-libraries.txt"
     --appimage-extract-and-run --appdir "$app_dir" "${libraries[@]}" --plugin gtk
 )
 
-# Relocate after dependency deployment, before the only AppImage output step.
+# Relocate after dependency deployment. The final tool must not redeploy ELFs
+# or overwrite their RPATHs and reintroduce host-library assumptions.
 python3 "$script_dir/runtime.py" relocate "$app_dir" "$binary"
-(
-  cd "$build_dir"
-  NO_STRIP=1 OUTPUT="$image" "$linuxdeploy" \
-    --appimage-extract-and-run --appdir "$app_dir" \
-    --exclude-library 'libwayland-client.so.*' --exclude-library 'libwayland-server.so.*' \
-    --output appimage
-)
+appimagetool="$build_dir/appimagetool-$arch.AppImage"
+if ! test -x "$appimagetool"; then
+  curl --fail --location --output "$appimagetool" \
+    "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-$arch.AppImage"
+  chmod +x "$appimagetool"
+fi
+ARCH="$arch" "$appimagetool" --appimage-extract-and-run "$app_dir" "$build_dir/$image"
 mv -f -- "$build_dir/$image" "$output_dir/$image"

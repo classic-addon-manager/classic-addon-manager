@@ -2,9 +2,9 @@
 set -e
 export APPDIR="$(dirname "$(readlink -f "$0")")"
 export PATH="$APPDIR/usr/bin:$PATH"
-export LD_LIBRARY_PATH="$APPDIR/usr/lib:$APPDIR/usr/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export XDG_DATA_DIRS="$APPDIR/usr/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
-# linuxdeploy's outer AppRun sources the GTK resource hook before this launcher.
+# Resource hooks must run before our runtime-specific configuration.
+source "$APPDIR/apprun-hooks/linuxdeploy-plugin-gtk.sh"
 source "$APPDIR/runtime-env.sh"
 # Scoped ELF path patches are relative to this directory, including inside
 # WebKit's bubblewrap sandbox. Do not disable the sandbox to make them work.
