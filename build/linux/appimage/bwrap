@@ -1,0 +1,30 @@
+#!/bin/bash
+set -euo pipefail
+# WebKit also invokes bubblewrap directly to probe container capabilities.
+# Preserve that probe; rejecting it would make WebKit disable its own sandbox.
+if [[ ${1-} != --args ]]; then
+    exec "$APPDIR/usr/bin/bwrap.real" "$@"
+fi
+# WebKit passes namespace/seccomp options in a sealed, inherited memfd.
+if [[ $# -lt 4 || $3 != -- ]]; then
+    echo 'Unsupported WebKit bubblewrap invocation' >&2
+    exit 1
+fi
+mapfile -d '' -t options < "/proc/self/fd/$2"
+shift 3
+
+# Relative compiled helper binds would otherwise target sandbox /lib, whose
+# distro-specific parents may not exist under its read-only /usr/lib mount.
+# The entire AppDir is bound below, so these mounts are redundant.
+filtered=()
+for ((i = 0; i < ${#options[@]}; i++)); do
+    if [[ ${options[i]} == --ro-bind-try || ${options[i]} == --ro-bind ]] &&
+       [[ ${options[i+1]-} == ././* && ${options[i+1]-} == "${options[i+2]-}" ]]; then
+        ((i += 2))
+    else
+        filtered+=("${options[i]}")
+    fi
+done
+# Bind after WebKit's /tmp tmpfs, preserving the sandbox and inherited FDs.
+exec "$APPDIR/usr/bin/bwrap.real" "${filtered[@]}" \
+    --ro-bind "$APPDIR" "$APPDIR" --chdir "$APPDIR/usr" -- "$@"

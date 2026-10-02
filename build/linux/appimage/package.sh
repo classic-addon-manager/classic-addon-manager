@@ -1,53 +1,57 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-binary=$1
-icon=$2
-desktop_file=$3
-output_dir=$4
-build_dir=$5
+script_dir=$(dirname "$(realpath "$0")")
+binary=$(realpath "$1")
+icon=$(realpath "$2")
+desktop_file=$(realpath "$3")
+mkdir -p "$4" "$5"
+output_dir=$(realpath "$4")
+build_dir=$(realpath "$5")
 
 name=$(basename "$binary")
 arch=$(uname -m)
 app_dir="$build_dir/$name-$arch.AppDir"
 image="$name-$arch.AppImage"
 linuxdeploy="$build_dir/linuxdeploy-$arch.AppImage"
-log=$(mktemp)
-trap 'rm -f -- "$log"' EXIT
 
-if wails3 generate appimage \
-  -binary "$binary" \
-  -icon "$icon" \
-  -desktopfile "$desktop_file" \
-  -outputdir "$output_dir" \
-  -builddir "$build_dir" 2>&1 | tee "$log"; then
-  exit 0
+# Stage only the linked GTK4 stack. Wails' generator copies helpers from every
+# installed WebKit stack and emits an image before we can relocate its runtime.
+test ! -e "$app_dir" || rm -r -- "$app_dir"
+mkdir -p "$app_dir/usr/bin" "$app_dir/usr/share/applications" "$app_dir/usr/share/pixmaps"
+cp -a -- "$binary" "$app_dir/usr/bin/"
+cp -a -- "$desktop_file" "$icon" "$app_dir/"
+cp -a -- "$icon" "$app_dir/.DirIcon"
+cp -a -- "$desktop_file" "$app_dir/usr/share/applications/"
+cp -a -- "$icon" "$app_dir/usr/share/pixmaps/"
+
+if ! test -x "$linuxdeploy"; then
+  curl --fail --location --output "$linuxdeploy" \
+    "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-$arch.AppImage"
+  chmod +x "$linuxdeploy"
 fi
 
-# Wails currently copies WebKit helper processes from every installed GTK stack.
-# On a GTK4 build, an unrelated WebKit 4.x helper can have missing dependencies.
-binary_dependencies=$(ldd "$binary")
-if ! grep -Fq 'Failed to deploy dependencies for existing files' "$log" ||
-  [[ "$binary_dependencies" != *libwebkitgtk-6.0.so* ]] ||
-  ! test -x "$linuxdeploy" ||
-  ! test -f "$app_dir/AppRun" ||
-  ! test -f "$build_dir/linuxdeploy-plugin-gtk.sh"; then
-  exit 1
-fi
+# Reuse the GTK plugin shipped with the project's pinned Wails dependency.
+wails_dir=$(go list -m -f '{{.Dir}}' github.com/wailsapp/wails/v3)
+cp -- "$wails_dir/internal/commands/linuxdeploy-plugin-gtk.sh" "$build_dir/"
+chmod +x "$build_dir/linuxdeploy-plugin-gtk.sh"
 
-mapfile -d '' old_webkit_dirs < <(find "$app_dir/usr/lib" -type d -name 'webkit2gtk-*' -prune -print0)
-if ((${#old_webkit_dirs[@]} == 0)); then
-  exit 1
-fi
-
-for old_webkit_dir in "${old_webkit_dirs[@]}"; do
-  rm -r -- "$old_webkit_dir"
-done
-
-echo 'Retrying AppImage packaging with only the WebKitGTK 6.0 helpers.'
+python3 "$script_dir/runtime.py" stage "$app_dir" "$binary"
+mapfile -t libraries < "$app_dir/runtime-libraries.txt"
+rm -- "$app_dir/runtime-libraries.txt"
 (
   cd "$build_dir"
-  NO_STRIP=1 DEPLOY_GTK_VERSION=4 OUTPUT="$image" "$linuxdeploy" \
-    --appimage-extract-and-run --appdir "$app_dir" --output appimage --plugin gtk
+  NO_STRIP=1 DEPLOY_GTK_VERSION=4 "$linuxdeploy" \
+    --appimage-extract-and-run --appdir "$app_dir" "${libraries[@]}" --plugin gtk
+)
+
+# Relocate after dependency deployment, before the only AppImage output step.
+python3 "$script_dir/runtime.py" relocate "$app_dir" "$binary"
+(
+  cd "$build_dir"
+  NO_STRIP=1 OUTPUT="$image" "$linuxdeploy" \
+    --appimage-extract-and-run --appdir "$app_dir" \
+    --exclude-library 'libwayland-client.so.*' --exclude-library 'libwayland-server.so.*' \
+    --output appimage
 )
 mv -f -- "$build_dir/$image" "$output_dir/$image"
