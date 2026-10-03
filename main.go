@@ -165,6 +165,9 @@ func main() {
 		BackgroundColour: application.NewRGBA(10, 10, 10, 1),
 		BackgroundType:   application.BackgroundTypeSolid,
 		EnableFileDrop:   true,
+		Linux: application.LinuxWindow{
+			WebviewGpuPolicy: application.WebviewGpuPolicyAlways,
+		},
 	})
 	// Re-apply after restore/unmaximise: some platforms drop MinWidth/MinHeight.
 	// Do not call SetMinSize before a.Run() — beta.5 panics when app.impl is nil.
