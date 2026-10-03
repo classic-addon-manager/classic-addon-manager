@@ -4,26 +4,49 @@ A desktop application for managing addons in **ArcheAge**. Browse, install, upda
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/gaijindev)
 
-<img align="center" width="700" alt="Dashboard screenshot" src="https://github.com/user-attachments/assets/4a5d13a8-dc4d-481e-85a5-5fdc0ce4f98b" />
-
-<img align="center" width="700" alt="Addon browser screenshot" src="https://github.com/user-attachments/assets/c1ee5165-ff20-4717-810f-d4b065945521" />
-
-<img align="center" width="700" alt="Troubleshooting screenshot" src="https://github.com/user-attachments/assets/a1bc8d7f-b2de-4b0e-bed8-ac4eeeacd683" />
-
-<img align="center" width="700" alt="Settings screenshot" src="https://github.com/user-attachments/assets/5e9906bf-667b-4242-930a-d04af6d21f34" />
+<p align="center">
+  <img src="docs/images/features/01-overview.png" width="800" alt="Classic Addon Manager dashboard listing installed ArcheAge Classic addons beside the selected addon's details">
+</p>
 
 ---
 
-## Features
+## Feature Tour
 
-- **Addon Browser**: Browse the addon repository, filter by tags, and install addons with one click. Dependencies are resolved automatically.
-- **Dashboard**: See all your installed addons at a glance. Check for updates, uninstall, open addon folders, or report issues.
-- **In-Game Notifications**: Get notified inside ArcheAge when addon updates are available.
-- **AI Chat Assistant**: Ask a friendly Daru for help with addons, game questions, or troubleshooting.
-- **Troubleshooting Tools**: Diagnose addon issues by scanning your game logs for errors, reset corrupted settings, or uninstall everything and start fresh.
-- **Self-Updating**: The app checks for its own updates and can install them automatically.
-- **Discord Authentication**: Sign in with Discord to sync your installed addons, rate addons, and access the AI assistant.
-- **ZIP Import**: Install addons from a local ZIP file.
+### Manage installed addons
+
+Select an addon to see its version, update status, and source, then open its folder, pick another version, reinstall, or uninstall from one menu.
+
+<img src="docs/images/features/02-manage-addons.png" width="800" alt="Dashboard with the Accountant addon selected, an Up to date badge, and its action menu open">
+
+### Discover new addons
+
+Search the catalog, filter by tag, switch between list and grid, and read an addon's details before installing.
+
+<img src="docs/images/features/03-discover-addons.png" width="800" alt="Addon catalog toolbar with search, tag filter, and list/grid toggle, next to the Stonks addon detail dialog with an Install button">
+
+### Review updates and versions
+
+Read release notes before updating, or choose a specific published release. Nothing installs until you confirm.
+
+<img src="docs/images/features/04-review-updates.png" width="800" alt="Update available dialog comparing installed and new versions with release notes, beside the Install Version dropdown marking the current release">
+
+### Publish your own addons
+
+Submit addons through a declaration form, follow each review decision, and track downloads, subscribers, and likes.
+
+<img src="docs/images/features/05-developer-workspace.png" width="800" alt="Developer workspace showing a published addon's review history with approved submissions and a statistics summary">
+
+### Diagnose problems
+
+Scan the game's addon log to see which addon raised an error and in which file and line. Recovery actions ask for confirmation.
+
+<img src="docs/images/features/06-diagnose-problems.png" width="800" alt="Troubleshooting page showing an Accountant error with its file location, above Reset addon settings and Uninstall all addons">
+
+### Personalize settings
+
+Let the app detect your ArcheAge Classic documents folder, choose an accent color, and open the manager's cache and data folders.
+
+<img src="docs/images/features/07-personalize-settings.png" width="800" alt="Settings page with automatic documents folder detection, eight accent color presets, and cache and data location shortcuts">
 
 ---
 
