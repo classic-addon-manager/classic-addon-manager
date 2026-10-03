@@ -191,7 +191,10 @@ export function parseAddonSources(statusCode: number, body: unknown): ParseSourc
     const submission = parseSourceSubmission(item)
     if (submission) submissions.push(submission)
   }
-  return { status: 'ok', sources: { addons, submissions } }
+  const installUrl = data.webhook_install_url
+  const webhookInstallUrl =
+    typeof installUrl === 'string' && installUrl.startsWith('https://') ? installUrl : ''
+  return { status: 'ok', sources: { addons, submissions, webhookInstallUrl } }
 }
 
 export function parseAddonValues(
@@ -573,6 +576,7 @@ function parseSourceAddon(value: unknown): SourceAddon | null {
   if (typeof value.uuid !== 'string' || value.uuid === '') return null
   if (typeof value.name !== 'string' || value.name === '') return null
   if (typeof value.alias !== 'string') return null
+  const lastEventAt = value.webhook_last_event_at
   return {
     uuid: value.uuid,
     name: value.name,
@@ -580,6 +584,13 @@ function parseSourceAddon(value: unknown): SourceAddon | null {
     // Downloads is newer than the rest of the payload; a missing or invalid
     // value falls back to 0 instead of dropping the addon from the list.
     downloads: isInteger(value.downloads) ? value.downloads : 0,
+    /* Webhook state is newer than the rest of the payload as well, so missing
+       values read as "not enabled" instead of dropping the addon. */
+    webhookEnabled: value.webhook_enabled === true,
+    webhookLastEventAt:
+      typeof lastEventAt === 'string' && Number.isFinite(new Date(lastEventAt).getTime())
+        ? lastEventAt
+        : null,
   }
 }
 

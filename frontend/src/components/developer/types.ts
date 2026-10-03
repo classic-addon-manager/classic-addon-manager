@@ -31,6 +31,9 @@ export type SourceAddon = {
   name: string
   alias: string
   downloads: number
+  webhookEnabled: boolean
+  /** Time of the last release webhook event for the addon's repo, null when none yet. */
+  webhookLastEventAt: string | null
 }
 export type SourceSubmission = {
   id: number
@@ -39,7 +42,12 @@ export type SourceSubmission = {
   status?: string
   createdAt?: string
 }
-export type AddonSources = { addons: SourceAddon[]; submissions: SourceSubmission[] }
+export type AddonSources = {
+  addons: SourceAddon[]
+  submissions: SourceSubmission[]
+  /** GitHub App install page for instant updates, empty when the API does not offer it. */
+  webhookInstallUrl: string
+}
 
 export type SubmissionStatus = 'open' | 'approved' | 'rejected'
 export type SubmissionMessage = {

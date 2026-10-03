@@ -27,6 +27,8 @@ export type OwnedAddon = {
   library: boolean
   addedAt: string | null
   reviewHistory: ReviewHistoryEntry[]
+  webhookEnabled: boolean
+  webhookLastEventAt: string | null
 }
 
 export type OwnedSubmissionPayload = {

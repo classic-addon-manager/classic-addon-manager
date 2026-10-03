@@ -12,7 +12,12 @@ import { fetchAddonCatalog } from '@/lib/catalog'
 import type { AddonManifest } from '@/lib/wails'
 
 export type GetOwnedAddonsResult =
-  | { status: 'ok'; addons: OwnedAddon[]; submissions: OwnedSubmission[] }
+  | {
+      status: 'ok'
+      addons: OwnedAddon[]
+      submissions: OwnedSubmission[]
+      webhookInstallUrl: string
+    }
   | { status: 'unauthorized'; message: string }
   | { status: 'error'; message: string }
 
@@ -32,6 +37,7 @@ export function sourcesToOwned(
 ): {
   addons: OwnedAddon[]
   submissions: OwnedSubmission[]
+  webhookInstallUrl: string
 } {
   const manifestByName = new Map(manifests.map(manifest => [manifest.name, manifest]))
   const published = new Set(sources.addons.map(addon => addon.name))
@@ -54,6 +60,7 @@ export function sourcesToOwned(
       toOwnedAddon(addon, manifestByName.get(addon.name), historyByName.get(addon.name) ?? [])
     ),
     submissions: [...standalone, ...[...historyByName.values()].flat().map(toOwnedSubmission)],
+    webhookInstallUrl: sources.webhookInstallUrl,
   }
 }
 
@@ -89,6 +96,8 @@ function toOwnedAddon(
     library: manifest?.library ?? false,
     addedAt: null,
     reviewHistory: toReviewHistory(submissions),
+    webhookEnabled: addon.webhookEnabled,
+    webhookLastEventAt: addon.webhookLastEventAt,
   }
 }
 

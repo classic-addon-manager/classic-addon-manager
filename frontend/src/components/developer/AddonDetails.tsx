@@ -1,5 +1,5 @@
 import { Browser } from '@wailsio/runtime'
-import { BarChart3, GithubIcon, History, LayoutList, LoaderCircle } from 'lucide-react'
+import { BarChart3, GithubIcon, History, LayoutList, LoaderCircle, Zap } from 'lucide-react'
 import { useState } from 'react'
 
 import { AddonEditPanel } from '@/components/developer/AddonEditPanel'
@@ -15,17 +15,19 @@ import { useDevAddonValues } from '@/components/developer/useDevAddonValues.ts'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { formatToLocalDate } from '@/lib/utils'
+import { cn, formatToLocalDate, timeAgo } from '@/lib/utils'
 
 const tabChip =
   'flex-none rounded-full border border-border px-3 py-1.5 text-muted-foreground hover:border-foreground/20 hover:text-foreground data-[state=active]:border-primary/40 data-[state=active]:bg-primary/15 data-[state=active]:text-primary-foreground dark:data-[state=active]:text-primary'
 
 export function AddonDetails({
   addon,
+  webhookInstallUrl,
   onSelect,
   onRefresh,
 }: {
   addon: OwnedAddon
+  webhookInstallUrl: string
   onSelect: (key: string) => void
   onRefresh: () => Promise<void>
 }) {
@@ -176,6 +178,41 @@ export function AddonDetails({
                 <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm">
                   {display.warning}
                 </p>
+              )}
+              {(display.webhookEnabled || webhookInstallUrl !== '') && (
+                <section className="flex items-center justify-between gap-3 rounded-xl border bg-card/40 px-4 py-3 text-sm">
+                  <div className="flex min-w-0 flex-1 items-start gap-3">
+                    <Zap
+                      aria-hidden
+                      className={cn(
+                        'mt-0.5 size-4 shrink-0',
+                        display.webhookEnabled ? 'text-primary' : 'text-muted-foreground'
+                      )}
+                    />
+                    <div className="min-w-0">
+                      <h3 className="font-medium">
+                        Instant updates: {display.webhookEnabled ? 'on' : 'off'}
+                      </h3>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {!display.webhookEnabled
+                          ? "Install the GitHub App on this addon's repository. Org repos need an org owner to install."
+                          : display.webhookLastEventAt
+                            ? `Last release event ${timeAgo(display.webhookLastEventAt)}`
+                            : 'No release events yet'}
+                      </p>
+                    </div>
+                  </div>
+                  {!display.webhookEnabled && webhookInstallUrl !== '' && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="shrink-0"
+                      onClick={() => void Browser.OpenURL(webhookInstallUrl)}
+                    >
+                      Enable
+                    </Button>
+                  )}
+                </section>
               )}
               <section className="space-y-3">
                 <h3 className="text-sm font-medium">Listing details</h3>

@@ -146,5 +146,17 @@ export function daysAgo(dateString: string): number {
   return Math.floor(diff / (1000 * 60 * 60 * 24))
 }
 
+/**
+ * Compact relative time for a go date string, such as "5m ago" or "2h ago".
+ */
+export function timeAgo(dateString: string): string {
+  const minutes = Math.floor((Date.now() - new Date(dateString).getTime()) / 60_000)
+  if (minutes < 1) return 'just now'
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  return `${Math.floor(hours / 24)}d ago`
+}
+
 /** Number of days after `added_at` during which an addon counts as "new". */
 export const NEW_ADDON_DAYS = 32

@@ -9,6 +9,7 @@ import { useUserStore } from '@/stores/userStore'
 export type OwnedAddonsData = {
   addons: OwnedAddon[]
   submissions: OwnedSubmission[]
+  webhookInstallUrl: string
 }
 
 export function useOwnedAddons(enabled: boolean): {
@@ -29,7 +30,11 @@ export function useOwnedAddons(enabled: boolean): {
     queryFn: async (): Promise<OwnedAddonsData> => {
       const result = await getOwnedAddons()
       if (result.status !== 'ok') throw new Error(result.message)
-      return { addons: result.addons, submissions: result.submissions }
+      return {
+        addons: result.addons,
+        submissions: result.submissions,
+        webhookInstallUrl: result.webhookInstallUrl,
+      }
     },
   })
 
@@ -51,7 +56,7 @@ export function useOwnedAddons(enabled: boolean): {
     queryClient.setQueryData<OwnedAddonsData>(queryKey, current =>
       current
         ? {
-            addons: current.addons,
+            ...current,
             submissions: current.submissions.filter(submission => submission.id !== id),
           }
         : current

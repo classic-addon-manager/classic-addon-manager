@@ -153,6 +153,7 @@ export function DeveloperWorkspace({
           <AddonDetails
             key={selected.key}
             addon={selected.addon}
+            webhookInstallUrl={data.webhookInstallUrl}
             onSelect={onSelectionChange}
             onRefresh={onRefresh}
           />
@@ -447,6 +448,8 @@ function SubmissionDetails({
               warning: null,
               addedAt: null,
               reviewHistory: [],
+              webhookEnabled: false,
+              webhookLastEventAt: null,
             }}
             initialForm={form}
             initialSubmissionId={submission.id}
