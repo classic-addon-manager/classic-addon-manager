@@ -2,7 +2,7 @@ import { Browser } from '@wailsio/runtime'
 import { BugIcon, GithubIcon } from 'lucide-react'
 import { useState } from 'react'
 
-import { Icon } from '@/components/addons/RemoteAddon/Icon.tsx'
+import { AddonIcon } from '@/components/shared/AddonIcon'
 import { Button } from '@/components/ui/button.tsx'
 import { DialogTitle } from '@/components/ui/dialog'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip.tsx'
@@ -49,7 +49,7 @@ export const Header = ({ manifest, release }: HeaderProps) => {
         )}
       >
         <div className="overflow-hidden rounded-xl ring-1 ring-primary/20">
-          <Icon manifest={manifest} iconUrl={iconUrl} prominent />
+          <AddonIcon name={manifest.alias} src={iconUrl} size="lg" />
         </div>
       </div>
 

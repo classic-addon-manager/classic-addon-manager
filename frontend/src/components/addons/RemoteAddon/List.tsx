@@ -1,11 +1,27 @@
+import { CheckIcon } from 'lucide-react'
+
+import { AddonIcon } from '@/components/shared/AddonIcon'
+
 import { ActionButton } from './ActionButton'
-import { Icon } from './Icon'
-import { NewBadge } from './NewBadge'
-import { Stats } from './Stats'
-import { TagPills } from './TagPills'
+import { listRowGridClass } from './listLayout'
+import { DownloadMeter, LikeRing } from './ListStats'
+import { TagDots } from './TagDots'
 import type { RemoteAddonItemProps } from './types'
 import { useRemoteAddonItem } from './useRemoteAddonItem'
 import { WarningIcon } from './WarningIcon'
+
+export const ListHeader = () => (
+  <div
+    className={`${listRowGridClass} px-3 pb-1 text-[10px] uppercase tracking-widest text-muted-foreground/70`}
+  >
+    <span />
+    <span>Addon</span>
+    <span className="hidden md:block">Tags</span>
+    <span className="text-right">Downloads</span>
+    <span className="text-right">Liked</span>
+    <span />
+  </div>
+)
 
 export const List = ({ manifest, installed }: RemoteAddonItemProps) => {
   const { isNew, iconUrl, openDialog } = useRemoteAddonItem({
@@ -15,39 +31,46 @@ export const List = ({ manifest, installed }: RemoteAddonItemProps) => {
 
   return (
     <div
-      className="grid grid-cols-12 items-center gap-2 bg-muted/30 hover:bg-muted/50 h-16 w-full rounded-xl cursor-pointer transition-all px-4 py-2 border border-border/50 hover:border-primary/30 hover:shadow-sm hover:ring-1 hover:ring-primary/10 group"
+      className={`${listRowGridClass} group relative w-full cursor-pointer px-3 py-2.5 transition-colors hover:bg-muted/50 before:absolute before:inset-y-2.5 before:left-0 before:w-0.5 before:rounded-full before:bg-primary before:scale-y-0 before:transition-transform hover:before:scale-y-100`}
       onClick={openDialog}
     >
-      <div className="flex items-center gap-3 col-span-5">
-        <div className="relative shrink-0">
-          <Icon manifest={manifest} iconUrl={iconUrl} />
-          <NewBadge isNew={isNew} />
-        </div>
-        <div className="flex flex-col overflow-hidden">
-          <div className="flex items-center gap-1.5 overflow-hidden">
-            <span className="text-foreground font-medium truncate group-hover:text-primary transition-colors">
-              {manifest.alias}
+      <div className="relative">
+        <AddonIcon name={manifest.alias} src={iconUrl} />
+        {installed && (
+          <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-background bg-green-500 text-background">
+            <CheckIcon className="h-2 w-2 stroke-[4]" />
+          </span>
+        )}
+      </div>
+
+      <div className="min-w-0">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="truncate font-medium text-foreground transition-colors group-hover:text-primary">
+            {manifest.alias}
+          </span>
+          {isNew && (
+            <span className="shrink-0 rounded-sm bg-primary px-1.5 py-0.5 text-[10px] font-semibold leading-none tracking-wider text-primary-foreground">
+              NEW
             </span>
-            <WarningIcon warning={manifest.warning} />
-          </div>
-          <div className="mt-0.5">
-            <Stats manifest={manifest} />
-          </div>
+          )}
+          <WarningIcon warning={manifest.warning} chip />
+        </div>
+        <div className="mt-0.5 truncate text-xs text-muted-foreground/70">
+          <span className="text-muted-foreground" title={`Author: ${manifest.author}`}>
+            {manifest.author}
+          </span>
+          {manifest.description && ` · ${manifest.description}`}
         </div>
       </div>
 
-      <div
-        className="text-sm text-muted-foreground truncate text-center col-span-3"
-        title={`Author: ${manifest.author}`}
-      >
-        {manifest.author}
+      <div className="hidden min-w-0 md:block">
+        <TagDots tags={manifest.tags} maxTags={3} />
       </div>
 
-      <div className="col-span-3 flex justify-end">
-        <TagPills tags={manifest.tags} maxTags={4} />
-      </div>
+      <DownloadMeter downloads={manifest.downloads} />
+      <LikeRing percentage={manifest.like_percentage} />
 
-      <div className="flex justify-end col-span-1">
+      <div className="flex justify-end">
         <ActionButton installed={installed} />
       </div>
     </div>

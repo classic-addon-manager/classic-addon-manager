@@ -1,39 +1,36 @@
-import { CheckIcon, DownloadIcon } from 'lucide-react'
-
-import { Button } from '@/components/ui/button'
+import { ArrowRightIcon, CheckIcon } from 'lucide-react'
 
 interface ActionButtonProps {
   installed: boolean
   compact?: boolean
 }
 
+/** Expands to a "View" pill when the surrounding `group` is hovered. */
 export const ActionButton = ({ installed, compact = false }: ActionButtonProps) => {
-  const iconClass = compact ? 'h-4 w-4' : 'h-5 w-5'
-  const buttonClass = compact ? 'h-7 w-7' : undefined
+  const heightClass = compact ? 'h-6' : 'h-8'
+  const iconClass = compact ? 'h-3.5 w-3.5' : 'h-4 w-4'
 
   if (installed) {
     return (
-      <Button
-        variant="ghost"
-        size="icon"
-        className={`cursor-default text-green-500 focus-visible:ring-0 focus-visible:ring-offset-0 ${buttonClass ?? ''}`}
-        disabled={true}
-        aria-label="Installed"
-        tabIndex={-1}
+      <span
+        className={`inline-flex items-center font-medium text-green-500 ${heightClass} ${compact ? 'gap-1 text-[11px]' : 'gap-1.5 px-2 text-xs'}`}
       >
         <CheckIcon className={iconClass} />
-      </Button>
+        Installed
+      </span>
     )
   }
 
   return (
-    <Button
-      variant="ghost"
-      size="icon"
-      aria-label="View details and install"
-      className={`cursor-pointer text-muted-foreground hover:text-primary focus-visible:ring-primary/40 ${buttonClass ?? ''}`}
+    <button
+      type="button"
+      aria-label="View details"
+      className={`group/view inline-flex cursor-pointer items-center font-semibold text-muted-foreground/70 outline-none transition-all group-hover:bg-primary group-hover:text-primary-foreground focus-visible:bg-primary focus-visible:text-primary-foreground ${heightClass} ${compact ? 'rounded-md px-1 text-[11px] group-hover:px-2 focus-visible:px-2' : 'rounded-lg px-2 text-xs group-hover:px-3 focus-visible:px-3'}`}
     >
-      <DownloadIcon className={iconClass} />
-    </Button>
+      <span className="max-w-0 overflow-hidden opacity-0 transition-all group-hover:mr-1.5 group-hover:max-w-12 group-hover:opacity-100 group-focus-visible/view:mr-1.5 group-focus-visible/view:max-w-12 group-focus-visible/view:opacity-100">
+        View
+      </span>
+      <ArrowRightIcon className={iconClass} />
+    </button>
   )
 }

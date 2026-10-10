@@ -22,7 +22,7 @@ import { AddonRatingButtons } from '@/components/dashboard/AddonRatingButtons'
 import { AddonRepositoryMatch } from '@/components/dashboard/AddonRepositoryMatch'
 import { localUpdateDialogOpenAtom } from '@/components/dashboard/atoms'
 import { catalogIconMapAtom } from '@/components/dashboard/iconMap'
-import { AddonIconImage } from '@/components/shared/AddonIconImage'
+import { AddonIcon } from '@/components/shared/AddonIcon'
 import { Readme } from '@/components/shared/Readme'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -179,13 +179,7 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
       <div className="shrink-0 border-b px-6 py-5">
         <div className="flex items-start gap-4">
           <div className="shrink-0">
-            <AddonIconImage
-              src={iconUrl}
-              alt={`${addon.alias} icon`}
-              imageClassName="h-14 w-14 rounded-xl object-cover border border-border/50 shadow-sm"
-              fallbackClassName="flex items-center justify-center h-14 w-14 rounded-xl bg-muted border border-border/50"
-              fallbackIconClassName="h-7 w-7 opacity-40 stroke-[1.5]"
-            />
+            <AddonIcon name={addon.alias} src={iconUrl} size="lg" className="shadow-sm" />
           </div>
 
           <div className="flex-1 min-w-0">

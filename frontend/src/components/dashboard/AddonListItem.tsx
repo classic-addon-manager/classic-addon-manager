@@ -2,7 +2,7 @@ import { useAtomValue } from 'jotai'
 import { Check, Download, LoaderCircle } from 'lucide-react'
 
 import { catalogIconMapAtom } from '@/components/dashboard/iconMap'
-import { AddonIconImage } from '@/components/shared/AddonIconImage'
+import { AddonIcon } from '@/components/shared/AddonIcon'
 import { hasAddonUpdate } from '@/lib/addonUpdate'
 import { cn } from '@/lib/utils'
 import type { Addon } from '@/lib/wails'
@@ -32,13 +32,7 @@ export const AddonListItem = ({ addon, isSelected, onClick }: AddonListItemProps
       )}
     >
       <div className="shrink-0">
-        <AddonIconImage
-          src={iconUrl}
-          alt={`${addon.alias} icon`}
-          imageClassName="h-9 w-9 rounded-lg object-cover border border-border/50 shadow-xs"
-          fallbackClassName="flex items-center justify-center h-9 w-9 rounded-lg bg-background border border-border/50 shadow-xs"
-          fallbackIconClassName="h-4 w-4 opacity-40 stroke-[1.5]"
-        />
+        <AddonIcon name={addon.alias} src={iconUrl} size="sm" />
       </div>
 
       <div className="flex-1 min-w-0">

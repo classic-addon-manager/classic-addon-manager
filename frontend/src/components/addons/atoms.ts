@@ -2,7 +2,7 @@ import { atom } from 'jotai'
 
 import { addonCatalogQuery, fetchAddonCatalog } from '@/lib/catalog'
 import { queryClient } from '@/lib/queryClient'
-import { daysAgo, NEW_ADDON_DAYS } from '@/lib/utils'
+import { isNewAddon } from '@/lib/utils'
 import type { AddonManifest } from '@/lib/wails'
 import { LocalAddonService, RemoteAddonService } from '@/lib/wails'
 
@@ -53,8 +53,8 @@ export const loadAddonsAtom = atom(null, async (get, set, force?: boolean) => {
 
     // Sort addons
     tmp.sort((a, b) => {
-      const aIsNew = daysAgo(a.manifest.added_at) < NEW_ADDON_DAYS
-      const bIsNew = daysAgo(b.manifest.added_at) < NEW_ADDON_DAYS
+      const aIsNew = isNewAddon(a.manifest.added_at)
+      const bIsNew = isNewAddon(b.manifest.added_at)
 
       if (aIsNew && !bIsNew) return -1
       if (!aIsNew && bIsNew) return 1
@@ -80,6 +80,10 @@ export const loadAddonsAtom = atom(null, async (get, set, force?: boolean) => {
     return false
   }
 })
+
+export const maxDownloadsAtom = atom(get =>
+  get(addonsAtom).reduce((max, item) => Math.max(max, item.manifest.downloads), 0)
+)
 
 export const filteredAddonsAtom = atom(get => {
   const addons = get(addonsAtom)

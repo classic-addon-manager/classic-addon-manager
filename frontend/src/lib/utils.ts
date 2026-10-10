@@ -160,3 +160,5 @@ export function timeAgo(dateString: string): string {
 
 /** Number of days after `added_at` during which an addon counts as "new". */
 export const NEW_ADDON_DAYS = 32
+
+export const isNewAddon = (addedAt: string): boolean => daysAgo(addedAt) < NEW_ADDON_DAYS
