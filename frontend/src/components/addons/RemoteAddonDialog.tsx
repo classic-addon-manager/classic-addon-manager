@@ -59,11 +59,10 @@ export const RemoteAddonDialog = ({
     onAddonUninstalled,
   })
 
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="flex max-h-[90svh] min-h-[500px] w-full max-w-0 min-w-[650px] flex-col gap-0 overflow-hidden p-0 md:max-w-[70svw] lg:max-w-[850px]"
+        className="flex max-h-[90svh] min-h-[500px] w-full max-w-0 min-w-[650px] flex-col gap-0 overflow-hidden p-0 outline-none md:max-w-[70svw] lg:max-w-[850px]"
         onOpenAutoFocus={event => {
           // Focusing the first control would pop its tooltip open on every dialog open.
           event.preventDefault()

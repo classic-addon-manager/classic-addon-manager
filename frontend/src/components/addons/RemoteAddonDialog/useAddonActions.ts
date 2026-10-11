@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangleIcon } from 'lucide-react'
+import { useEffect } from 'react'
 
 import { toast } from '@/components/ui/toast.tsx'
+import { addonDependenciesQuery, addonReleaseQuery } from '@/lib/addonQueries'
 import { notifyDependencyResult } from '@/lib/notifyDependencyResult'
 import { useAddonReadme } from '@/lib/repo'
 import { safeCall } from '@/lib/utils.ts'
@@ -41,55 +43,47 @@ export const useAddonActions = ({
     },
   })
 
-  const releaseQuery = useQuery({
-    queryKey: ['addon-release', manifest.name],
-    enabled: open,
-    retry: false,
-    queryFn: async () => {
-      const [r, err] = await safeCall(RemoteAddonService.GetLatestRelease(manifest.name))
-      if (err) {
-        toast({
-          title: 'Error',
-          description: `Failed to fetch release information for ${manifest.name}`,
-          icon: AlertTriangleIcon,
-        })
-        console.error('Fetch release error: ', err)
-        throw err
-      }
-      return r
-    },
-  })
+  const releaseQuery = useQuery({ ...addonReleaseQuery(manifest.name), enabled: open })
 
   const readmeQuery = useAddonReadme(manifest.repo, manifest.branch, open)
 
   const dependenciesQuery = useQuery({
-    queryKey: ['addon-deps', manifest.name],
+    ...addonDependenciesQuery(manifest),
     enabled: open && manifest.dependencies.length > 0,
-    retry: false,
-    queryFn: async () => {
-      const [result, err] = await safeCall(RemoteAddonService.ResolveDependencies(manifest))
-      if (err || !result) {
-        toast({
-          title: 'Error',
-          description: `Failed to resolve dependencies for ${manifest.name}`,
-          icon: AlertTriangleIcon,
-        })
-        return []
-      }
-
-      if (result.errors.length > 0) {
-        console.warn('Dependency resolution errors:', result.errors)
-        // Show first error to user, log all errors
-        toast({
-          title: 'Dependency resolution warning',
-          description: result.errors[0],
-          icon: AlertTriangleIcon,
-        })
-      }
-
-      return result.dependencies
-    },
   })
+
+  // Errors are reported here rather than in the query functions so that prefetching the same
+  // queries from the addon list stays silent.
+  const releaseFailed = releaseQuery.isError
+  useEffect(() => {
+    if (!open || !releaseFailed) return
+    toast({
+      title: 'Error',
+      description: `Failed to fetch release information for ${manifest.name}`,
+      icon: AlertTriangleIcon,
+    })
+  }, [open, releaseFailed, manifest.name])
+
+  const dependenciesFailed = dependenciesQuery.isError
+  const dependencyErrors = dependenciesQuery.data?.errors
+  useEffect(() => {
+    if (!open) return
+    if (dependenciesFailed) {
+      toast({
+        title: 'Error',
+        description: `Failed to resolve dependencies for ${manifest.name}`,
+        icon: AlertTriangleIcon,
+      })
+    } else if (dependencyErrors && dependencyErrors.length > 0) {
+      console.warn('Dependency resolution errors:', dependencyErrors)
+      // Show first error to user, log all errors
+      toast({
+        title: 'Dependency resolution warning',
+        description: dependencyErrors[0],
+        icon: AlertTriangleIcon,
+      })
+    }
+  }, [open, dependenciesFailed, dependencyErrors, manifest.name])
 
   const readme =
     (readmeQuery.isError ? null : readmeQuery.data) ||
@@ -201,7 +195,6 @@ export const useAddonActions = ({
     uninstallMutation.mutate()
   }
 
-
   const handleDependencyClick = (depManifest: AddonManifest) => {
     onViewDependency(depManifest)
   }
@@ -210,7 +203,7 @@ export const useAddonActions = ({
     release,
     readme,
     changelog,
-    dependencies: dependenciesQuery.data ?? [],
+    dependencies: dependenciesQuery.data?.dependencies ?? [],
     isInstalled,
     isLoadingRelease: open && releaseQuery.isPending,
     isLoadingReadme: readmeQuery.isLoading,

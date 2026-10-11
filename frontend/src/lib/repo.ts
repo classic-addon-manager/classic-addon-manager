@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 
+import { addonReadmeQuery } from '@/lib/addonQueries'
 import { fetchAddonCatalog } from '@/lib/catalog'
-import { safeCall } from '@/lib/utils'
 import type { AddonManifest } from '@/lib/wails'
 
 export async function repoGetManifest(name: string): Promise<AddonManifest> {
@@ -20,23 +20,8 @@ export async function repoGetManifest(name: string): Promise<AddonManifest> {
  * can distinguish errors via `isError`.
  */
 export function useAddonReadme(repo: string, branch: string | undefined, enabled = true) {
-  const normalizedBranch = branch || 'main'
   return useQuery({
-    queryKey: ['addon-readme', repo, normalizedBranch],
+    ...addonReadmeQuery(repo, branch),
     enabled: enabled && !!repo,
-    retry: false,
-    queryFn: async (): Promise<string | null> => {
-      const [r, err] = await safeCall<Response>(
-        fetch(`https://raw.githubusercontent.com/${repo}/refs/heads/${normalizedBranch}/README.md`)
-      )
-      if (err) {
-        console.error('Error fetching README: ', err)
-        throw err
-      }
-      if (!r || !r.ok) {
-        return null
-      }
-      return r.text()
-    },
   })
 }

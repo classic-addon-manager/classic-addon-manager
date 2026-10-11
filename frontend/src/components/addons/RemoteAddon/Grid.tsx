@@ -10,7 +10,7 @@ import { useRemoteAddonItem } from './useRemoteAddonItem'
 import { WarningIcon } from './WarningIcon'
 
 export const Grid = ({ manifest, installed }: RemoteAddonItemProps) => {
-  const { isNew, iconUrl, openDialog } = useRemoteAddonItem({
+  const { isNew, iconUrl, openDialog, prefetchHandlers } = useRemoteAddonItem({
     manifest,
     installed,
   })
@@ -19,6 +19,7 @@ export const Grid = ({ manifest, installed }: RemoteAddonItemProps) => {
     <div
       className="group flex h-full cursor-pointer flex-col overflow-hidden rounded-xl border border-border/60 bg-muted/20 transition-colors hover:border-primary/35 hover:bg-muted/50"
       onClick={openDialog}
+      {...prefetchHandlers}
     >
       <div className="flex min-w-0 items-center gap-2.5 px-3 pt-3">
         <div className="relative shrink-0">

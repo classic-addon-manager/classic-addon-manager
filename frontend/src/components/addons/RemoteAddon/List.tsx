@@ -24,7 +24,7 @@ export const ListHeader = () => (
 )
 
 export const List = ({ manifest, installed }: RemoteAddonItemProps) => {
-  const { isNew, iconUrl, openDialog } = useRemoteAddonItem({
+  const { isNew, iconUrl, openDialog, prefetchHandlers } = useRemoteAddonItem({
     manifest,
     installed,
   })
@@ -33,6 +33,7 @@ export const List = ({ manifest, installed }: RemoteAddonItemProps) => {
     <div
       className={`${listRowGridClass} group relative w-full cursor-pointer px-3 py-2.5 transition-colors hover:bg-muted/50 before:absolute before:inset-y-2.5 before:left-0 before:w-0.5 before:rounded-full before:bg-primary before:scale-y-0 before:transition-transform hover:before:scale-y-100`}
       onClick={openDialog}
+      {...prefetchHandlers}
     >
       <div className="relative">
         <AddonIcon name={manifest.alias} src={iconUrl} />
