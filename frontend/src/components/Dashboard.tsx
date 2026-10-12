@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { useSetAtom } from 'jotai'
+import { useAtomValue, useSetAtom } from 'jotai'
 import { Blocks, LoaderCircle, Package, PackageSearch, Upload } from 'lucide-react'
 import { useEffect } from 'react'
 
@@ -7,7 +7,7 @@ import { listAnimations } from '@/animations/listAnimations'
 import { activePageAtom } from '@/atoms/sidebarAtoms'
 import { AddonDetailsPane } from '@/components/dashboard/AddonDetailsPane'
 import { AddonListItem } from '@/components/dashboard/AddonListItem'
-import { versionSelectAtom } from '@/components/dashboard/atoms'
+import { localUpdateDialogOpenAtom, versionSelectAtom } from '@/components/dashboard/atoms'
 import { DashboardToolbar } from '@/components/dashboard/DashboardToolbar'
 import { LocalAddonVersionSelectDialog } from '@/components/dashboard/index'
 import { LocalAddonUpdateDialog } from '@/components/dashboard/LocalAddonUpdateDialog'
@@ -68,6 +68,8 @@ export const Dashboard = () => {
 
   const { installedAddons, latestReleasesMap } = useAddonStore()
   const openVersionSelect = useSetAtom(versionSelectAtom)
+  // Stays mounted while open so the success state survives the addon no longer needing an update.
+  const updateDialogOpen = useAtomValue(localUpdateDialogOpenAtom)
 
   useEffect(() => {
     if (!selectedAddon && filteredAddons.length > 0) {
@@ -119,9 +121,11 @@ export const Dashboard = () => {
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
       <DashboardToolbar />
-      {selectedAddon && hasAddonUpdate(selectedAddon, latestReleaseForSelected) && (
-        <LocalAddonUpdateDialog addon={selectedAddon} release={latestReleaseForSelected} />
-      )}
+      {selectedAddon &&
+        latestReleaseForSelected &&
+        (updateDialogOpen || hasAddonUpdate(selectedAddon, latestReleaseForSelected)) && (
+          <LocalAddonUpdateDialog addon={selectedAddon} release={latestReleaseForSelected} />
+        )}
 
       {versionSelectAddon && <LocalAddonVersionSelectDialog addon={versionSelectAddon} />}
 

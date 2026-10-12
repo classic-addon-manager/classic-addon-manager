@@ -108,38 +108,38 @@
 }
 
 .dark {
-  --background: oklch(0.1450 0 0);
-  --foreground: oklch(0.9850 0 0);
-  --card: oklch(0.2050 0 0);
-  --card-foreground: oklch(0.9850 0 0);
-  --popover: oklch(0.2690 0 0);
-  --popover-foreground: oklch(0.9850 0 0);
-  --primary: oklch(0.8300 0.0950 80);
-  --primary-foreground: oklch(0.2050 0 0);
-  --secondary: oklch(0.2690 0 0);
-  --secondary-foreground: oklch(0.9850 0 0);
-  --muted: oklch(0.2690 0 0);
-  --muted-foreground: oklch(0.7080 0 0);
-  --accent: oklch(0.3710 0 0);
-  --accent-foreground: oklch(0.9850 0 0);
-  --destructive: oklch(0.7040 0.1910 22.2160);
-  --destructive-foreground: oklch(0.9850 0 0);
-  --border: oklch(0.2750 0 0);
-  --input: oklch(0.3250 0 0);
-  --ring: oklch(0.8300 0.0950 80);
-  --chart-1: oklch(0.8300 0.0950 80);
-  --chart-2: oklch(0.7500 0.1000 80);
-  --chart-3: oklch(0.6700 0.1050 80);
-  --chart-4: oklch(0.5900 0.1100 80);
-  --chart-5: oklch(0.5100 0.1150 80);
-  --sidebar: oklch(0.2050 0 0);
-  --sidebar-foreground: oklch(0.9850 0 0);
-  --sidebar-primary: oklch(0.8300 0.0950 80);
-  --sidebar-primary-foreground: oklch(0.9850 0 0);
-  --sidebar-accent: oklch(0.2690 0 0);
-  --sidebar-accent-foreground: oklch(0.9850 0 0);
-  --sidebar-border: oklch(0.2750 0 0);
-  --sidebar-ring: oklch(0.8300 0.0950 80);
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.269 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.83 0.095 80);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.371 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.275 0 0);
+  --input: oklch(0.325 0 0);
+  --ring: oklch(0.83 0.095 80);
+  --chart-1: oklch(0.83 0.095 80);
+  --chart-2: oklch(0.75 0.1 80);
+  --chart-3: oklch(0.67 0.105 80);
+  --chart-4: oklch(0.59 0.11 80);
+  --chart-5: oklch(0.51 0.115 80);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.83 0.095 80);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(0.275 0 0);
+  --sidebar-ring: oklch(0.83 0.095 80);
 }
 
 @layer base {
@@ -164,7 +164,7 @@
 * {
   user-select: none;
   user-drag: none;
-  -webkit-user-drag: none
+  -webkit-user-drag: none;
 }
 
 .drag-region {
@@ -258,15 +258,15 @@
 }
 
 .content-wrapper {
-    position: fixed;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    width: 95vw;
-    height: 95vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 95vw;
+  height: 95vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* AI Chat Dialog Styles */
@@ -392,6 +392,46 @@
 
 .chat-prose pre .stream-markdown-tail {
   white-space: pre;
+}
+
+/* Release notes in the addon update dialog. Unlayered so it beats Readme's heading utilities. */
+.release-notes {
+  @apply text-sm leading-relaxed text-muted-foreground;
+}
+
+.release-notes :is(h1, h2, h3, h4, h5, h6) {
+  @apply relative mt-5 mb-2 border-0 pb-0 text-xs font-semibold tracking-wider text-foreground uppercase;
+}
+
+.release-notes .contents > :first-child {
+  @apply mt-0;
+}
+
+.release-notes :is(ul, ol) {
+  @apply my-2;
+}
+
+.release-notes li::marker {
+  @apply text-primary/60;
+}
+
+.release-notes strong {
+  @apply text-foreground;
+}
+
+/* Changelogs with headings get a rail, with each heading as a dot on it. */
+.release-notes-timeline {
+  @apply relative pl-6;
+}
+
+.release-notes-timeline::before {
+  content: '';
+  @apply absolute top-6 bottom-8 left-[9px] w-px bg-primary/30;
+}
+
+.release-notes-timeline :is(h1, h2, h3, h4, h5, h6)::before {
+  content: '';
+  @apply absolute top-1/2 -left-[19px] size-2 -translate-y-1/2 rounded-full bg-primary ring-4 ring-primary/15;
 }
 
 /* PublishAddonForm pass entrance */
