@@ -11,7 +11,6 @@ import {
   LoaderCircle,
   MenuIcon,
   PackageIcon,
-  RefreshCw,
   Tag,
   Trash2Icon,
   User,
@@ -36,10 +35,9 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { toast } from '@/components/ui/toast'
 import { hasAddonUpdate } from '@/lib/addonUpdate'
-import { notifyDependencyResult } from '@/lib/notifyDependencyResult'
-import { repoGetManifest, useAddonReadme } from '@/lib/repo'
+import { useAddonReadme } from '@/lib/repo'
 import { formatToLocalTime, safeCall } from '@/lib/utils'
-import type { Addon, AddonManifest } from '@/lib/wails'
+import type { Addon } from '@/lib/wails'
 import { LocalAddonService } from '@/lib/wails'
 import { useAddonStore } from '@/stores/addonStore'
 
@@ -68,8 +66,7 @@ const DetailsLoading = () => (
 )
 
 const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPaneProps) => {
-  const { installWithDependencies, uninstall, unmanage, latestReleasesMap, isCheckingForUpdates } =
-    useAddonStore()
+  const { uninstall, unmanage, latestReleasesMap, isCheckingForUpdates } = useAddonStore()
   const [updateDialogOpen, setUpdateDialogOpen] = useAtom(localUpdateDialogOpenAtom)
   const readmeQuery = useAddonReadme(addon.repo, addon.branch)
   const fallbackReadme = addon.description || 'No description provided'
@@ -79,55 +76,6 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
   const latestRelease = latestReleasesMap.get(addon.name)
   const hasUpdate = hasAddonUpdate(addon, latestRelease)
   const iconUrl = useAtomValue(catalogIconMapAtom).get(addon.name) ?? null
-
-  const handleReinstall = async () => {
-    const [manifest, manifestError] = await safeCall<AddonManifest>(repoGetManifest(addon.name))
-
-    if (manifestError || !manifest) {
-      if (manifestError?.message.includes('no release found')) {
-        toast({
-          title: 'Error',
-          description: 'No release found for this addon',
-          icon: AlertTriangleIcon,
-        })
-      } else {
-        toast({
-          title: 'Error',
-          description: 'Failed to fetch manifest during reinstall, try again later',
-        })
-      }
-      return
-    }
-
-    try {
-      const result = await installWithDependencies(manifest, 'latest')
-
-      if (!notifyDependencyResult(result, `Failed to reinstall ${addon.alias}`)) {
-        return
-      }
-
-      toast({
-        title: 'Addon reinstalled',
-        description: `${addon.alias} was reinstalled`,
-        icon: CheckIcon,
-      })
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err)
-      if (message.includes('no release found')) {
-        toast({
-          title: 'Error',
-          description: 'No release found for this addon',
-          icon: AlertTriangleIcon,
-        })
-      } else {
-        toast({
-          title: 'Error',
-          description: `Failed to reinstall addon: ${message.substring(0, 100)}`,
-        })
-      }
-      console.error('Reinstall error:', err)
-    }
-  }
 
   const handleUninstall = async () => {
     const didUninstall = await uninstall(addon)
@@ -255,11 +203,7 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onOpenVersionSelect(addon)}>
                     <GitBranchIcon className="w-4 h-4" />
-                    Other Version
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleReinstall}>
-                    <RefreshCw className="w-4 h-4" />
-                    Reinstall
+                    Install Version
                   </DropdownMenuItem>
                 </>
               )}
