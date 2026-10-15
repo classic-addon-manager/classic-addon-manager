@@ -145,29 +145,29 @@ export function useDeclarationForm({
     setPublishError('This submission is no longer open.')
   }
 
+  const performResume = async (id: number) => {
+    const schema = await requireAddonSchema()
+    if (!schema) {
+      setPublishError('This source is unavailable.')
+      return
+    }
+    const result = await getAddonValues(resumeSource(id), schema)
+    if (result.status !== 'ok') {
+      setPublishError(result.message)
+      return
+    }
+    setSubmissionId(id)
+    setForm(valuesToForm(result.values))
+    clearResult()
+    setFieldErrors({})
+    setEditable(true)
+    onResumed?.(result.kind)
+  }
+
   const resume = async (id: number) => {
     if (busy) return
     setResuming(true)
-    try {
-      const schema = await requireAddonSchema()
-      if (!schema) {
-        setPublishError('This source is unavailable.')
-        return
-      }
-      const result = await getAddonValues(resumeSource(id), schema)
-      if (result.status !== 'ok') {
-        setPublishError(result.message)
-        return
-      }
-      setSubmissionId(id)
-      setForm(valuesToForm(result.values))
-      clearResult()
-      setFieldErrors({})
-      setEditable(true)
-      onResumed?.(result.kind)
-    } finally {
-      setResuming(false)
-    }
+    await performResume(id).finally(() => setResuming(false))
   }
 
   const validate = async () => {
@@ -181,27 +181,20 @@ export function useDeclarationForm({
       const result = await validateAddon(form, submissionId)
       if (result.status === 'not_open') {
         markNotOpen()
-        return
-      }
-      if (result.status === 'already_open') {
+      } else if (result.status === 'already_open') {
         setAlreadyOpenId(result.id)
-        return
-      }
-      if (result.status === 'error') {
+      } else if (result.status === 'error') {
         setValidationError(true)
-        return
-      }
-      if (result.status === 'valid') {
+      } else if (result.status === 'valid') {
         validationPassed = true
-        return
+      } else {
+        applyInvalidResult(result.fields)
       }
-      applyInvalidResult(result.fields)
     } catch {
       setValidationError(true)
-    } finally {
-      setValidated(validationPassed)
-      setValidating(false)
     }
+    setValidated(validationPassed)
+    setValidating(false)
   }
 
   const submit = async () => {
@@ -219,27 +212,20 @@ export function useDeclarationForm({
           icon: CheckIcon,
         })
         onSubmitted()
-        return
-      }
-      if (result.status === 'already_open') {
+      } else if (result.status === 'already_open') {
         setAlreadyOpenId(result.id)
-        return
-      }
-      if (result.status === 'invalid') {
+      } else if (result.status === 'invalid') {
         setValidated(false)
         applyInvalidResult(result.fields)
-        return
-      }
-      if (result.status === 'not_open') {
+      } else if (result.status === 'not_open') {
         markNotOpen()
-        return
+      } else {
+        setPublishError(result.message)
       }
-      setPublishError(result.message)
     } catch {
       setPublishError("Couldn't publish this addon.")
-    } finally {
-      setSubmitting(false)
     }
+    setSubmitting(false)
   }
 
   /** Validates first, then submits once the declaration has passed validation. */

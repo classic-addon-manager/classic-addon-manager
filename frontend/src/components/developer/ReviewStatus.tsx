@@ -41,51 +41,51 @@ export function ReviewStatus({
     ],
   }
 
-  const handleWithdraw = async () => {
-    if (busy) return
-    setBusy(true)
-    try {
-      const result = await withdrawDeclaration(review.submissionId)
-      if (result.status === 'withdrawn') {
-        setWithdrawing(false)
-        setClosed(true)
-        toast({
-          title: 'Changes withdrawn',
-          description: 'The review is closed.',
-          icon: CheckIcon,
-        })
-        void onRefresh()
-        return
-      }
-      if (result.status === 'not_open') {
-        setWithdrawing(false)
-        setClosed(true)
-        toast({
-          title: 'Withdraw changes',
-          description: 'This review is no longer open.',
-          icon: AlertTriangleIcon,
-        })
-        void onRefresh()
-        return
-      }
-      if (result.status === 'not_found') {
-        setWithdrawing(false)
-        toast({
-          title: 'Withdraw changes',
-          description: result.message,
-          icon: AlertTriangleIcon,
-        })
-        void onRefresh()
-        return
-      }
+  const performWithdraw = async () => {
+    const result = await withdrawDeclaration(review.submissionId)
+    if (result.status === 'withdrawn') {
+      setWithdrawing(false)
+      setClosed(true)
+      toast({
+        title: 'Changes withdrawn',
+        description: 'The review is closed.',
+        icon: CheckIcon,
+      })
+      void onRefresh()
+      return
+    }
+    if (result.status === 'not_open') {
+      setWithdrawing(false)
+      setClosed(true)
+      toast({
+        title: 'Withdraw changes',
+        description: 'This review is no longer open.',
+        icon: AlertTriangleIcon,
+      })
+      void onRefresh()
+      return
+    }
+    if (result.status === 'not_found') {
+      setWithdrawing(false)
       toast({
         title: 'Withdraw changes',
         description: result.message,
         icon: AlertTriangleIcon,
       })
-    } finally {
-      setBusy(false)
+      void onRefresh()
+      return
     }
+    toast({
+      title: 'Withdraw changes',
+      description: result.message,
+      icon: AlertTriangleIcon,
+    })
+  }
+
+  const handleWithdraw = async () => {
+    if (busy) return
+    setBusy(true)
+    await performWithdraw().finally(() => setBusy(false))
   }
 
   return (

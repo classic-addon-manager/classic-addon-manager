@@ -234,52 +234,52 @@ function SubmissionDetails({
   const editable = open && !closed
   const fromHistory = backTo !== undefined
 
-  const handleWithdraw = async () => {
-    if (busy) return
-    setBusy(true)
-    try {
-      const result = await withdrawDeclaration(submission.id)
-      if (result.status === 'withdrawn') {
-        setWithdrawing(false)
-        toast({
-          title: 'Submission withdrawn',
-          description: 'The review is closed.',
-          icon: CheckIcon,
-        })
-        onDropSubmission(submission.id)
-        void onRefresh()
-        return
-      }
-      if (result.status === 'not_open') {
-        setWithdrawing(false)
-        setClosed(true)
-        toast({
-          title: 'Withdraw submission',
-          description: 'This submission is no longer open.',
-          icon: AlertTriangleIcon,
-        })
-        void onRefresh()
-        return
-      }
-      if (result.status === 'not_found') {
-        setWithdrawing(false)
-        toast({
-          title: 'Withdraw submission',
-          description: result.message,
-          icon: AlertTriangleIcon,
-        })
-        onDropSubmission(submission.id)
-        void onRefresh()
-        return
-      }
+  const performWithdraw = async () => {
+    const result = await withdrawDeclaration(submission.id)
+    if (result.status === 'withdrawn') {
+      setWithdrawing(false)
+      toast({
+        title: 'Submission withdrawn',
+        description: 'The review is closed.',
+        icon: CheckIcon,
+      })
+      onDropSubmission(submission.id)
+      void onRefresh()
+      return
+    }
+    if (result.status === 'not_open') {
+      setWithdrawing(false)
+      setClosed(true)
+      toast({
+        title: 'Withdraw submission',
+        description: 'This submission is no longer open.',
+        icon: AlertTriangleIcon,
+      })
+      void onRefresh()
+      return
+    }
+    if (result.status === 'not_found') {
+      setWithdrawing(false)
       toast({
         title: 'Withdraw submission',
         description: result.message,
         icon: AlertTriangleIcon,
       })
-    } finally {
-      setBusy(false)
+      onDropSubmission(submission.id)
+      void onRefresh()
+      return
     }
+    toast({
+      title: 'Withdraw submission',
+      description: result.message,
+      icon: AlertTriangleIcon,
+    })
+  }
+
+  const handleWithdraw = async () => {
+    if (busy) return
+    setBusy(true)
+    await performWithdraw().finally(() => setBusy(false))
   }
   if (loaded.loading || detail.loading) {
     return (

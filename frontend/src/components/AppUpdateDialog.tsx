@@ -54,9 +54,8 @@ export const AppUpdateDialog = () => {
         }
       } catch (error) {
         console.error('Failed to get latest release:', error)
-      } finally {
-        setUpdateCheckComplete(true)
       }
+      setUpdateCheckComplete(true)
     }
 
     void checkForUpdates()

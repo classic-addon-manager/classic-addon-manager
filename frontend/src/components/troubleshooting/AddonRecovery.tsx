@@ -45,48 +45,49 @@ export const AddonRecovery = () => {
   const onResetAddonSettings = async () => {
     if (resetting) return
     setResetting(true)
-    try {
-      const ok = await resetAddonSettings()
-      if (ok) setConfirm(null)
-    } finally {
-      setResetting(false)
+    await resetAddonSettings()
+      .then(ok => {
+        if (ok) setConfirm(null)
+      })
+      .finally(() => setResetting(false))
+  }
+
+  const performUninstallAll = async () => {
+    let i = 0
+    for (const a of installedAddons) {
+      let uninstalled = false
+      try {
+        uninstalled = await uninstall(a, { skipRefresh: true })
+      } catch {
+        uninstalled = false
+      }
+      if (!uninstalled) {
+        toast({
+          title: 'Error',
+          description: `Failed to uninstall addon: ${a.alias}`,
+          icon: AlertTriangleIcon,
+        })
+        return
+      }
+      i++
     }
+    toast({
+      title: 'Success',
+      description: `${i} ${i === 1 ? 'addon' : 'addons'} uninstalled. Restart the game.`,
+      icon: CheckIcon,
+    })
+    setConfirm(null)
+
+    await resetAddonSettings()
   }
 
   const onUninstallAllAddons = async () => {
     if (uninstalling) return
     setUninstalling(true)
-    try {
-      let i = 0
-      for (const a of installedAddons) {
-        let uninstalled = false
-        try {
-          uninstalled = await uninstall(a, { skipRefresh: true })
-        } catch {
-          uninstalled = false
-        }
-        if (!uninstalled) {
-          toast({
-            title: 'Error',
-            description: `Failed to uninstall addon: ${a.alias}`,
-            icon: AlertTriangleIcon,
-          })
-          return
-        }
-        i++
-      }
-      toast({
-        title: 'Success',
-        description: `${i} ${i === 1 ? 'addon' : 'addons'} uninstalled. Restart the game.`,
-        icon: CheckIcon,
-      })
-      setConfirm(null)
-
-      await resetAddonSettings()
-    } finally {
+    await performUninstallAll().finally(async () => {
       await refreshAfterLocalChange()
       setUninstalling(false)
-    }
+    })
   }
 
   return (

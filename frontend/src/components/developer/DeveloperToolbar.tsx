@@ -44,15 +44,13 @@ export function DeveloperToolbar({
     if (showSpinner) return
     setShowSpinner(true)
     const startTime = Date.now()
-    try {
-      await onRefresh()
-    } finally {
+    await onRefresh().finally(() => {
       const remaining = Math.max(0, 500 - (Date.now() - startTime))
       spinnerTimerRef.current = window.setTimeout(() => {
         spinnerTimerRef.current = null
         setShowSpinner(false)
       }, remaining)
-    }
+    })
   }
 
   const [highlightSubmissions, setHighlightSubmissions] = useState(false)
