@@ -2,7 +2,8 @@ import { Window } from '@wailsio/runtime'
 import { useSetAtom } from 'jotai'
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 
-import aacLogo from '@/assets/images/aac-logo-wide.webp'
+import aacLogo1x from '@/assets/images/aac-logo-wide@1x.webp'
+import aacLogo2x from '@/assets/images/aac-logo-wide@2x.webp'
 import { titleBarSlotAtom } from '@/atoms/titleBarAtoms'
 import { cn } from '@/lib/utils'
 
@@ -81,7 +82,12 @@ export function TitleBar() {
     >
       <div className="flex items-center">
         <div className="flex items-center gap-3 rounded-md px-2 py-1">
-          <img src={aacLogo} alt="AAC Logo" className="h-8 w-auto" />
+          <img
+            src={aacLogo1x}
+            srcSet={`${aacLogo1x} 1x, ${aacLogo2x} 2x`}
+            alt="AAC Logo"
+            className="h-8 w-auto"
+          />
         </div>
       </div>
 
