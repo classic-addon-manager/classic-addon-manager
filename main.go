@@ -153,7 +153,7 @@ func main() {
 		})
 	}
 
-	mainWindow := a.Window.NewWithOptions(application.WebviewWindowOptions{
+	mainWindowOptions := application.WebviewWindowOptions{
 		Title:            "Classic Addon Manager",
 		Name:             "main",
 		Width:            windowMinWidth,
@@ -168,7 +168,10 @@ func main() {
 		Linux: application.LinuxWindow{
 			WebviewGpuPolicy: application.WebviewGpuPolicyAlways,
 		},
-	})
+	}
+	applyWindowChrome := prepareWindowChrome(&mainWindowOptions)
+	mainWindow := a.Window.NewWithOptions(mainWindowOptions)
+	applyWindowChrome(mainWindow)
 	// Re-apply after restore/unmaximise: some platforms drop MinWidth/MinHeight.
 	// Do not call SetMinSize before a.Run() — beta.5 panics when app.impl is nil.
 	reapplyMinSize := func(_ *application.WindowEvent) {
