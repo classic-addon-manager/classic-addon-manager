@@ -21,4 +21,11 @@ func init() {
 	if os.Getenv("WEBKIT_DMABUF_RENDERER_FORCE_SHM") == "" {
 		_ = os.Setenv("WEBKIT_DMABUF_RENDERER_FORCE_SHM", "1")
 	}
+	// WebKitGTK 2.54's Skia compositor presents one frame of a layer's pre-animation
+	// state whenever an accelerated CSS animation ends, so dialogs flash back in at
+	// full opacity without their overlay when closing. The TextureMapper compositor
+	// keeps backdrop filters and does not glitch.
+	if os.Getenv("WEBKIT_USE_SKIA_FOR_COMPOSITION") == "" {
+		_ = os.Setenv("WEBKIT_USE_SKIA_FOR_COMPOSITION", "0")
+	}
 }
