@@ -15,6 +15,7 @@ import (
 	"ClassicAddonManager/backend/config"
 	"ClassicAddonManager/backend/file"
 	"ClassicAddonManager/backend/logger"
+	"ClassicAddonManager/backend/shared"
 )
 
 func TestGenerateUpdatesLuaQuotesEveryField(t *testing.T) {
@@ -194,6 +195,14 @@ func setupCheckForUpdatesDataDir(t *testing.T) {
 		localAddons = nil
 		localAddonsMu.Unlock()
 	})
+	stubUpdateCheckCatalog(t, nil)
+}
+
+func stubUpdateCheckCatalog(t *testing.T, manifests []shared.AddonManifest) {
+	t.Helper()
+	original := catalogForUpdateCheck
+	catalogForUpdateCheck = func() ([]shared.AddonManifest, error) { return manifests, nil }
+	t.Cleanup(func() { catalogForUpdateCheck = original })
 }
 
 func seedManagedAddonsFile(t *testing.T, addons ...Addon) {
@@ -283,6 +292,37 @@ func TestCheckForUpdatesUsesOneBulkRequest(t *testing.T) {
 	}
 	if got := updates["Gamma"]; got.Name != "Gamma" || got.Version != "3.1" {
 		t.Fatalf("updates[Gamma] = %+v, want {Name:Gamma Version:3.1}", got)
+	}
+}
+
+func TestCheckForUpdatesSkipsDeprecatedAddons(t *testing.T) {
+	setupCheckForUpdatesDataDir(t)
+	seedManagedAddonsFile(t,
+		Addon{Name: "Retired", Version: "1.0"},
+		Addon{Name: "Active", Version: "1.0"},
+	)
+	stubUpdateCheckCatalog(t, []shared.AddonManifest{
+		{Name: "Retired", Deprecated: true},
+		{Name: "Active"},
+	})
+
+	// Retired has no release info: a deprecated addon must not be reported as missing either.
+	stubAPIClient(t, roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(bulkReleasesBody(t, map[string]string{"Active": "2.0"})),
+		}, nil
+	}))
+
+	updates, err := CheckForUpdates()
+	if err != nil {
+		t.Fatalf("CheckForUpdates: %v", err)
+	}
+	if _, ok := updates["Retired"]; ok {
+		t.Fatalf("updates = %v, deprecated addon must not be offered", updates)
+	}
+	if got := updates["Active"]; got.Version != "2.0" {
+		t.Fatalf("updates = %v, want Active at 2.0", updates)
 	}
 }
 

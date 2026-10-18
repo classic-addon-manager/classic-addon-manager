@@ -1,6 +1,8 @@
 import { CheckIcon } from 'lucide-react'
 
 import { AddonIcon } from '@/components/shared/AddonIcon'
+import { DeprecatedIcon } from '@/components/shared/DeprecatedIcon'
+import { deprecationOf } from '@/lib/deprecation'
 
 import { ActionButton } from './ActionButton'
 import { DownloadMeter, LikeRing } from './ListStats'
@@ -14,6 +16,7 @@ export const Grid = ({ manifest, installed }: RemoteAddonItemProps) => {
     manifest,
     installed,
   })
+  const deprecation = deprecationOf(manifest)
 
   return (
     <div
@@ -40,7 +43,11 @@ export const Grid = ({ manifest, installed }: RemoteAddonItemProps) => {
                 NEW
               </span>
             )}
-            <WarningIcon warning={manifest.warning} compact />
+            {deprecation ? (
+              <DeprecatedIcon deprecation={deprecation} compact />
+            ) : (
+              <WarningIcon warning={manifest.warning} compact />
+            )}
           </div>
           <div
             className="truncate text-xs text-muted-foreground"
@@ -63,7 +70,7 @@ export const Grid = ({ manifest, installed }: RemoteAddonItemProps) => {
         <DownloadMeter downloads={manifest.downloads} />
         <LikeRing percentage={manifest.like_percentage} fixedWidth={false} />
         <div className="ml-auto flex shrink-0 whitespace-nowrap">
-          <ActionButton installed={installed} compact />
+          <ActionButton installed={installed} deprecated={deprecation !== null} compact />
         </div>
       </div>
     </div>

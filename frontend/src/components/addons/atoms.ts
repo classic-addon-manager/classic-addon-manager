@@ -33,14 +33,17 @@ export const loadAddonsAtom = atom(null, async (get, set, force?: boolean) => {
     const installedAddonNames = await LocalAddonService.GetAllInstalledAddonNames()
     const installedAddonSet = new Set(installedAddonNames)
 
-    const tmp: AddonListItem[] = manifests.map(manifest => ({
-      manifest,
-      isInstalled: installedAddonSet.has(manifest.name),
-    }))
+    // A deprecated addon is only listed for users who still have it, so they can remove it.
+    const tmp: AddonListItem[] = manifests
+      .map(manifest => ({
+        manifest,
+        isInstalled: installedAddonSet.has(manifest.name),
+      }))
+      .filter(item => item.isInstalled || !item.manifest.deprecated)
 
     // Generate tags
     const uniqueTags = new Set<string>()
-    manifests.forEach(manifest => {
+    tmp.forEach(({ manifest }) => {
       manifest.tags.forEach(tag => {
         if (tag !== 'Example') {
           uniqueTags.add(tag)
@@ -51,8 +54,10 @@ export const loadAddonsAtom = atom(null, async (get, set, force?: boolean) => {
     const sortedTags = Array.from(uniqueTags).sort((a, b) => a.localeCompare(b))
     set(tagsAtom, ['All', ...sortedTags])
 
-    // Sort addons
+    // Sort addons, deprecated ones the user still has come first
     tmp.sort((a, b) => {
+      if (a.manifest.deprecated !== b.manifest.deprecated) return a.manifest.deprecated ? -1 : 1
+
       const aIsNew = isNewAddon(a.manifest.added_at)
       const bIsNew = isNewAddon(b.manifest.added_at)
 

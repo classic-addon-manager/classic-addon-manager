@@ -18,11 +18,12 @@ import { DetailField } from '@/components/developer/DetailField'
 import type { DeveloperScope } from '@/components/developer/DeveloperToolbar'
 import { listOf, textOf, valuesToForm } from '@/components/developer/formValues.ts'
 import { isStandaloneSubmission, statusTone } from '@/components/developer/ownedAddons'
-import type { OwnedSubmission } from '@/components/developer/ownedParse'
+import { ownedDeprecation,type OwnedSubmission } from '@/components/developer/ownedParse'
 import { StatusChip } from '@/components/developer/StatusChip'
 import type { SubmissionStatus } from '@/components/developer/types.ts'
 import { useDevAddonSubmission } from '@/components/developer/useDevAddonSubmission.ts'
 import { useDevAddonValues } from '@/components/developer/useDevAddonValues.ts'
+import { DeprecatedIcon } from '@/components/shared/DeprecatedIcon'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -122,9 +123,14 @@ export function DeveloperWorkspace({
                       ) : (
                         <Inbox className="size-5 shrink-0 text-muted-foreground" />
                       )}
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium">
-                          {entry.addon?.alias ?? entry.submission?.title}
+                      <div className="min-w-0 flex-1">
+                        <p className="flex min-w-0 items-center gap-1.5 text-sm font-medium">
+                          <span className="truncate">
+                            {entry.addon?.alias ?? entry.submission?.title}
+                          </span>
+                          {entry.addon && (
+                            <DeprecatedIcon compact deprecation={ownedDeprecation(entry.addon)} />
+                          )}
                         </p>
                         <p
                           className={cn(
@@ -153,6 +159,7 @@ export function DeveloperWorkspace({
           <AddonDetails
             key={selected.key}
             addon={selected.addon}
+            ownedNames={publishedNames}
             webhookInstallUrl={data.webhookInstallUrl}
             onSelect={onSelectionChange}
             onRefresh={onRefresh}
@@ -450,6 +457,10 @@ function SubmissionDetails({
               reviewHistory: [],
               webhookEnabled: false,
               webhookLastEventAt: null,
+              deprecated: false,
+              deprecationReason: null,
+              replacement: null,
+              deprecationRequest: null,
             }}
             initialForm={form}
             initialSubmissionId={submission.id}

@@ -15,14 +15,25 @@ import {
   Trash2Icon,
   User,
 } from 'lucide-react'
-import { Suspense } from 'react'
+import { Suspense, useState } from 'react'
 
 import { AddonRatingButtons } from '@/components/dashboard/AddonRatingButtons'
 import { AddonRepositoryMatch } from '@/components/dashboard/AddonRepositoryMatch'
 import { localUpdateDialogOpenAtom } from '@/components/dashboard/atoms'
 import { catalogIconMapAtom } from '@/components/dashboard/iconMap'
 import { AddonIcon } from '@/components/shared/AddonIcon'
+import { DeprecatedBanner } from '@/components/shared/DeprecatedBanner'
 import { Readme } from '@/components/shared/Readme'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -35,6 +46,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { toast } from '@/components/ui/toast'
 import { hasAddonUpdate } from '@/lib/addonUpdate'
+import { useAddonDeprecation, useReplacementManifest } from '@/lib/deprecation'
 import { useAddonReadme } from '@/lib/repo'
 import { formatToLocalTime, safeCall } from '@/lib/utils'
 import type { Addon } from '@/lib/wails'
@@ -66,16 +78,24 @@ const DetailsLoading = () => (
 )
 
 const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPaneProps) => {
-  const { uninstall, unmanage, latestReleasesMap, isCheckingForUpdates } = useAddonStore()
+  const { installedAddons, uninstall, unmanage, latestReleasesMap, isCheckingForUpdates } =
+    useAddonStore()
   const [updateDialogOpen, setUpdateDialogOpen] = useAtom(localUpdateDialogOpenAtom)
   const readmeQuery = useAddonReadme(addon.repo, addon.branch)
   const fallbackReadme = addon.description || 'No description provided'
   const readme =
     !addon.repo || readmeQuery.isError ? fallbackReadme : (readmeQuery.data ?? fallbackReadme)
 
-  const latestRelease = latestReleasesMap.get(addon.name)
+  const deprecation = useAddonDeprecation(addon)
+  const replacement = useReplacementManifest(deprecation)
+  // A deprecated addon offers nothing but removal, so no update or version actions.
+  const latestRelease = deprecation ? undefined : latestReleasesMap.get(addon.name)
   const hasUpdate = hasAddonUpdate(addon, latestRelease)
   const iconUrl = useAtomValue(catalogIconMapAtom).get(addon.name) ?? null
+  const dependents = installedAddons.filter(
+    other => other.name !== addon.name && other.dependencies?.includes(addon.name)
+  )
+  const [confirmingUninstall, setConfirmingUninstall] = useState(false)
 
   const handleUninstall = async () => {
     const didUninstall = await uninstall(addon)
@@ -92,6 +112,15 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
       description: `${addon.alias} was uninstalled`,
       icon: CheckIcon,
     })
+  }
+
+  // Removing a deprecated addon others still use deserves a second look.
+  const requestUninstall = () => {
+    if (deprecation && dependents.length > 0) {
+      setConfirmingUninstall(true)
+      return
+    }
+    void handleUninstall()
   }
 
   const handleUnmanage = async () => {
@@ -167,6 +196,13 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
               )}
             </div>
 
+            {deprecation && (
+              <Button variant="destructive" size="sm" className="mt-2" onClick={requestUninstall}>
+                <Trash2Icon className="w-4 h-4" />
+                Uninstall
+              </Button>
+            )}
+
             {hasUpdate && (
               <Badge
                 variant="outline"
@@ -193,7 +229,7 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
                 <FolderOpen className="w-4 h-4" />
                 Open Directory
               </DropdownMenuItem>
-              {addon.isManaged && (
+              {addon.isManaged && !deprecation && (
                 <>
                   <DropdownMenuItem
                     onClick={() => Browser.OpenURL(`https://github.com/${addon.repo}/issues/new`)}
@@ -207,14 +243,14 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
                   </DropdownMenuItem>
                 </>
               )}
-              {addon.isManaged && (
+              {addon.isManaged && !deprecation && (
                 <DropdownMenuItem variant="warning" onClick={handleUnmanage}>
                   <AlertTriangleIcon className="w-4 h-4" />
                   Unmanage
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" onClick={handleUninstall}>
+              <DropdownMenuItem variant="destructive" onClick={requestUninstall}>
                 <Trash2Icon className="w-4 h-4" />
                 Uninstall
               </DropdownMenuItem>
@@ -222,6 +258,8 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
           </DropdownMenu>
         </div>
       </div>
+
+      <DeprecatedBanner deprecation={deprecation} replacement={replacement} />
 
       <div className="shrink-0 border-b px-6 py-3">
         <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm w-lg">
@@ -267,7 +305,7 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
             </div>
           )}
 
-          {addon.isManaged && (
+          {addon.isManaged && !deprecation && (
             <div>
               <span className="text-muted-foreground">Rating</span>
               <div className="font-medium">
@@ -306,6 +344,25 @@ const AddonDetailsContent = ({ addon, onOpenVersionSelect }: AddonDetailsPanePro
           </Suspense>
         </div>
       )}
+
+      <AlertDialog open={confirmingUninstall} onOpenChange={setConfirmingUninstall}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Uninstall {addon.alias}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {dependents.map(other => other.alias).join(', ')}{' '}
+              {dependents.length === 1 ? 'depends' : 'depend'} on this addon and may stop working
+              once it is removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep addon</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={() => void handleUninstall()}>
+              Uninstall
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

@@ -1,20 +1,34 @@
 import { Browser } from '@wailsio/runtime'
-import { BarChart3, GithubIcon, History, LayoutList, LoaderCircle, Zap } from 'lucide-react'
+import {
+  AlertTriangleIcon,
+  BarChart3,
+  CheckIcon,
+  GithubIcon,
+  History,
+  LayoutList,
+  LoaderCircle,
+  Zap,
+} from 'lucide-react'
 import { useState } from 'react'
 
 import { AddonEditPanel } from '@/components/developer/AddonEditPanel'
 import { AddonIcon } from '@/components/developer/AddonIcon'
 import { AddonStatistics } from '@/components/developer/AddonStatistics'
 import { latestReview } from '@/components/developer/catalogEditing'
+import { restoreAddon } from '@/components/developer/declarationApi.ts'
+import { DeprecateAddonDialog } from '@/components/developer/DeprecateAddonDialog'
 import { DetailField } from '@/components/developer/DetailField'
 import { listOf, textOf, valuesToForm } from '@/components/developer/formValues.ts'
-import type { OwnedAddon } from '@/components/developer/ownedParse'
+import { type OwnedAddon, ownedDeprecation } from '@/components/developer/ownedParse'
 import { ReviewStatus } from '@/components/developer/ReviewStatus'
 import { StatusChip } from '@/components/developer/StatusChip'
 import { useDevAddonValues } from '@/components/developer/useDevAddonValues.ts'
+import { DeprecatedIcon } from '@/components/shared/DeprecatedIcon'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { toast } from '@/components/ui/toast'
+import { useAddonCatalog } from '@/lib/catalog'
 import { cn, formatToLocalDate, timeAgo } from '@/lib/utils'
 
 const tabChip =
@@ -22,11 +36,13 @@ const tabChip =
 
 export function AddonDetails({
   addon,
+  ownedNames,
   webhookInstallUrl,
   onSelect,
   onRefresh,
 }: {
   addon: OwnedAddon
+  ownedNames: ReadonlySet<string>
   webhookInstallUrl: string
   onSelect: (key: string) => void
   onRefresh: () => Promise<void>
@@ -76,6 +92,33 @@ export function AddonDetails({
     setMode('edit')
   }
 
+  const { data: catalog } = useAddonCatalog()
+  const [deprecating, setDeprecating] = useState(false)
+  const [restoring, setRestoring] = useState(false)
+  const deprecationPending = addon.deprecationRequest?.status === 'open'
+  const replacementAlias = (name: string | null) =>
+    name === null ? null : (catalog?.find(manifest => manifest.name === name)?.alias ?? name)
+
+  // Restoring lifts a live deprecation, or withdraws one still in review.
+  const handleRestore = async () => {
+    if (restoring) return
+    setRestoring(true)
+    const result = await restoreAddon(addon.uuid)
+    setRestoring(false)
+    if (result.status !== 'restored') {
+      toast({ title: 'Restore addon', description: result.message, icon: AlertTriangleIcon })
+      return
+    }
+    toast({
+      title: addon.deprecated ? 'Addon restored' : 'Deprecation withdrawn',
+      description: addon.deprecated
+        ? `${display.alias} can be installed and updated again.`
+        : 'The deprecation review is closed.',
+      icon: CheckIcon,
+    })
+    void onRefresh()
+  }
+
   return (
     <Tabs
       value={tab}
@@ -89,8 +132,9 @@ export function AddonDetails({
         <div className="flex items-start gap-3">
           <AddonIcon addon={display} />
           <div className="min-w-0">
-            <h2 className="wrap-break-word text-xl font-semibold tracking-tight">
+            <h2 className="flex flex-wrap items-center gap-2 wrap-break-word text-xl font-semibold tracking-tight">
               {display.alias}
+              <DeprecatedIcon chip deprecation={ownedDeprecation(addon)} />
             </h2>
             <p className="mt-1 text-xs text-muted-foreground">
               Published{display.author && ` · ${display.author}`}
@@ -114,7 +158,33 @@ export function AddonDetails({
               View code
             </Button>
           )}
+          {addon.deprecated || deprecationPending ? (
+            <Button variant="outline" onClick={() => void handleRestore()} disabled={restoring}>
+              {restoring
+                ? 'Restoring...'
+                : addon.deprecated
+                  ? 'Restore addon'
+                  : 'Withdraw deprecation'}
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              className="text-destructive hover:text-destructive"
+              onClick={() => setDeprecating(true)}
+            >
+              Deprecate
+            </Button>
+          )}
         </div>
+        {deprecating && (
+          <DeprecateAddonDialog
+            addon={display}
+            ownedNames={ownedNames}
+            open
+            onOpenChange={setDeprecating}
+            onDeprecated={() => void onRefresh()}
+          />
+        )}
         <TabsList className="flex-wrap gap-2">
           <TabsTrigger value="overview" className={tabChip}>
             <LayoutList aria-hidden />
@@ -173,6 +243,52 @@ export function AddonDetails({
                   onInspect={() => onSelect(`submission:${review.submissionId}`)}
                   onRefresh={onRefresh}
                 />
+              )}
+              {addon.deprecated && (
+                <section className="space-y-1 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm">
+                  <h3 className="font-medium text-destructive">Deprecated</h3>
+                  <p className="text-muted-foreground">
+                    Hidden from browsing. Everyone who has it installed is asked to uninstall it.
+                  </p>
+                  {addon.deprecationReason && (
+                    <p className="whitespace-pre-wrap wrap-break-word">{addon.deprecationReason}</p>
+                  )}
+                  {addon.replacement && (
+                    <p className="text-muted-foreground">
+                      Replacement: {replacementAlias(addon.replacement)}
+                    </p>
+                  )}
+                </section>
+              )}
+              {!addon.deprecated && addon.deprecationRequest && (
+                <section
+                  className={cn(
+                    'space-y-1 rounded-xl border p-4 text-sm',
+                    deprecationPending
+                      ? 'border-amber-500/30 bg-amber-500/5'
+                      : 'border-destructive/30 bg-destructive/5'
+                  )}
+                >
+                  <h3 className="font-medium">
+                    {deprecationPending ? 'Deprecation in review' : 'Deprecation not approved'}
+                  </h3>
+                  <p className="text-muted-foreground">
+                    {deprecationPending
+                      ? 'Addons by other developers depend on this addon, so a reviewer confirms the deprecation first.'
+                      : 'The addon stays listed. You can submit a new deprecation request.'}
+                  </p>
+                  <p className="whitespace-pre-wrap wrap-break-word">
+                    {addon.deprecationRequest.reason}
+                  </p>
+                  {!deprecationPending && addon.deprecationRequest.feedback && (
+                    <div className="border-l-2 border-destructive pl-3">
+                      <p className="text-xs text-muted-foreground">Reviewer feedback</p>
+                      <p className="mt-1 whitespace-pre-wrap wrap-break-word">
+                        {addon.deprecationRequest.feedback}
+                      </p>
+                    </div>
+                  )}
+                </section>
               )}
               {display.warning && (
                 <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm">

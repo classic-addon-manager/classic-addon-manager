@@ -1,7 +1,9 @@
 import { useRef } from 'react'
 
+import { DeprecatedBanner } from '@/components/shared/DeprecatedBanner'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { useAddonRating } from '@/lib/addon'
+import { deprecationOf, useReplacementManifest } from '@/lib/deprecation'
 import type { AddonManifest } from '@/lib/wails'
 
 import { ActionBar } from './RemoteAddonDialog/ActionBar.tsx'
@@ -33,6 +35,8 @@ export const RemoteAddonDialog = ({
   onAddonUninstalled,
 }: RemoteAddonDialogProps) => {
   const scrollRef = useRef<HTMLDivElement>(null)
+  const deprecation = deprecationOf(manifest)
+  const replacement = useReplacementManifest(deprecation)
   const {
     rating,
     isLoading: isLoadingRating,
@@ -75,7 +79,15 @@ export const RemoteAddonDialog = ({
           <div className="flex min-h-full flex-col">
             <div className="flex-1">
               <Header manifest={manifest} release={release} />
-              <Warning text={manifest.warning} />
+              {deprecation ? (
+                <DeprecatedBanner
+                  deprecation={deprecation}
+                  replacement={replacement}
+                  onViewReplacement={onViewDependency}
+                />
+              ) : (
+                <Warning text={manifest.warning} />
+              )}
               <StatBar manifest={manifest} release={release} isLoadingRelease={isLoadingRelease} />
 
               <DescriptionSection readme={readme} isLoading={isLoadingReadme} />
@@ -99,6 +111,7 @@ export const RemoteAddonDialog = ({
               rating={rating}
               isRatingDisabled={isLoadingRating || isSaving}
               isInstalled={isInstalled}
+              isDeprecated={deprecation !== null}
               isLoadingRelease={isLoadingRelease}
               onRate={rateAddon}
               onInstall={handleInstall}

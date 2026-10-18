@@ -462,3 +462,81 @@ func TestResolveDependencies_CycleAndSharedDependency(t *testing.T) {
 		t.Fatalf("expected dependency order %v, got %v", want, names)
 	}
 }
+
+func TestResolveDependencies_SkipsDeprecatedDependency(t *testing.T) {
+	t.Setenv("APPDATA", os.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", os.TempDir())
+
+	aacPath := t.TempDir()
+	prevValue := viper.Get("general.aacpath")
+	viper.Set("general.aacpath", aacPath)
+	t.Cleanup(func() { viper.Set("general.aacpath", prevValue) })
+
+	addonDir := filepath.Join(aacPath, "Addon")
+	if err := os.MkdirAll(addonDir, 0755); err != nil {
+		t.Fatalf("create addon dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(addonDir, "addons.txt"), []byte{}, 0644); err != nil {
+		t.Fatalf("write addons.txt: %v", err)
+	}
+
+	orig := getAddonManifest
+	t.Cleanup(func() { getAddonManifest = orig })
+	getAddonManifest = func() ([]shared.AddonManifest, error) {
+		return []shared.AddonManifest{
+			{Name: "retired", Deprecated: true, Dependencies: []string{"hidden"}},
+			{Name: "hidden"},
+			{Name: "active"},
+		}, nil
+	}
+
+	s := &RemoteAddonService{}
+	result, err := s.ResolveDependencies(shared.AddonManifest{
+		Name:         "main",
+		Dependencies: []string{"retired", "active"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	names := make([]string, 0, len(result.Dependencies))
+	for _, d := range result.Dependencies {
+		names = append(names, d.Manifest.Name)
+	}
+	if !slices.Equal(names, []string{"active"}) {
+		t.Fatalf("expected only active, a deprecated dependency and its own dependencies are skipped, got %v", names)
+	}
+	if !slices.Equal(result.Errors, []string{"Addon retired is deprecated and will not be installed"}) {
+		t.Fatalf("expected deprecation warning, got %v", result.Errors)
+	}
+}
+
+func TestInstallAndUpdateRejectDeprecatedAddon(t *testing.T) {
+	t.Setenv("APPDATA", os.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", os.TempDir())
+
+	origManifest := getAddonManifest
+	origInstall := installAddon
+	t.Cleanup(func() {
+		getAddonManifest = origManifest
+		installAddon = origInstall
+	})
+	getAddonManifest = func() ([]shared.AddonManifest, error) {
+		return []shared.AddonManifest{{Name: "retired", Deprecated: true}}, nil
+	}
+	installAddon = func(shared.AddonManifest, string) (bool, error) {
+		t.Fatal("a deprecated addon must not reach the installer")
+		return false, nil
+	}
+
+	// The caller's manifest predates the deprecation: the catalog decides.
+	stale := shared.AddonManifest{Name: "retired"}
+	s := &RemoteAddonService{}
+
+	if _, err := s.InstallAddonWithDependencies(stale, "latest"); !errors.Is(err, ErrAddonDeprecated) {
+		t.Fatalf("install: expected ErrAddonDeprecated, got %v", err)
+	}
+	if _, err := s.UpdateAddon(stale, "latest"); !errors.Is(err, ErrAddonDeprecated) {
+		t.Fatalf("update: expected ErrAddonDeprecated, got %v", err)
+	}
+}
