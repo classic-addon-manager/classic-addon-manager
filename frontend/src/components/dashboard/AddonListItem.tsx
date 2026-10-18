@@ -3,7 +3,9 @@ import { Check, Download, LoaderCircle } from 'lucide-react'
 
 import { catalogIconMapAtom } from '@/components/dashboard/iconMap'
 import { AddonIcon } from '@/components/shared/AddonIcon'
+import { DeprecatedIcon } from '@/components/shared/DeprecatedIcon'
 import { hasAddonUpdate } from '@/lib/addonUpdate'
+import { type Deprecation, useAddonDeprecation } from '@/lib/deprecation'
 import { cn } from '@/lib/utils'
 import type { Addon } from '@/lib/wails'
 import { useAddonStore } from '@/stores/addonStore'
@@ -17,6 +19,7 @@ interface AddonListItemProps {
 export const AddonListItem = ({ addon, isSelected, onClick }: AddonListItemProps) => {
   const { latestReleasesMap, isCheckingForUpdates } = useAddonStore()
   const hasUpdate = hasAddonUpdate(addon, latestReleasesMap.get(addon.name))
+  const deprecation = useAddonDeprecation(addon)
 
   const iconUrl = useAtomValue(catalogIconMapAtom).get(addon.name) ?? null
 
@@ -61,6 +64,7 @@ export const AddonListItem = ({ addon, isSelected, onClick }: AddonListItemProps
       <div className="shrink-0 flex items-center">
         <AddonListItemIndicator
           addon={addon}
+          deprecation={deprecation}
           hasUpdate={hasUpdate}
           isCheckingForUpdates={isCheckingForUpdates}
         />
@@ -71,13 +75,19 @@ export const AddonListItem = ({ addon, isSelected, onClick }: AddonListItemProps
 
 const AddonListItemIndicator = ({
   addon,
+  deprecation,
   hasUpdate,
   isCheckingForUpdates,
 }: {
   addon: Addon
+  deprecation: Deprecation | null
   hasUpdate: boolean
   isCheckingForUpdates: boolean
 }) => {
+  if (deprecation) {
+    return <DeprecatedIcon deprecation={deprecation} />
+  }
+
   if (addon.isManaged && isCheckingForUpdates) {
     return <LoaderCircle className="animate-spin text-primary" size={16} />
   }

@@ -31,6 +31,12 @@ type AddonManifest struct {
 	AddedAt      time.Time `json:"added_at"`
 	Warning      *string   `json:"warning,omitempty"`
 	Library      bool      `json:"library"`
+
+	// A deprecated addon stays in the catalog so installed copies can be flagged for removal.
+	Deprecated        bool    `json:"deprecated"`
+	DeprecationReason *string `json:"deprecation_reason,omitempty"`
+	// Name of the catalog addon that replaces this one, when the developer named one.
+	Replacement *string `json:"replacement,omitempty"`
 }
 
 type DependencyInfo struct {

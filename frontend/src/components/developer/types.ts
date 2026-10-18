@@ -26,6 +26,19 @@ export type SchemaField = {
 
 export type AddonSchema = { version: number; widgets: Widget[]; fields: SchemaField[] }
 
+/**
+ * A deprecation that waits on review. The API opens one instead of deprecating
+ * right away when addons by other developers depend on this addon.
+ */
+export type DeprecationRequest = {
+  status: 'open' | 'rejected'
+  reason: string
+  replacement: string | null
+  createdAt: string | null
+  /** Reviewer feedback on a rejected request, null when none was left. */
+  feedback: string | null
+}
+
 export type SourceAddon = {
   uuid: string
   name: string
@@ -34,6 +47,10 @@ export type SourceAddon = {
   webhookEnabled: boolean
   /** Time of the last release webhook event for the addon's repo, null when none yet. */
   webhookLastEventAt: string | null
+  deprecated: boolean
+  deprecationReason: string | null
+  replacement: string | null
+  deprecationRequest: DeprecationRequest | null
 }
 export type SourceSubmission = {
   id: number
