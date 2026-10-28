@@ -1,5 +1,5 @@
 import { AlertCircleIcon, FolderOpen, Settings2 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { Section } from '@/components/shared/Section'
 import { Button } from '@/components/ui/button'
@@ -29,6 +29,13 @@ export const Settings = () => {
     loadConfig,
   } = useSettingsStore()
   const [errDocsPath, setErrDocsPath] = useState('')
+  const [os, setOS] = useState('windows')
+
+  useEffect(() => {
+    ApplicationService.GetOS()
+      .then(setOS)
+      .catch((err) => console.error('Failed to get OS:', err))
+  }, [])
 
   const openSelect = async () => {
     setErrDocsPath('')
@@ -122,7 +129,11 @@ export const Settings = () => {
                   <Input
                     id="install-path"
                     type="text"
-                    placeholder="C:\AAClassic\Documents\..."
+                    placeholder={
+                      os === 'windows'
+                        ? 'C:\\AAClassic\\Documents\\...'
+                        : '~/.local/share/AAClassic/.../Documents/AAClassic'
+                    }
                     value={aacPath}
                     disabled
                     className="flex-1 font-mono text-xs"

@@ -181,3 +181,25 @@ func TestGetAddonDirAbsolutePath(t *testing.T) {
 		t.Fatalf("GetAddonDir = %q, want %q", dir, want)
 	}
 }
+
+func TestDetectLinuxDocs(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home) // os.UserHomeDir on Windows
+
+	if _, err := detectLinuxDocs(); !errors.Is(err, errNoInstallations) {
+		t.Fatalf("detectLinuxDocs err = %v, want errNoInstallations", err)
+	}
+
+	want := filepath.Join(home, linuxDocsSubpath)
+	if err := os.MkdirAll(want, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	got, err := detectLinuxDocs()
+	if err != nil {
+		t.Fatalf("detectLinuxDocs: %v", err)
+	}
+	if got != want {
+		t.Fatalf("detectLinuxDocs = %q, want %q", got, want)
+	}
+}

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strconv"
 
 	"github.com/spf13/viper"
@@ -41,15 +42,47 @@ func LoadConfig() error {
 		return fmt.Errorf("%w: %v", ErrAACNotDetected, err)
 	}
 
-	aacPath := filepath.Join(path, "Documents")
-	if err := SetString("general.aacpath", aacPath); err != nil {
+	if err := SetString("general.aacpath", path); err != nil {
 		return err
 	}
 
 	return nil
 }
 
+// linuxDocsSubpath is the Documents dir of the Steam/Proton ArcheAge Classic install, relative to the home directory.
+const linuxDocsSubpath = ".local/share/AAClassic/steam-compatdata/pfx/drive_c/users/steamuser/Documents/AAClassic"
+
+var errNoInstallations = errors.New("could not find any ArcheAge Classic installations")
+
+// detectAACPath returns the ArcheAge Classic Documents directory.
 func detectAACPath() (string, error) {
+	switch runtime.GOOS {
+	case "windows":
+		install, err := detectWindowsInstall()
+		if err != nil {
+			return "", err
+		}
+		return filepath.Join(install, "Documents"), nil
+	case "linux":
+		return detectLinuxDocs()
+	default:
+		return "", errNoInstallations
+	}
+}
+
+func detectLinuxDocs() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	docs := filepath.Join(home, linuxDocsSubpath)
+	if info, err := os.Stat(docs); err != nil || !info.IsDir() {
+		return "", fmt.Errorf("%w (looked for %s)", errNoInstallations, docs)
+	}
+	return docs, nil
+}
+
+func detectWindowsInstall() (string, error) {
 	// Find all instances of C:\AAClassic* and get the one with the highest number
 	matches, err := filepath.Glob("C:\\AAClassic*")
 	if err != nil {
@@ -57,7 +90,7 @@ func detectAACPath() (string, error) {
 	}
 
 	if len(matches) == 0 {
-		return "", errors.New("could not find any ArcheAge Classic installations")
+		return "", errNoInstallations
 	}
 
 	var highestVersion string
