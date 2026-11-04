@@ -36,3 +36,39 @@ func TestAddonManifestIconDecoding(t *testing.T) {
 		}
 	})
 }
+
+func TestAddonManifestDeprecationDecoding(t *testing.T) {
+	t.Run("deprecation fields are kept when present", func(t *testing.T) {
+		body := `[{"name":"OldMeter","deprecated":true,"deprecation_reason":"Merged into NewMeter","replacement":"NewMeter"}]`
+
+		var manifests []AddonManifest
+		if err := json.NewDecoder(strings.NewReader(body)).Decode(&manifests); err != nil {
+			t.Fatalf("decode failed: %v", err)
+		}
+
+		got := manifests[0]
+		if !got.Deprecated {
+			t.Fatal("expected deprecated to be true")
+		}
+		if got.DeprecationReason == nil || *got.DeprecationReason != "Merged into NewMeter" {
+			t.Fatalf("expected deprecation reason, got %v", got.DeprecationReason)
+		}
+		if got.Replacement == nil || *got.Replacement != "NewMeter" {
+			t.Fatalf("expected replacement, got %v", got.Replacement)
+		}
+	})
+
+	t.Run("an addon without the fields is not deprecated", func(t *testing.T) {
+		body := `[{"name":"FishMe"}]`
+
+		var manifests []AddonManifest
+		if err := json.NewDecoder(strings.NewReader(body)).Decode(&manifests); err != nil {
+			t.Fatalf("decode failed: %v", err)
+		}
+
+		got := manifests[0]
+		if got.Deprecated || got.DeprecationReason != nil || got.Replacement != nil {
+			t.Fatalf("expected no deprecation, got %+v", got)
+		}
+	})
+}

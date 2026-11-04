@@ -1,4 +1,8 @@
 import {
+  parseDeprecateResponse,
+  type ParseDeprecateResult,
+  parseRestoreResponse,
+  type ParseRestoreResult,
   parseSaveResponse,
   type ParseSaveResult,
   parseValidateResponse,
@@ -11,11 +15,16 @@ import { SCHEMA_FIELD_KEYS } from '@/components/developer/types.ts'
 
 import { fetchJson, fetchParsed } from './fetchJson.ts'
 
-export type { ParseSaveResult, ParseValidateResult, ParseWithdrawResult }
+export type {
+  ParseDeprecateResult,
+  ParseRestoreResult,
+  ParseSaveResult,
+  ParseValidateResult,
+  ParseWithdrawResult,
+}
 
 export type UploadIconResult =
-  | { status: 'uploaded'; assetId: string; url: string }
-  | { status: 'error'; message: string }
+  { status: 'uploaded'; assetId: string; url: string } | { status: 'error'; message: string }
 
 export async function uploadIcon(file: File): Promise<UploadIconResult> {
   const form = new FormData()
@@ -115,5 +124,33 @@ export async function withdrawDeclaration(submissionId: number): Promise<ParseWi
     parseWithdrawResponse,
     'Sign in to withdraw a submission.',
     'Unexpected withdraw response.'
+  )
+}
+
+/**
+ * Asks users to uninstall the addon and hides it from browsing. The API applies
+ * it at once, or opens a review when addons by other developers depend on it.
+ */
+export async function deprecateAddon(
+  uuid: string,
+  request: { reason: string; replacement: string | null }
+): Promise<ParseDeprecateResult> {
+  return fetchParsed(
+    `/dev/addon/${encodeURIComponent(uuid)}/deprecate`,
+    { method: 'POST', body: request },
+    parseDeprecateResponse,
+    'Sign in to deprecate an addon.',
+    'Unexpected deprecate response.'
+  )
+}
+
+/** Lifts a deprecation, or withdraws a deprecation request still in review. */
+export async function restoreAddon(uuid: string): Promise<ParseRestoreResult> {
+  return fetchParsed(
+    `/dev/addon/${encodeURIComponent(uuid)}/undeprecate`,
+    { method: 'POST' },
+    parseRestoreResponse,
+    'Sign in to restore an addon.',
+    'Unexpected restore response.'
   )
 }

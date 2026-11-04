@@ -9,6 +9,7 @@ import type {
   AddonVersionUsage,
   DeclarationKind,
   DeclarationValues,
+  DeprecationRequest,
   FieldErrors,
   SchemaField,
   SnapshotPoint,
@@ -62,6 +63,19 @@ export type ParseWithdrawResult =
   | { status: 'withdrawn'; id: number; revision: number }
   | { status: 'not_open'; id: number }
   | { status: 'not_found'; message: string }
+  | { status: 'unauthorized'; message: string }
+  | { status: 'error'; message: string }
+
+export type ParseDeprecateResult =
+  /** Live right away: no addon by another developer depends on it. */
+  | { status: 'deprecated' }
+  /** Addons by other developers depend on it, so a reviewer decides first. */
+  | { status: 'review' }
+  | { status: 'unauthorized'; message: string }
+  | { status: 'error'; message: string }
+
+export type ParseRestoreResult =
+  | { status: 'restored' }
   | { status: 'unauthorized'; message: string }
   | { status: 'error'; message: string }
 
@@ -323,6 +337,31 @@ export function parseWithdrawResponse(statusCode: number, body: unknown): ParseW
     return { status: 'error', message: 'Unexpected withdraw response.' }
   }
   return { status: 'withdrawn', id: data.id, revision: data.revision }
+}
+
+export function parseDeprecateResponse(statusCode: number, body: unknown): ParseDeprecateResult {
+  const envelope = parseEnvelope(body)
+  if (statusCode === 401) {
+    return { status: 'unauthorized', message: 'Sign in to deprecate an addon.' }
+  }
+  if ((statusCode !== 200 && statusCode !== 202) || !envelope?.status) {
+    return { status: 'error', message: envelope?.message || 'Unexpected deprecate response.' }
+  }
+  const data = envelope.data
+  if (isObject(data) && data.status === 'deprecated') return { status: 'deprecated' }
+  if (isObject(data) && data.status === 'review') return { status: 'review' }
+  return { status: 'error', message: 'Unexpected deprecate response.' }
+}
+
+export function parseRestoreResponse(statusCode: number, body: unknown): ParseRestoreResult {
+  const envelope = parseEnvelope(body)
+  if (statusCode === 401) {
+    return { status: 'unauthorized', message: 'Sign in to restore an addon.' }
+  }
+  if (statusCode !== 200 || !envelope?.status) {
+    return { status: 'error', message: envelope?.message || 'Unexpected restore response.' }
+  }
+  return { status: 'restored' }
 }
 
 export function parseSubmissionDetail(
@@ -591,6 +630,27 @@ function parseSourceAddon(value: unknown): SourceAddon | null {
       typeof lastEventAt === 'string' && Number.isFinite(new Date(lastEventAt).getTime())
         ? lastEventAt
         : null,
+    // Deprecation is newer than the rest of the payload too: missing reads as not deprecated.
+    deprecated: value.deprecated === true,
+    deprecationReason: nonEmptyString(value.deprecation_reason),
+    replacement: nonEmptyString(value.replacement),
+    deprecationRequest: parseDeprecationRequest(value.deprecation_request),
+  }
+}
+
+function parseDeprecationRequest(value: unknown): DeprecationRequest | null {
+  if (!isObject(value)) return null
+  if (value.status !== 'open' && value.status !== 'rejected') return null
+  const reason = nonEmptyString(value.reason)
+  if (reason === null) return null
+  const createdAt = nonEmptyString(value.created_at)
+  return {
+    status: value.status,
+    reason,
+    replacement: nonEmptyString(value.replacement),
+    createdAt:
+      createdAt !== null && Number.isFinite(new Date(createdAt).getTime()) ? createdAt : null,
+    feedback: nonEmptyString(value.feedback),
   }
 }
 

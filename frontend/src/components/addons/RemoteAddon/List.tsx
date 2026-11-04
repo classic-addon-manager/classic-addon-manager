@@ -1,6 +1,8 @@
 import { CheckIcon } from 'lucide-react'
 
 import { AddonIcon } from '@/components/shared/AddonIcon'
+import { DeprecatedIcon } from '@/components/shared/DeprecatedIcon'
+import { deprecationOf } from '@/lib/deprecation'
 
 import { ActionButton } from './ActionButton'
 import { listRowGridClass } from './listLayout'
@@ -28,6 +30,7 @@ export const List = ({ manifest, installed }: RemoteAddonItemProps) => {
     manifest,
     installed,
   })
+  const deprecation = deprecationOf(manifest)
 
   return (
     <div
@@ -54,7 +57,11 @@ export const List = ({ manifest, installed }: RemoteAddonItemProps) => {
               NEW
             </span>
           )}
-          <WarningIcon warning={manifest.warning} chip />
+          {deprecation ? (
+            <DeprecatedIcon deprecation={deprecation} chip />
+          ) : (
+            <WarningIcon warning={manifest.warning} chip />
+          )}
         </div>
         <div className="mt-0.5 truncate text-xs text-muted-foreground/70">
           <span className="text-muted-foreground" title={`Author: ${manifest.author}`}>
@@ -72,7 +79,7 @@ export const List = ({ manifest, installed }: RemoteAddonItemProps) => {
       <LikeRing percentage={manifest.like_percentage} />
 
       <div className="flex justify-end">
-        <ActionButton installed={installed} />
+        <ActionButton installed={installed} deprecated={deprecation !== null} />
       </div>
     </div>
   )

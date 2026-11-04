@@ -17,6 +17,10 @@ import (
 //go:embed cam.lua
 var luaScript []byte
 
+// catalogForUpdateCheck supplies the catalog used to leave deprecated addons
+// out of the update check. Tests replace it.
+var catalogForUpdateCheck = GetAddonManifest
+
 // CheckForUpdates returns the managed addons with a newer release available.
 // A nil map signals a total failure: the caller must not regenerate the
 // update notification and lose the previously reported updates.
@@ -42,8 +46,13 @@ func CheckForUpdates() (map[string]Addon, error) {
 		return nil, fmt.Errorf("fetch latest releases: %w", err)
 	}
 
+	deprecated := deprecatedAddonNames()
+
 	var missing []string
 	for name, a := range addons {
+		if deprecated[name] {
+			continue
+		}
 		release, ok := releases[name]
 		if !ok || release.TagName == "" {
 			missing = append(missing, name)
@@ -62,6 +71,24 @@ func CheckForUpdates() (map[string]Addon, error) {
 	}
 
 	return updates, nil
+}
+
+// deprecatedAddonNames lists the catalog addons marked deprecated. They are
+// never offered as updates, the app prompts the user to uninstall them instead.
+// An unreachable catalog only means no addon is skipped.
+func deprecatedAddonNames() map[string]bool {
+	names := make(map[string]bool)
+	manifests, err := catalogForUpdateCheck()
+	if err != nil {
+		logger.Warn("CheckForUpdates: catalog unavailable, deprecated addons are not skipped")
+		return names
+	}
+	for _, manifest := range manifests {
+		if manifest.Deprecated {
+			names[manifest.Name] = true
+		}
+	}
+	return names
 }
 
 // hasUpdate reports whether a release should be offered as an update for an

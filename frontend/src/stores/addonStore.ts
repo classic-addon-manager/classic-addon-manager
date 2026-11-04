@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 
 import { hasAddonUpdate } from '@/lib/addonUpdate'
+import { fetchAddonCatalog } from '@/lib/catalog'
 import { queryClient } from '@/lib/queryClient'
 import { safeCall } from '@/lib/utils.ts'
 import type { Addon, AddonManifest, InstallWithDependenciesResult, Release } from '@/lib/wails'
@@ -93,7 +94,15 @@ export const useAddonStore = create<AddonState>((set, get) => {
       set({ isCheckingForUpdates: true })
 
       try {
-        const managedAddons = installedAddons.filter(addon => addon.isManaged)
+        // Deprecated addons are never offered updates, the app asks to uninstall them instead.
+        // An unreachable catalog only means none are left out.
+        const catalog = await fetchAddonCatalog().catch(() => [])
+        const deprecatedNames = new Set(
+          catalog.filter(manifest => manifest.deprecated).map(manifest => manifest.name)
+        )
+        const managedAddons = installedAddons.filter(
+          addon => addon.isManaged && !deprecatedNames.has(addon.name)
+        )
         const addonNames = managedAddons.map(addon => addon.name)
 
         // Reset state if no managed addons

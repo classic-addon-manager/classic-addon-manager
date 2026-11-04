@@ -98,6 +98,10 @@ function toOwnedAddon(
     reviewHistory: toReviewHistory(submissions),
     webhookEnabled: addon.webhookEnabled,
     webhookLastEventAt: addon.webhookLastEventAt,
+    deprecated: addon.deprecated,
+    deprecationReason: addon.deprecationReason,
+    replacement: addon.replacement,
+    deprecationRequest: addon.deprecationRequest,
   }
 }
 

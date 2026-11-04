@@ -1,14 +1,31 @@
-import { ArrowRightIcon, CheckIcon } from 'lucide-react'
+import { ArrowRightIcon, CheckIcon, Trash2Icon } from 'lucide-react'
 
 interface ActionButtonProps {
   installed: boolean
+  /** A deprecated addon only offers removal, which the details dialog performs. */
+  deprecated?: boolean
   compact?: boolean
 }
 
 /** Expands to a "View" pill when the surrounding `group` is hovered. */
-export const ActionButton = ({ installed, compact = false }: ActionButtonProps) => {
+export const ActionButton = ({
+  installed,
+  deprecated = false,
+  compact = false,
+}: ActionButtonProps) => {
   const heightClass = compact ? 'h-6' : 'h-8'
   const iconClass = compact ? 'h-3.5 w-3.5' : 'h-4 w-4'
+
+  if (installed && deprecated) {
+    return (
+      <span
+        className={`inline-flex items-center font-semibold text-destructive ${heightClass} ${compact ? 'gap-1 text-[11px]' : 'gap-1.5 px-2 text-xs'}`}
+      >
+        <Trash2Icon className={iconClass} />
+        Uninstall
+      </span>
+    )
+  }
 
   if (installed) {
     return (

@@ -5,6 +5,7 @@ import (
 	"ClassicAddonManager/backend/api"
 	"ClassicAddonManager/backend/logger"
 	"ClassicAddonManager/backend/shared"
+	"errors"
 	"fmt"
 	"sort"
 )
@@ -20,6 +21,25 @@ var installAddon = addon.InstallAddon
 // getAddonManifest is the catalog fetch used by GetAddonManifest and
 // ResolveDependencies. Tests replace it to stub fetch outcomes.
 var getAddonManifest = addon.GetAddonManifest
+
+// ErrAddonDeprecated is returned when installing or updating an addon the catalog marks deprecated.
+var ErrAddonDeprecated = errors.New("addon is deprecated")
+
+// rejectDeprecated asks the catalog rather than the caller's manifest, which
+// may predate the deprecation. An unreachable catalog does not block, the
+// dependency resolution that follows reports that failure itself.
+func rejectDeprecated(name string) error {
+	manifests, err := getAddonManifest()
+	if err != nil {
+		return nil
+	}
+	for _, manifest := range manifests {
+		if manifest.Name == name && manifest.Deprecated {
+			return fmt.Errorf("%s: %w", name, ErrAddonDeprecated)
+		}
+	}
+	return nil
+}
 
 func (s *RemoteAddonService) GetAddonManifest() ([]shared.AddonManifest, error) {
 	return getAddonManifest()
@@ -40,6 +60,10 @@ func (s *RemoteAddonService) InstallAddon(ad shared.AddonManifest, version strin
 }
 
 func (s *RemoteAddonService) UpdateAddon(ad shared.AddonManifest, version string) (shared.InstallWithDependenciesResult, error) {
+	if err := rejectDeprecated(ad.Name); err != nil {
+		return shared.InstallWithDependenciesResult{}, err
+	}
+
 	resolution, err := s.ResolveDependencies(ad)
 	if err != nil {
 		return shared.InstallWithDependenciesResult{}, err
@@ -123,6 +147,11 @@ func (s *RemoteAddonService) ResolveDependencies(ad shared.AddonManifest) (share
 			return
 		}
 
+		if manifest.Deprecated {
+			result.Errors = append(result.Errors, fmt.Sprintf("Addon %s is deprecated and will not be installed", name))
+			return
+		}
+
 		_, isInstalled := installedByName[name]
 		existing, exists := dependencyByName[name]
 		if !exists || depth > existing.Depth {
@@ -161,6 +190,10 @@ func (s *RemoteAddonService) ResolveDependencies(ad shared.AddonManifest) (share
 }
 
 func (s *RemoteAddonService) InstallAddonWithDependencies(ad shared.AddonManifest, version string) (shared.InstallWithDependenciesResult, error) {
+	if err := rejectDeprecated(ad.Name); err != nil {
+		return shared.InstallWithDependenciesResult{}, err
+	}
+
 	resolution, err := s.ResolveDependencies(ad)
 	if err != nil {
 		return shared.InstallWithDependenciesResult{}, err
