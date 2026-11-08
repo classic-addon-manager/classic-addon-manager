@@ -26,7 +26,7 @@ Search the catalog, filter by tag, switch between list and grid, and read an add
 
 ### Review updates and versions
 
-Read release notes before updating, or choose a specific published release. Nothing installs until you confirm.
+Read release notes before updating, or choose a specific published release. Nothing installs until you confirm. Downloads are verified against their SHA-256 checksum before installing.
 
 <img src="docs/images/features/04-review-updates.png" width="800" alt="Update available dialog comparing installed and new versions with release notes, beside the Install Version dropdown marking the current release">
 
@@ -60,8 +60,25 @@ You can get Classic Addon Manager in one of these ways:
 
 ### Supported Platforms
 
-- **Windows**: Full support (.exe installer)
+- **Windows**: Full support (standalone `.exe`)
 - **Linux**: Supported as an AppImage, but designed primarily for Windows. Some features may not work
+
+### Data Locations
+
+| Data                  | Windows                               | Linux                               |
+|-----------------------|---------------------------------------|-------------------------------------|
+| Config, login, `app.log` | `%APPDATA%\ClassicAddonManager`    | `~/.config/ClassicAddonManager`     |
+| Cache                 | `%LOCALAPPDATA%\ClassicAddonManager`  | `~/.cache/ClassicAddonManager`      |
+
+Set `CAM_CONFIG_DIR` and `CAM_CACHE_DIR` to override them, e.g. to sandbox a test run. With only `CAM_CONFIG_DIR` set, the cache goes to its `cache/` subdirectory.
+
+### Headless Update Check
+
+```
+classic-addon-manager --check-updates
+```
+
+Checks installed addons for updates without opening a window. It logs to `check-updates.log` next to `app.log`.
 
 ---
 
@@ -77,106 +94,102 @@ If you find this project useful, consider supporting development:
 
 ### Requirements
 
-- Go 1.25+
-- Node.js 22.12+
-- PNPM
+- Rust 1.92+ (the newest `rust-version` among the dependencies)
+- [`just`](https://github.com/casey/just) task runner (`cargo install just`)
+- Windows only: the MSVC toolchain (`stable-x86_64-pc-windows-msvc`, rustup's default on Windows) and Visual Studio Build Tools with the "Desktop development with C++" workload, which provides the linker and the Windows SDK resource compiler
+- Linux only: a C toolchain, CMake, and the GPUI system libraries (see below)
 
-Install PNPM by following [pnpm.io/installation](https://pnpm.io/installation).
+Install the Linux build dependencies with your distribution's package manager:
 
-Then install the Wails CLI:
+```sh
+# Debian / Ubuntu
+sudo apt install build-essential clang cmake pkg-config libasound2-dev libfontconfig-dev libssl-dev \
+    libwayland-dev libxcb1-dev libxkbcommon-dev libxkbcommon-x11-dev libzstd-dev
 
+# Fedora
+sudo dnf install gcc gcc-c++ make clang cmake pkgconf-pkg-config alsa-lib-devel fontconfig-devel openssl-devel \
+    wayland-devel libxcb-devel libxkbcommon-devel libxkbcommon-x11-devel libzstd-devel
+
+# Arch Linux
+sudo pacman -S --needed base-devel clang cmake alsa-lib fontconfig openssl wayland libxcb libxkbcommon \
+    libxkbcommon-x11 zstd
 ```
-go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.5
-```
 
-> We use Wails v3 beta (`v3.0.0-beta.5`). Make sure you install the matching CLI version. See [Wails v3 Installation](https://v3.wails.io/getting-started/installation) for details.
+### Tasks
+
+Run `just` to list all recipes.
+
+| Command                 | Purpose                                                      |
+|-------------------------|--------------------------------------------------------------|
+| `just build`            | Debug build                                                  |
+| `just build-prod`       | Optimized release build with `Cargo.lock` enforced           |
+| `just run [ARGS]`       | Build (debug) and run, e.g. `just run --check-updates`       |
+| `just run-prod [ARGS]`  | Build (release) and run                                      |
+| `just dev`              | Rebuild and restart on source changes (needs `cargo-watch`) |
+| `just check`            | Type-check all targets                                       |
+| `just test [ARGS]`      | Run the test suite                                           |
+| `just lint`             | Clippy, warnings are errors                                  |
+| `just fmt`              | Format the sources                                           |
+| `just fmt-check`        | Check formatting without changing files                      |
+| `just ci`               | `fmt-check`, `lint`, and `test`                              |
+| `just clean`            | Remove build artifacts                                       |
 
 ### Live Development
 
-Run `wails3 dev` in the project directory. This starts a Vite development server with fast hot reload for frontend changes, plus the Wails window. Inspect the interface in the app window itself: development builds enable the WebView2 DevTools, so right-click → **Inspect** (or `F12` where the host page allows it) gives you the full app with working bindings.
+Run `just dev` (install the watcher with `cargo install cargo-watch`). It rebuilds and restarts the app whenever `src/` or `Cargo.toml` changes.
 
-Press **Ctrl+Alt+Q** while the app is focused to open or close **TanStack Query Devtools** and inspect cached queries and mutations. This shortcut is available only in frontend development mode.
-
-The Vite URL (`http://localhost:9245`) is the frontend dev server only. It does not serve the Wails runtime: `/wails/runtime` and the other `/wails/*` endpoints are answered by the app's asset server, which is reachable inside the WebView (`http://wails.localhost:<vite-port>`) and not over a TCP port. Opening the Vite URL in a normal browser therefore has no Go bindings or events, and this app renders blank because it bootstraps from them. Use it only for isolated frontend work that does not touch the backend.
-
-For a browser with working bindings and events, run the app in server mode:
-
-```
-wails3 task run:server
-```
-
-For live development in a browser instead, run `wails3 task dev:server` and open http://localhost:8080. This starts Vite for frontend hot module replacement and Air for Go rebuilds/restarts.
-
-### Frontend Linting and Formatting
-
-Run these commands from `frontend/` after `pnpm install`:
-
-| Command             | Purpose                                 |
-|---------------------|-----------------------------------------|
-| `pnpm lint`         | Run oxlint and apply safe fixes         |
-| `pnpm lint:check`   | Run oxlint without changing files       |
-| `pnpm format`       | Format TypeScript/TSX with Prettier     |
-| `pnpm format:check` | Check formatting without changing files |
-
-Oxlint is configured in `frontend/.oxlintrc.json`. It uses native core, TypeScript,
-React Hooks, Fast Refresh, and React Compiler rules.
-
-Formatting is separate from linting and retains `frontend/.prettierrc`. Generated
-Wails bindings and build output are excluded from both checks. Run `pnpm lint`
-before `pnpm format`, overlapping type-import and import-sorting fixes can require
-a second lint run.
+Debug builds include the GPUI inspector: press **Ctrl+Shift+I** to open or close it and pick an element to see the source location that rendered it.
 
 ### Building
 
-To build a production package:
+To build a production binary:
 
 ```
-wails3 task build:prod
+just build-prod
 ```
 
-To build a Linux AppImage, run `wails3 task linux:create:appimage` on Linux. The task writes `bin/classic-addon-manager-<architecture>.AppImage`. AppImage generation downloads the linuxdeploy and AppRun tools as needed.
+The binary is written to `target/release/classic-addon-manager` (`.exe` on Windows). Release builds keep the symbol table so panic backtraces in `app.log` show function names. Windows builds embed the application icon from `resources/windows/` (`build.rs`) and link the C runtime statically (`.cargo/config.toml`), so the exe runs without the Visual C++ Redistributable.
 
-To build the server binary (no GUI window, serves the frontend and all bindings over HTTP):
-
-```
-wails3 task build:server
-```
-
-The binary is written to `build/bin/classic-addon-manager-server` (`.exe` on Windows). It defaults to http://localhost:8080; override with `WAILS_SERVER_HOST` / `WAILS_SERVER_PORT`. Pass `PRODUCTION=true` for a stripped production build (`-tags server,production`).
+To build a Linux AppImage, run `just appimage` on Linux. It builds inside an Ubuntu 22.04 container (Podman, or Docker if Podman is missing, override with `CONTAINER_ENGINE`) so the binary runs on glibc 2.35 and newer, and writes `dist/classic-addon-manager-<architecture>.AppImage`. The container build uses its own `target/appimage/` directory.
 
 ### Version Management
 
-Use the `version` task instead of editing version numbers by hand. It keeps `build/config.yml`, the Windows resource, manifest and NSIS files, the Linux package config, and `backend/shared/types.go` in sync.
+Use the `version` recipe instead of editing version numbers by hand. It updates `[package] version` in `Cargo.toml` and refreshes `Cargo.lock`.
 
 ```
 # Set an explicit version
-wails3 task version SET=3.3.0
+just version 4.1.0
 
 # Bump to the next version (defaults to patch)
-wails3 task version BUMP=major
-wails3 task version BUMP=minor
-wails3 task version BUMP=patch
+just version major
+just version minor
+just version patch
 ```
 
-With no arguments, the task bumps the patch version. It changes only version fields and leaves other build settings alone.
+An explicit version accepts `X.Y.Z` or `vX.Y.Z`. Run the recipe from the project root.
 
-- `BUMP` requires all version fields to match. If they differ or contain an invalid version, the task stops without writing any files.
-- `SET` accepts `X.Y.Z` or `vX.Y.Z` and updates all version fields, even if their current values differ or are invalid.
-- Run the task from the project root. You can also run the tool directly with `go run ./tools/setversion -set 3.3.0` or `go run ./tools/setversion -bump patch`.
+### Asset Generators
+
+| Command                     | Purpose                                                                                                                                           |
+|-----------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|
+| `just gen icons <names...>` | Copy Lucide icons into `assets/icons`, e.g. `just gen icons circle-check RefreshCw close=x`. Downloads `lucide-static` into a temporary directory |
 
 ### Project Structure
 
-| Directory   | Description                                                 |
-|-------------|-------------------------------------------------------------|
-| `backend/`  | Go backend (addon logic, API client, services, auth)        |
-| `frontend/` | React + TypeScript frontend (Vite, Tailwind CSS, shadcn/ui) |
-| `build/`    | Build configuration, icons, installer scripts               |
+| Directory            | Description                                                           |
+|----------------------|-----------------------------------------------------------------------|
+| `src/backend/`       | Addon logic, API client, auth, config, self-updater                   |
+| `src/state/`         | Application state: addons, settings, user, queries, toasts            |
+| `src/ui/`            | GPUI views: shell, sidebar, pages, components, theme                  |
+| `assets/`            | Embedded fonts, icons, and images                                     |
+| `resources/windows/` | Windows executable resources (application icon), linked by `build.rs` |
+| `tools/`             | Version tool, asset generators, AppImage packaging                    |
 
 ### Tech Stack
 
-- **Desktop framework:** Wails v3 (Go + WebView2)
-- **Frontend:** React, TypeScript, Vite, Tailwind CSS v4, shadcn/ui
+- **UI framework:** GPUI via `gpui-kit`
 - **Fonts:** Geist + Geist Mono
-- **State management:** Zustand + Jotai
-- **Backend:** Go, Viper (config), Zap (logging)
-- **Packaging:** NSIS (Windows), nfpm (Linux)
+- **HTTP:** ureq
+- **Config:** TOML (serde)
+- **Markdown/README rendering:** markdown, html5ever
+- **Packaging:** standalone executable (Windows), AppImage via appimagetool (Linux)

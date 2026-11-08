@@ -1,0 +1,6 @@
+# The AppImage is built in a Linux container from this checkout (`just appimage`), so these files must keep LF even
+# with core.autocrlf=true: bash rejects `set -o pipefail\r`, the AppRun shebang becomes `/bin/sh\r`, and appimagetool
+# refuses desktop files with CR.
+*.sh text eol=lf
+tools/appimage/AppRun text eol=lf
+*.desktop text eol=lf

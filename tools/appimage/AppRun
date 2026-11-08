@@ -1,0 +1,5 @@
+#!/bin/sh
+# Bundled libraries are found through the RPATH baked into the binary, so no LD_LIBRARY_PATH leaks to child processes.
+APPDIR="$(dirname "$(readlink -f "$0")")"
+export APPDIR
+exec "$APPDIR/usr/bin/classic-addon-manager" "$@"

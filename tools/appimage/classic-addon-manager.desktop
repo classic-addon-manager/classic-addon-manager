@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Classic Addon Manager
+Comment=An addon manager for ArcheAge Classic
+Exec=classic-addon-manager %u
+Icon=classic-addon-manager
+Categories=Utility;
+Terminal=false
+StartupNotify=false
+StartupWMClass=classic-addon-manager
+MimeType=x-scheme-handler/classicaddonmanager;

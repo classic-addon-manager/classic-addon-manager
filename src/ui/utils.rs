@@ -1,0 +1,314 @@
+//! Helpers that pages need: dates, numbers, semver versions, hues, addon search, text truncation and URL escaping.
+use std::sync::LazyLock;
+
+use chrono::{DateTime, Local, Utc};
+use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, utf8_percent_encode};
+
+/// Date and time in the local time zone, e.g. `05 Jul 2025 04:31 PM`, or `05 Jul 2025 16:31` when the OS clock is
+/// 24-hour (see [`clock_format`]). `short_month` uses `Jul` instead of `July`.
+pub fn format_to_local_time(date: &DateTime<Utc>, short_month: bool) -> String {
+    let local = date.with_timezone(&Local);
+    let month = if short_month { "%b" } else { "%B" };
+    local.format(&format!("%d {month} %Y {}", clock_format())).to_string()
+}
+
+/// strftime hour/minute pattern matching the user's OS clock preference: `%H:%M` or `%I:%M %p`.
+/// Read once per process; changing the OS setting takes effect on restart.
+pub fn clock_format() -> &'static str {
+    static FORMAT: LazyLock<&str> = LazyLock::new(|| if system_uses_24h() { "%H:%M" } else { "%I:%M %p" });
+    *FORMAT
+}
+
+/// Windows: the user's short time pattern from Region settings (`HH:mm` vs `h:mm tt`).
+#[cfg(windows)]
+fn system_uses_24h() -> bool {
+    #[link(name = "kernel32")]
+    unsafe extern "system" {
+        fn GetLocaleInfoEx(locale_name: *const u16, lc_type: u32, data: *mut u16, cch_data: i32) -> i32;
+    }
+    const LOCALE_STIMEFORMAT: u32 = 0x1003;
+    // Documented maximum for LOCALE_STIMEFORMAT is 80 characters including the terminator.
+    let mut buf = [0u16; 80];
+    // SAFETY: a null locale name selects LOCALE_NAME_USER_DEFAULT, the length is the buffer size in u16 units.
+    let len = unsafe { GetLocaleInfoEx(std::ptr::null(), LOCALE_STIMEFORMAT, buf.as_mut_ptr(), buf.len() as i32) };
+    if len <= 0 {
+        return false;
+    }
+    windows_pattern_is_24h(&String::from_utf16_lossy(&buf[..len as usize - 1]))
+}
+
+/// Linux: `LC_TIME`'s `T_FMT` from the environment (`LC_ALL` > `LC_TIME` > `LANG`), without touching the
+/// process-global locale.
+#[cfg(target_os = "linux")]
+fn system_uses_24h() -> bool {
+    // SAFETY: `newlocale` gets a NUL-terminated name and a null base, the returned handle is checked, only read
+    // via `nl_langinfo_l` while alive, and freed once. `nl_langinfo_l` returns a NUL-terminated string owned by it.
+    unsafe {
+        let loc = libc::newlocale(libc::LC_TIME_MASK, c"".as_ptr(), std::ptr::null_mut());
+        if loc.is_null() {
+            return true; // POSIX "C" locale: `%H:%M:%S`
+        }
+        let fmt = std::ffi::CStr::from_ptr(libc::nl_langinfo_l(libc::T_FMT, loc)).to_string_lossy().into_owned();
+        libc::freelocale(loc);
+        strftime_pattern_is_24h(&fmt)
+    }
+}
+
+#[cfg(not(any(windows, target_os = "linux")))]
+fn system_uses_24h() -> bool {
+    false
+}
+
+/// Windows time picture: `H` is the 24-hour field, `h`/`tt` the 12-hour ones; `'...'` is literal text.
+#[cfg(any(windows, test))]
+fn windows_pattern_is_24h(pattern: &str) -> bool {
+    let mut quoted = false;
+    for c in pattern.chars() {
+        match c {
+            '\'' => quoted = !quoted,
+            'H' if !quoted => return true,
+            _ => {}
+        }
+    }
+    false
+}
+
+/// strftime pattern: 12-hour iff it uses `%I`, `%l`, `%r` or `%p` (`E`/`O` modifiers allowed).
+#[cfg(any(target_os = "linux", test))]
+fn strftime_pattern_is_24h(pattern: &str) -> bool {
+    let mut chars = pattern.chars();
+    while let Some(c) = chars.next() {
+        if c != '%' {
+            continue;
+        }
+        let mut spec = chars.next();
+        if matches!(spec, Some('E' | 'O')) {
+            spec = chars.next();
+        }
+        if matches!(spec, Some('I' | 'l' | 'r' | 'p')) {
+            return false;
+        }
+    }
+    true
+}
+
+/// Local date in `05 Jul 2025` style (day, month, year).
+pub fn format_to_local_date(date: &DateTime<Utc>, short_month: bool) -> String {
+    let local = date.with_timezone(&Local);
+    let month = if short_month { "%b" } else { "%B" };
+    local.format(&format!("%d {month} %Y")).to_string()
+}
+
+/// Whole days since `date`.
+pub fn days_ago(date: &DateTime<Utc>) -> i64 {
+    (Utc::now() - *date).num_days()
+}
+
+/// Time since `date` as "just now", "5m ago", "2h ago" or "3d ago".
+pub fn time_ago(date: &DateTime<Utc>) -> String {
+    time_ago_at(date, &Utc::now())
+}
+
+fn time_ago_at(date: &DateTime<Utc>, now: &DateTime<Utc>) -> String {
+    let minutes = (*now - *date).num_minutes();
+    if minutes < 1 {
+        return "just now".into();
+    }
+    if minutes < 60 {
+        return format!("{minutes}m ago");
+    }
+    let hours = minutes / 60;
+    if hours < 24 {
+        return format!("{hours}h ago");
+    }
+    format!("{}d ago", hours / 24)
+}
+
+/// Days after `added_at` during which an addon counts as new.
+pub const NEW_ADDON_DAYS: i64 = 32;
+
+/// True while the addon was added less than [`NEW_ADDON_DAYS`] days ago. An addon without an added time is not new.
+pub fn is_new_addon(added_at: Option<DateTime<Utc>>) -> bool {
+    added_at.is_some_and(|t| days_ago(&t) < NEW_ADDON_DAYS)
+}
+
+/// Groups digits in thousands: `12345` -> `12,345`.
+pub fn format_number(n: i64) -> String {
+    let s = n.abs().to_string();
+    let mut out = String::new();
+    for (i, c) in s.chars().enumerate() {
+        if i > 0 && (s.len() - i).is_multiple_of(3) {
+            out.push(',');
+        }
+        out.push(c);
+    }
+    if n < 0 { format!("-{out}") } else { out }
+}
+
+/// Compact counts (`1.2k`, `3.4M`).
+pub fn format_compact(n: i64) -> String {
+    let f = n as f64;
+    if n.abs() >= 1_000_000 {
+        format!("{:.1}M", f / 1_000_000.0).replace(".0M", "M")
+    } else if n.abs() >= 1_000 {
+        format!("{:.1}k", f / 1_000.0).replace(".0k", "k")
+    } else {
+        n.to_string()
+    }
+}
+
+/// Lenient semver parse: leading `v` stripped, missing minor/patch padded (`1.2` -> `1.2.0`).
+pub fn parse_semver(v: &str) -> Option<semver::Version> {
+    let v = v.trim().trim_start_matches(['v', 'V']);
+    if let Ok(v) = semver::Version::parse(v) {
+        return Some(v);
+    }
+    let (core, rest) = match v.find(['-', '+']) {
+        Some(i) => (&v[..i], &v[i..]),
+        None => (v, ""),
+    };
+    let mut parts: Vec<&str> = core.split('.').collect();
+    if parts.is_empty()
+        || parts.len() > 3
+        || parts.iter().any(|p| p.is_empty() || !p.chars().all(|c| c.is_ascii_digit()))
+    {
+        return None;
+    }
+    while parts.len() < 3 {
+        parts.push("0");
+    }
+    semver::Version::parse(&format!("{}{rest}", parts.join("."))).ok()
+}
+
+/// True when version `a` is greater than `b`, false when either side is not a version.
+pub fn semver_gt(a: &str, b: &str) -> bool {
+    matches!((parse_semver(a), parse_semver(b)), (Some(a), Some(b)) if a > b)
+}
+
+/// Stable hue (0-359) derived from the UTF-16 units of a string, so the same text always gets the same colour.
+pub fn hue_from_string(value: &str) -> u32 {
+    let mut hash: u32 = 0;
+    for unit in value.encode_utf16() {
+        hash = (hash * 31 + unit as u32) % 360;
+    }
+    hash
+}
+
+/// Search text of an addon list, trimmed and lower-cased once. An addon matches when the text is empty or found in its
+/// name, alias, description or author, compared without case.
+pub struct AddonSearch(String);
+
+impl AddonSearch {
+    pub fn new(text: &str) -> Self {
+        Self(text.trim().to_lowercase())
+    }
+
+    pub fn matches(&self, name: &str, alias: &str, description: &str, author: &str) -> bool {
+        self.0.is_empty()
+            || [name, alias, description, author].iter().any(|field| field.to_lowercase().contains(&self.0))
+    }
+}
+
+/// The first `n` characters of `s`, cut on a character boundary (used for error messages in toasts and banners).
+pub fn truncate_chars(s: &str, n: usize) -> &str {
+    match s.char_indices().nth(n) {
+        Some((i, _)) => &s[..i],
+        None => s,
+    }
+}
+
+/// What [`encode_uri_component`] escapes: every byte except ASCII letters, digits and `-_.!~*'()`.
+const URI_COMPONENT: &AsciiSet = &NON_ALPHANUMERIC
+    .remove(b'-')
+    .remove(b'_')
+    .remove(b'.')
+    .remove(b'!')
+    .remove(b'~')
+    .remove(b'*')
+    .remove(b'\'')
+    .remove(b'(')
+    .remove(b')');
+
+/// Percent-encodes `s` with upper-case hex so it fits into one URL path segment or query value. A `/` or a space is
+/// escaped too (`v1.0/beta 1` becomes `v1.0%2Fbeta%201`).
+pub fn encode_uri_component(s: &str) -> String {
+    utf8_percent_encode(s, URI_COMPONENT).to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn numbers() {
+        assert_eq!(format_number(0), "0");
+        assert_eq!(format_number(1234), "1,234");
+        assert_eq!(format_number(-1234567), "-1,234,567");
+        assert_eq!(format_compact(999), "999");
+        assert_eq!(format_compact(1500), "1.5k");
+        assert_eq!(format_compact(2_000_000), "2M");
+    }
+
+    #[test]
+    fn semver_compare() {
+        assert!(semver_gt("1.10.0", "1.9.9"));
+        assert!(semver_gt("v2.0", "1.9.9"));
+        assert!(!semver_gt("1.0.0", "1.0.0"));
+        assert!(!semver_gt("garbage", "1.0.0"));
+    }
+
+    #[test]
+    fn hue_matches_js() {
+        // Each UTF-16 unit is folded in as hash = (hash * 31 + unit) % 360.
+        assert_eq!(hue_from_string(""), 0);
+        assert_eq!(hue_from_string("a"), 97);
+        assert_eq!(hue_from_string("ab"), (97 * 31 + 98) % 360);
+    }
+
+    #[test]
+    fn clock_pattern_detection() {
+        assert!(windows_pattern_is_24h("HH:mm:ss"));
+        assert!(!windows_pattern_is_24h("h:mm:ss tt"));
+        assert!(!windows_pattern_is_24h("'Heure' h:mm tt"));
+        assert!(strftime_pattern_is_24h("%H:%M:%S"));
+        assert!(strftime_pattern_is_24h("%T"));
+        assert!(!strftime_pattern_is_24h("%r"));
+        assert!(!strftime_pattern_is_24h("%OI:%M %p"));
+        assert!(strftime_pattern_is_24h("%%I %H"));
+    }
+
+    #[test]
+    fn relative_time() {
+        let now = Utc::now();
+        let ago = |d: chrono::Duration| time_ago_at(&(now - d), &now);
+        assert_eq!(ago(chrono::Duration::seconds(10)), "just now");
+        assert_eq!(ago(chrono::Duration::minutes(5)), "5m ago");
+        assert_eq!(ago(chrono::Duration::seconds(3 * 3600 + 5)), "3h ago");
+        assert_eq!(ago(chrono::Duration::hours(49)), "2d ago");
+        assert_eq!(ago(chrono::Duration::minutes(-2)), "just now");
+    }
+
+    #[test]
+    fn addon_search() {
+        let search = |text: &str| AddonSearch::new(text).matches("bagpack", "BagPack", "Inventory helper", "Madpeter");
+        assert!(search(""));
+        assert!(search("   "));
+        assert!(search(" MADPE "));
+        assert!(search("inventory"));
+        assert!(!search("zzz"));
+    }
+
+    #[test]
+    fn truncate_is_char_safe() {
+        assert_eq!(truncate_chars("héllo", 2), "hé");
+        assert_eq!(truncate_chars("ab", 5), "ab");
+    }
+
+    #[test]
+    fn uri_component_encoding() {
+        assert_eq!(encode_uri_component("v1.0/beta 1"), "v1.0%2Fbeta%201");
+        assert_eq!(encode_uri_component("2026-10-03"), "2026-10-03");
+        assert_eq!(encode_uri_component("a-_.!~*'()z"), "a-_.!~*'()z");
+        assert_eq!(encode_uri_component("é+&"), "%C3%A9%2B%26");
+    }
+}

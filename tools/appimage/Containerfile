@@ -1,0 +1,25 @@
+# Build environment for the AppImage. Ubuntu 22.04 (glibc 2.35) is the oldest baseline we target: a binary links
+# against the glibc of the machine that built it, so building on a rolling distro produces an image that fails
+# on every older system.
+FROM docker.io/library/ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    RUSTUP_HOME=/usr/local/rustup \
+    CARGO_HOME=/usr/local/cargo \
+    PATH=/usr/local/cargo/bin:$PATH
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential clang cmake curl ca-certificates file git patchelf pkg-config \
+        libasound2-dev libfontconfig-dev libssl-dev libwayland-dev libxcb1-dev libxkbcommon-dev \
+        libxkbcommon-x11-dev libzstd-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN curl --proto '=https' --tlsv1.2 -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
+
+# appimagetool is itself an AppImage and FUSE is unavailable in containers: unpack it once at image build time.
+RUN set -eux; arch=$(uname -m); \
+    curl -fsSL -o /tmp/appimagetool "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-$arch.AppImage"; \
+    chmod +x /tmp/appimagetool; cd /tmp; ./appimagetool --appimage-extract >/dev/null; \
+    mv squashfs-root /opt/appimagetool; rm /tmp/appimagetool
+
+WORKDIR /src

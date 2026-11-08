@@ -1,0 +1,5 @@
+// Embedded by build.rs on Windows targets. ID 1 is the icon Explorer shows for the exe, and the one gpui loads
+// (LoadImageW(module, 1, IMAGE_ICON)) for the window class, so the title bar and taskbar use it too.
+// gpui already embeds the application manifest (RT_MANIFEST 1): adding one here fails to link as a duplicate.
+// app.ico is assets/images/appicon.png at 16-256 px, update it whenever that image changes.
+1 ICON "app.ico"

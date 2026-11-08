@@ -1,0 +1,37 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+  TAG: ${{ github.event.release.tag_name }}
+
+# The asset name is fixed: the update server links to `classic-addon-manager-x86_64.AppImage` in the release. GitHub
+# records each asset's SHA-256 digest on upload. Windows builds are uploaded manually.
+jobs:
+  linux-appimage:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install just
+        uses: taiki-e/install-action@v2
+        with:
+          tool: just
+
+      # Builds inside the Ubuntu 22.04 container (tools/appimage/Containerfile) for the glibc 2.35 baseline.
+      - name: Build AppImage
+        run: just appimage
+        env:
+          CONTAINER_ENGINE: docker
+
+      - name: Upload AppImage to release
+        run: gh release upload "$TAG" dist/classic-addon-manager-x86_64.AppImage --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}

@@ -1,0 +1,10 @@
+[package]
+name = "setversion"
+version = "1.0.0"
+edition = "2024"
+publish = false
+
+# Standalone (std only) so `just version` builds it in a second and works the same on Windows and Linux.
+[[bin]]
+name = "setversion"
+path = "main.rs"
