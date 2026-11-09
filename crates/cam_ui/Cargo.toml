@@ -1,0 +1,18 @@
+# The app's widget kit on top of gpui-kit: theme, Lucide icons, fonts, components, Markdown rendering and toasts.
+[package]
+name = "cam_ui"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+async-channel.workspace = true
+gpui-kit.workspace = true
+html5ever.workspace = true
+log.workspace = true
+markdown.workspace = true
+markup5ever_rcdom.workspace = true
+rust-embed.workspace = true
+ureq.workspace = true
+url.workspace = true

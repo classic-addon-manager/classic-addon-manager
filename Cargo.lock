@@ -764,6 +764,49 @@ dependencies = [
 ]
 
 [[package]]
+name = "cam_core"
+version = "4.0.1"
+dependencies = [
+ "anyhow",
+ "async-channel",
+ "base64 0.23.1",
+ "chrono",
+ "dirs 7.0.0",
+ "form_urlencoded",
+ "hex",
+ "libc",
+ "log",
+ "percent-encoding",
+ "regex",
+ "semver",
+ "serde",
+ "serde_json",
+ "sha2 0.11.1",
+ "tempfile",
+ "thiserror 2.0.21",
+ "toml 1.1.8+spec-1.1.0",
+ "ureq",
+ "url",
+ "zip",
+]
+
+[[package]]
+name = "cam_ui"
+version = "4.0.1"
+dependencies = [
+ "anyhow",
+ "async-channel",
+ "gpui-kit",
+ "html5ever 0.39.0",
+ "log",
+ "markdown",
+ "markup5ever_rcdom 0.39.0+unofficial",
+ "rust-embed",
+ "ureq",
+ "url",
+]
+
+[[package]]
 name = "cbc"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -862,37 +905,20 @@ dependencies = [
 
 [[package]]
 name = "classic-addon-manager"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "anyhow",
  "async-channel",
- "base64 0.23.1",
+ "cam_core",
+ "cam_ui",
  "chrono",
- "dirs 7.0.0",
  "embed-resource",
- "form_urlencoded",
  "gpui-kit",
- "hex",
- "html5ever 0.39.0",
  "libc",
  "log",
- "markdown",
- "markup5ever_rcdom 0.39.0+unofficial",
- "open",
- "percent-encoding",
  "raw-window-handle",
- "regex",
  "rust-embed",
- "semver",
- "serde",
  "serde_json",
- "sha2 0.11.1",
- "tempfile",
- "thiserror 2.0.21",
- "toml 1.1.8+spec-1.1.0",
- "ureq",
- "url",
- "zip",
 ]
 
 [[package]]

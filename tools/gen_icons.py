@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Copy lucide icons into assets/icons/<name>.svg and regenerate src/ui/icons_generated.rs.
+"""Copy lucide icons into crates/cam_ui/assets/icons/<name>.svg and regenerate crates/cam_ui/src/icons_generated.rs.
 
 Usage: tools/gen_icons.py NAME [NAME ...]
   NAME      kebab-case lucide name (circle-check) or PascalCase export (CircleCheck), aliases work too.
@@ -15,7 +15,7 @@ import xml.etree.ElementTree as ET
 from xml.sax.saxutils import escape
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-OUT = os.path.join(ROOT, "assets/icons")
+OUT = os.path.join(ROOT, "crates/cam_ui/assets/icons")
 REGISTRY = "https://registry.npmjs.org/lucide-static/latest"
 ICON_DIR = "package/icons/"
 
@@ -87,7 +87,7 @@ def write_constants():
         ident = f.upper().replace("-", "_")
         if ident[0].isdigit(): ident = "_" + ident
         lines.append(f'pub const {ident}: Lucide = Lucide("{f}");')
-    with open(os.path.join(ROOT, "src/ui/icons_generated.rs"), "w") as f:
+    with open(os.path.join(ROOT, "crates/cam_ui/src/icons_generated.rs"), "w") as f:
         f.write("\n".join(lines) + "\n")
     return len(allf)
 

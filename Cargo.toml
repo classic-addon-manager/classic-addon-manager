@@ -1,11 +1,21 @@
-[package]
-name = "classic-addon-manager"
-version = "4.0.0"
-edition = "2024"
+[workspace]
+members = ["crates/*"]
+# Built on its own by `just version`, see tools/setversion/Cargo.toml.
+exclude = ["tools/setversion"]
+resolver = "3"
 
-[dependencies]
+[workspace.package]
+version = "4.0.1"
+edition = "2024"
+publish = false
+
+[workspace.dependencies]
+cam_core = { path = "crates/cam_core" }
+cam_ui = { path = "crates/cam_ui" }
+
 anyhow = "1.0.104"
 async-channel = "2.5.0"
+base64 = "0.23.1"
 chrono = { version = "0.4.45", features = ["serde"] }
 dirs = "7.0.0"
 form_urlencoded = "1.2.2"
@@ -16,8 +26,8 @@ libc = "0.2.191"
 log = "0.4.34"
 markdown = "1.0.0"
 markup5ever_rcdom = "0.39.0"
-open = "5.4.4"
 percent-encoding = "2.3.2"
+raw-window-handle = "0.6"
 regex = "1.13.1"
 rust-embed = "8"
 semver = "1.0.28"
@@ -31,7 +41,6 @@ ureq = { version = "3", features = ["json"] }
 url = "2"
 zip = "9.0.5"
 
-[build-dependencies]
 embed-resource = "3.0.12"
 
 [profile.dev.package."*"]
@@ -42,7 +51,3 @@ opt-level = 3
 strip = "debuginfo"
 lto = "fat"
 codegen-units = 1
-
-[target."cfg(windows)".dependencies]
-base64 = "0.23.1"
-raw-window-handle = "0.6"

@@ -27,7 +27,7 @@ run-prod *ARGS:
 
 # Rebuild and restart on source changes (needs `cargo install cargo-watch`)
 dev:
-    cargo watch -w src -w Cargo.toml -x run
+    cargo watch -w crates -w Cargo.toml -x run
 
 # Type-check without producing a binary
 check:

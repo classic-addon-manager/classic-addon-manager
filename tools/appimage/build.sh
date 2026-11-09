@@ -21,9 +21,10 @@ install -m755 "$binary" "$app_dir/usr/bin/$name"
 install -m755 "$script_dir/AppRun" "$app_dir/AppRun"
 install -m644 "$script_dir/$name.desktop" "$app_dir/$name.desktop"
 install -m644 "$script_dir/$name.desktop" "$app_dir/usr/share/applications/$name.desktop"
-install -m644 assets/images/appicon.png "$app_dir/$name.png"
-install -m644 assets/images/appicon.png "$app_dir/.DirIcon"
-install -m644 assets/images/appicon.png "$app_dir/usr/share/icons/hicolor/256x256/apps/$name.png"
+icon=crates/classic-addon-manager/assets/images/appicon.png
+install -m644 "$icon" "$app_dir/$name.png"
+install -m644 "$icon" "$app_dir/.DirIcon"
+install -m644 "$icon" "$app_dir/usr/share/icons/hicolor/256x256/apps/$name.png"
 
 # Bundle the linked non-glibc libraries (libxcb, libxkbcommon, ...). The glibc family and libgcc_s must come from the host.
 ldd "$app_dir/usr/bin/$name" | awk '$2 == "=>" && $3 ~ /^\// { print $3 }' |

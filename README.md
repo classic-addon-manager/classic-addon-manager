@@ -119,24 +119,24 @@ sudo pacman -S --needed base-devel clang cmake alsa-lib fontconfig openssl wayla
 
 Run `just` to list all recipes.
 
-| Command                 | Purpose                                                      |
-|-------------------------|--------------------------------------------------------------|
-| `just build`            | Debug build                                                  |
-| `just build-prod`       | Optimized release build with `Cargo.lock` enforced           |
-| `just run [ARGS]`       | Build (debug) and run, e.g. `just run --check-updates`       |
-| `just run-prod [ARGS]`  | Build (release) and run                                      |
-| `just dev`              | Rebuild and restart on source changes (needs `cargo-watch`) |
-| `just check`            | Type-check all targets                                       |
-| `just test [ARGS]`      | Run the test suite                                           |
-| `just lint`             | Clippy, warnings are errors                                  |
-| `just fmt`              | Format the sources                                           |
-| `just fmt-check`        | Check formatting without changing files                      |
-| `just ci`               | `fmt-check`, `lint`, and `test`                              |
-| `just clean`            | Remove build artifacts                                       |
+| Command                | Purpose                                                                      |
+|------------------------|------------------------------------------------------------------------------|
+| `just build`           | Debug build                                                                  |
+| `just build-prod`      | Optimized release build with `Cargo.lock` enforced                           |
+| `just run [ARGS]`      | Build (debug) and run, e.g. `just run --check-updates`                       |
+| `just run-prod [ARGS]` | Build (release) and run                                                      |
+| `just dev`             | Rebuild and restart on source changes (needs `cargo-watch`)                  |
+| `just check`           | Type-check all targets                                                       |
+| `just test [ARGS]`     | Run the test suite, e.g. `just test -p cam_core` for the GPUI-free core only |
+| `just lint`            | Clippy, warnings are errors                                                  |
+| `just fmt`             | Format the sources                                                           |
+| `just fmt-check`       | Check formatting without changing files                                      |
+| `just ci`              | `fmt-check`, `lint`, and `test`                                              |
+| `just clean`           | Remove build artifacts                                                       |
 
 ### Live Development
 
-Run `just dev` (install the watcher with `cargo install cargo-watch`). It rebuilds and restarts the app whenever `src/` or `Cargo.toml` changes.
+Run `just dev` (install the watcher with `cargo install cargo-watch`). It rebuilds and restarts the app whenever `crates/` or `Cargo.toml` changes.
 
 Debug builds include the GPUI inspector: press **Ctrl+Shift+I** to open or close it and pick an element to see the source location that rendered it.
 
@@ -148,13 +148,13 @@ To build a production binary:
 just build-prod
 ```
 
-The binary is written to `target/release/classic-addon-manager` (`.exe` on Windows). Release builds keep the symbol table so panic backtraces in `app.log` show function names, which is why Windows builds use the GNU toolchain: MSVC only writes symbols to a `.pdb` file. Windows builds embed the application icon from `resources/windows/` (`build.rs`) and only depend on DLLs that ship with Windows 10 and later.
+The binary is written to `target/release/classic-addon-manager` (`.exe` on Windows). Release builds keep the symbol table so panic backtraces in `app.log` show function names, which is why Windows builds use the GNU toolchain: MSVC only writes symbols to a `.pdb` file. Windows builds embed the application icon from `crates/classic-addon-manager/resources/windows/` (its `build.rs`) and only depend on DLLs that ship with Windows 10 and later.
 
 To build a Linux AppImage, run `just appimage` on Linux. It builds inside an Ubuntu 22.04 container (Podman, or Docker if Podman is missing, override with `CONTAINER_ENGINE`) so the binary runs on glibc 2.35 and newer, and writes `dist/classic-addon-manager-<architecture>.AppImage`. The container build uses its own `target/appimage/` directory.
 
 ### Version Management
 
-Use the `version` recipe instead of editing version numbers by hand. It updates `[package] version` in `Cargo.toml` and refreshes `Cargo.lock`.
+Use the `version` recipe instead of editing version numbers by hand. It updates `[workspace.package] version` in the root `Cargo.toml`, which every crate inherits, and refreshes `Cargo.lock`.
 
 ```
 # Set an explicit version
@@ -170,20 +170,24 @@ An explicit version accepts `X.Y.Z` or `vX.Y.Z`. Run the recipe from the project
 
 ### Asset Generators
 
-| Command                     | Purpose                                                                                                                                           |
-|-----------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|
-| `just gen icons <names...>` | Copy Lucide icons into `assets/icons`, e.g. `just gen icons circle-check RefreshCw close=x`. Downloads `lucide-static` into a temporary directory |
+| Command                     | Purpose                                                                                                                                                         |
+|-----------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `just gen icons <names...>` | Copy Lucide icons into `crates/cam_ui/assets/icons`, e.g. `just gen icons circle-check RefreshCw close=x`. Downloads `lucide-static` into a temporary directory |
 
 ### Project Structure
 
-| Directory            | Description                                                           |
-|----------------------|-----------------------------------------------------------------------|
-| `src/backend/`       | Addon logic, API client, auth, config, self-updater                   |
-| `src/state/`         | Application state: addons, settings, user, queries, toasts            |
-| `src/ui/`            | GPUI views: shell, sidebar, pages, components, theme                  |
-| `assets/`            | Embedded fonts, icons, and images                                     |
-| `resources/windows/` | Windows executable resources (application icon), linked by `build.rs` |
-| `tools/`             | Version tool, asset generators, AppImage packaging                    |
+A Cargo workspace with one crate per layer. A crate only depends on the ones above it in this table, so the compiler keeps the layers apart:
+
+| Crate                           | Description                                                                                                                                             |
+|---------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `crates/cam_core/`              | Everything that is not UI, without GPUI: addons, the server API (catalog, developer, AI chat), auth, config, self-updater, single-instance IPC, logging |
+| `crates/cam_ui/`                | The widget kit on gpui-kit: theme, Lucide icons and Geist fonts (`assets/`), components, Markdown rendering, toasts                                     |
+| `crates/classic-addon-manager/` | The app: `main.rs`, GPUI state (`state/`), and the window (`ui/`: shell, pages, chat). Owns the images in `assets/` and the Windows resources           |
+
+| Directory | Description                                         |
+|-----------|-----------------------------------------------------|
+| `tools/`  | Version tool, asset generators, AppImage packaging  |
+| `docs/`   | README screenshots                                  |
 
 ### Tech Stack
 
