@@ -96,7 +96,7 @@ If you find this project useful, consider supporting development:
 
 - Rust 1.92+ (the newest `rust-version` among the dependencies)
 - [`just`](https://github.com/casey/just) task runner (`cargo install just`)
-- Windows only: the MSVC toolchain (`stable-x86_64-pc-windows-msvc`, rustup's default on Windows) and Visual Studio Build Tools with the "Desktop development with C++" workload, which provides the linker and the Windows SDK resource compiler
+- Windows only: the GNU toolchain (`rustup default stable-x86_64-pc-windows-gnu`) and the UCRT64 GCC toolchain from [MSYS2](https://www.msys2.org/), with `C:\msys64\ucrt64\bin` on `PATH`
 - Linux only: a C toolchain, CMake, and the GPUI system libraries (see below)
 
 Install the Linux build dependencies with your distribution's package manager:
@@ -148,7 +148,7 @@ To build a production binary:
 just build-prod
 ```
 
-The binary is written to `target/release/classic-addon-manager` (`.exe` on Windows). Release builds keep the symbol table so panic backtraces in `app.log` show function names. Windows builds embed the application icon from `resources/windows/` (`build.rs`) and link the C runtime statically (`.cargo/config.toml`), so the exe runs without the Visual C++ Redistributable.
+The binary is written to `target/release/classic-addon-manager` (`.exe` on Windows). Release builds keep the symbol table so panic backtraces in `app.log` show function names, which is why Windows builds use the GNU toolchain: MSVC only writes symbols to a `.pdb` file. Windows builds embed the application icon from `resources/windows/` (`build.rs`) and only depend on DLLs that ship with Windows 10 and later.
 
 To build a Linux AppImage, run `just appimage` on Linux. It builds inside an Ubuntu 22.04 container (Podman, or Docker if Podman is missing, override with `CONTAINER_ENGINE`) so the binary runs on glibc 2.35 and newer, and writes `dist/classic-addon-manager-<architecture>.AppImage`. The container build uses its own `target/appimage/` directory.
 

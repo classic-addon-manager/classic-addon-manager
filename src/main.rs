@@ -1,6 +1,10 @@
 // Classic Addon Manager (GPUI). Bootstrap: CLI flag, single instance, assets/fonts/theme, window.
 // Release builds link as a GUI app on Windows so launching doesn't spawn a console, debug keeps the console for stderr.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+// False positive on windows-gnu: `thread_local!` expands differently there and clippy flags initializers that already
+// are `const { … }` (ui/components/dialog.rs, ui/components/floating.rs).
+// https://github.com/rust-lang/rust-clippy/issues/13422
+#![cfg_attr(all(windows, target_env = "gnu"), expect(clippy::missing_const_for_thread_local))]
 mod backend;
 mod state;
 mod ui;
