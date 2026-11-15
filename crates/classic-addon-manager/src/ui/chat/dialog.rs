@@ -18,11 +18,14 @@ use cam_ui::{
     icons,
     theme::{TokensExt, TwText, alpha},
 };
+use gpui_kit::base::motion::{
+    Easing, IterationCount, Keyframe, Keyframes, MotionTransform, Stagger, StaggerOrigin, Timing, animate_keyframes,
+};
 use gpui_kit::component::{Icon, Sizable as _, avatar::Avatar, clipboard::Clipboard};
 use gpui_kit::{
     Animation, AnimationExt as _, AnyElement, Context, Entity, FontWeight, InteractiveElement, IntoElement, ObjectFit,
     ParentElement, Pixels, Render, ScrollHandle, SharedString, StatefulInteractiveElement, Styled, StyledImage as _,
-    Task, Transformation, Window, div, ease_out_quint, img, percentage, prelude::FluentBuilder as _, px,
+    Task, Transformation, Window, div, ease_out_quint, img, percentage, point, prelude::FluentBuilder as _, px,
 };
 
 use super::conversation::{ChatState, Part, REVEAL_TICK_MS, TextReveal, ToolCall, ToolStatus, Turn, tool_meta};
@@ -417,7 +420,7 @@ impl Render for AiChatDialog {
             let mut list = div().flex().flex_col().gap(px(24.0));
             for (i, turn) in self.st.turns.iter().enumerate() {
                 list = list.child(self.user_message(i, &turn.user, cx));
-                if let Some(el) = self.assistant_turn(i, turn, active_turn == Some(i), is_revealing, cx) {
+                if let Some(el) = self.assistant_turn(i, turn, active_turn == Some(i), is_revealing, window, cx) {
                     list = list.child(el);
                 }
             }
@@ -541,6 +544,7 @@ impl AiChatDialog {
         turn: &Turn,
         is_active: bool,
         is_revealing: bool,
+        window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Option<AnyElement> {
         let full = turn.assistant.as_str();
@@ -576,7 +580,7 @@ impl AiChatDialog {
             col = col.child(tools);
         }
         if is_active && visible.trim().is_empty() && !has_running_tool {
-            col = col.child(loading_indicator(cx));
+            col = col.child(loading_indicator(window, cx));
         }
         if !visible.trim().is_empty() {
             col = col.child(
@@ -718,35 +722,49 @@ fn empty_state(window: &mut Window, cx: &mut Context<AiChatDialog>) -> impl Into
     .text_color(t.primary)
 }
 
-/// "Daru is thinking" label followed by three bouncing dots.
-fn loading_indicator(cx: &mut Context<AiChatDialog>) -> impl IntoElement {
-    let t = cx.tokens();
-    let dot = |i: usize, delay: f32| {
-        div().size(px(6.0)).rounded_full().bg(t.primary).relative().with_animation(
-            SharedString::from(format!("dot-{i}")),
-            Animation::new(Duration::from_millis(1000)).repeat(),
-            move |d, delta| {
-                // One bounce per second: the dot starts 1.5 px up, rests at the halfway point and rises back,
-                // with cubic easing.
-                let p = (delta + 1.0 - delay).fract();
-                let lift = if p < 0.5 {
-                    let s = p * 2.0;
-                    1.0 - s * s * s
-                } else {
-                    let s = (p - 0.5) * 2.0;
-                    1.0 - (1.0 - s).powi(3)
-                };
-                d.top(px(-1.5 * lift))
-            },
-        )
+/// One loop of a thinking dot: a smooth rise, a soft fall that dips just below the baseline, a settle, then a rest.
+/// Every keyframe is a velocity-zero turning point, so the motion has no sudden changes of speed.
+const DOT_CYCLE: Duration = Duration::from_millis(1400);
+/// Delay between neighbouring dots, so the bounce travels across them as a wave.
+const DOT_STAGGER: Duration = Duration::from_millis(160);
+const DOT_COUNT: usize = 3;
+
+thread_local! {
+    /// Built once: `Keyframes` holds an `Rc` easing, so it cannot live in a `static`.
+    static DOT_FRAMES: Keyframes<MotionTransform> = {
+        let pose = |y: f32, opacity: f32| MotionTransform {
+            translation: point(px(0.0), px(y)),
+            opacity,
+            ..MotionTransform::identity()
+        };
+        let rest = pose(0.0, 0.35);
+        Keyframes::try_new([
+            Keyframe::new(0.0, rest).ease(Easing::CubicBezier { x1: 0.33, y1: 0.0, x2: 0.2, y2: 1.0 }),
+            Keyframe::new(0.30, pose(-7.0, 1.0)).ease(Easing::CubicBezier { x1: 0.55, y1: 0.0, x2: 0.45, y2: 1.0 }),
+            Keyframe::new(0.62, pose(1.5, 0.55)).ease(Easing::EaseInOut),
+            Keyframe::new(0.78, rest),
+            Keyframe::new(1.0, rest),
+        ])
+        .expect("thinking dot keyframes are valid")
     };
+}
+
+/// "Daru is thinking" label followed by three dots bouncing in a wave.
+fn loading_indicator(window: &mut Window, cx: &mut Context<AiChatDialog>) -> impl IntoElement {
+    let t = cx.tokens();
+    let frames = DOT_FRAMES.with(Clone::clone);
+    let stagger = Stagger::new(DOT_STAGGER, StaggerOrigin::First);
+    let dots = (0..DOT_COUNT).map(|i| {
+        let timing =
+            Timing::new(DOT_CYCLE).iterations(IterationCount::Infinite).delay(stagger.delay(i, DOT_COUNT).into());
+        let pose = animate_keyframes((i, "daru-thinking-dot"), &frames, timing, window, cx).value;
+        div().size(px(6.0)).rounded_full().bg(t.primary).relative().top(pose.translation.y).opacity(pose.opacity)
+    });
     div()
         .flex()
         .items_center()
         .gap(px(6.0))
-        .py(px(4.0))
+        .py(px(6.0))
         .child(div().mr(px(4.0)).text_xs_tw().text_color(alpha(t.muted_foreground, 0.7)).child("Daru is thinking"))
-        .child(dot(0, 0.0))
-        .child(dot(1, 0.1))
-        .child(dot(2, 0.2))
+        .children(dots)
 }
