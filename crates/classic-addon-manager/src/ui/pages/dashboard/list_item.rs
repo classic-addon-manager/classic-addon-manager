@@ -20,25 +20,39 @@ type ClickFn = Rc<dyn Fn(&mut Window, &mut App)>;
 #[derive(IntoElement)]
 pub struct AddonListItem {
     id: ElementId,
-    addon: Addon,
+    alias: SharedString,
+    version: SharedString,
+    author: SharedString,
+    is_managed: bool,
     selected: bool,
     has_update: bool,
     checking_for_updates: bool,
-    icon_url: Option<String>,
+    icon_url: Option<SharedString>,
     on_click: ClickFn,
 }
 
 impl AddonListItem {
     pub fn new(
         id: impl Into<ElementId>,
-        addon: Addon,
+        addon: &Addon,
         selected: bool,
         has_update: bool,
         checking_for_updates: bool,
-        icon_url: Option<String>,
+        icon_url: Option<&str>,
         on_click: impl Fn(&mut Window, &mut App) + 'static,
     ) -> Self {
-        Self { id: id.into(), addon, selected, has_update, checking_for_updates, icon_url, on_click: Rc::new(on_click) }
+        Self {
+            id: id.into(),
+            alias: SharedString::new(&addon.alias),
+            version: SharedString::new(&addon.version),
+            author: SharedString::new(&addon.author),
+            is_managed: addon.is_managed,
+            selected,
+            has_update,
+            checking_for_updates,
+            icon_url: icon_url.map(SharedString::new),
+            on_click: Rc::new(on_click),
+        }
     }
 }
 
@@ -47,28 +61,22 @@ impl RenderOnce for AddonListItem {
         let t = cx.tokens();
         let (primary, border, muted_fg) = (t.primary, t.border, t.muted_foreground);
         let (muted, secondary, secondary_fg) = (t.muted, t.secondary, t.secondary_foreground);
-        let addon = self.addon;
         let on_click = self.on_click;
         let selected = self.selected;
+        let managed = self.is_managed;
 
-        let indicator = if addon.is_managed && self.checking_for_updates {
+        let indicator = if managed && self.checking_for_updates {
             spinner().color(primary).into_any_element()
-        } else if addon.is_managed && self.has_update {
+        } else if managed && self.has_update {
             Icon::new(icons::DOWNLOAD).size(px(16.0)).text_color(primary).into_any_element()
-        } else if addon.is_managed {
+        } else if managed {
             Icon::new(icons::CHECK).size(px(16.0)).text_color(tw(Tw::Green, 600)).into_any_element()
         } else {
             div().size(px(8.0)).rounded_full().bg(tw(Tw::Orange, 600)).into_any_element()
         };
 
-        let version_row = if addon.is_managed {
-            div()
-                .min_w_0()
-                .truncate()
-                .text_xs_tw()
-                .text_color(muted_fg)
-                .child(SharedString::from(addon.version.clone()))
-                .into_any_element()
+        let version_row = if managed {
+            div().min_w_0().truncate().text_xs_tw().text_color(muted_fg).child(self.version).into_any_element()
         } else {
             div()
                 .flex_none()
@@ -103,9 +111,7 @@ impl RenderOnce for AddonListItem {
                     .hover(move |s| s.bg(alpha(muted, 0.5)).border_color(alpha(border, 0.5)))
             })
             .on_click(move |_, window, cx| on_click(window, cx))
-            .child(div().flex_none().child(
-                AddonIcon::new(SharedString::from(addon.alias.clone()), self.icon_url.clone()).size(AddonIconSize::Sm),
-            ))
+            .child(div().flex_none().child(AddonIcon::new(self.alias.clone(), self.icon_url).size(AddonIconSize::Sm)))
             .child(
                 div()
                     .flex_1()
@@ -117,17 +123,16 @@ impl RenderOnce for AddonListItem {
                             .text_sm_tw()
                             .font_weight(FontWeight::MEDIUM)
                             .when(selected, |d| d.text_color(primary))
-                            .child(SharedString::from(addon.alias.clone())),
+                            .child(self.alias),
                     )
                     .child(
-                        div().flex().items_center().gap_2().mt(px(2.0)).child(version_row).child(
-                            div()
-                                .min_w_0()
-                                .truncate()
-                                .text_xs_tw()
-                                .text_color(muted_fg)
-                                .child(SharedString::from(addon.author.clone())),
-                        ),
+                        div()
+                            .flex()
+                            .items_center()
+                            .gap_2()
+                            .mt(px(2.0))
+                            .child(version_row)
+                            .child(div().min_w_0().truncate().text_xs_tw().text_color(muted_fg).child(self.author)),
                     ),
             )
             .child(div().flex_none().flex().items_center().child(indicator))

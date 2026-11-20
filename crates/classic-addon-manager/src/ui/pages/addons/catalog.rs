@@ -7,6 +7,7 @@
 use std::{cmp::Ordering, collections::HashSet, sync::Arc};
 
 use cam_core::{
+    addon::Addon,
     api::AddonManifest,
     config::{AddonSort, AddonSortKey},
 };
@@ -50,6 +51,8 @@ pub struct CatalogState {
     pub rev: u64,
     /// The catalog `addons` was built from.
     source: Option<Arc<Catalog>>,
+    /// The installed addons the `is_installed` marks of `addons` were taken from.
+    installed: Option<Arc<Vec<Addon>>>,
     _subs: [Subscription; 2],
 }
 
@@ -83,6 +86,7 @@ impl CatalogState {
             max_downloads: 0,
             rev: 0,
             source: None,
+            installed: None,
             _subs: subs,
         };
         this.sync(cx);
@@ -95,25 +99,30 @@ impl CatalogState {
         let is_ready = matches!(load, Load::Ready(_) | Load::Failed(_));
         let current = load.ready().cloned();
         let error = store::error(cx).map(|e| e.message());
-        let installed: HashSet<&str> =
-            state::addons(cx).read(cx).installed_addons.iter().map(|a| a.name.as_str()).collect();
+        let installed = state::addons(cx).read(cx).installed_addons.clone();
+        // The marks only change with the installed list, and the addon store replaces that list when it changes
+        let marks_stale = !self.installed.as_ref().is_some_and(|i| Arc::ptr_eq(i, &installed));
+        let names = || installed.iter().map(|a| a.name.as_str()).collect::<HashSet<&str>>();
         let mut changed = is_ready != self.is_ready || error != self.error;
         match current {
             Some(catalog) if !self.source.as_ref().is_some_and(|s| Arc::ptr_eq(s, &catalog)) => {
-                self.addons = build_list(catalog.addons(), &installed);
+                self.addons = build_list(catalog.addons(), &names());
                 self.tags = std::iter::once(ALL_TAG.to_string()).chain(catalog.tags().iter().cloned()).collect();
                 self.max_downloads = catalog.max_downloads();
                 self.source = Some(catalog);
                 changed = true;
             }
-            _ => {
+            _ if marks_stale => {
+                let names = names();
                 for item in &mut self.addons {
-                    let now = installed.contains(item.manifest.name.as_str());
+                    let now = names.contains(item.manifest.name.as_str());
                     changed |= item.is_installed != now;
                     item.is_installed = now;
                 }
             }
+            _ => {}
         }
+        self.installed = Some(installed);
         if changed {
             self.is_ready = is_ready;
             self.error = error;

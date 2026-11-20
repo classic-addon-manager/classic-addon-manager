@@ -3,7 +3,7 @@
 //!
 //! The model lives in a gpui `Global`, so the selected addon survives page switches. The page constructor resets the
 //! search query because the toolbar's search box always starts empty.
-use std::{cmp::Ordering, collections::HashMap};
+use std::collections::HashMap;
 
 use cam_core::{
     addon::{self, Addon},
@@ -15,7 +15,7 @@ use crate::{state::catalog::locale_cmp, ui::addon_filter::AddonSearch};
 
 #[derive(Default)]
 pub struct DashboardModel {
-    /// The selected addon as a snapshot. Resolve it against the store with [`resolve_selected`].
+    /// The selected addon as a snapshot. Its name picks the addon: the page shows the installed addon with that name.
     pub selected: Option<Addon>,
     /// Text typed into the toolbar search box.
     pub search_query: String,
@@ -41,41 +41,51 @@ impl DashboardModel {
     }
 }
 
+/// An addon of the installed list as the dashboard lists it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ListedAddon {
+    /// Position in the installed list.
+    pub index: usize,
+    pub has_update: bool,
+}
+
 /// Keeps the addons matching the search text in name, alias, description or author, then sorts them: addons with an
 /// update first, then by name.
-pub fn filtered_addons(installed: &[Addon], releases: &HashMap<String, Release>, search_query: &str) -> Vec<Addon> {
+pub fn filtered_addons(
+    installed: &[Addon],
+    releases: &HashMap<String, Release>,
+    search_query: &str,
+) -> Vec<ListedAddon> {
     let search = AddonSearch::new(search_query);
-    let mut filtered: Vec<Addon> =
-        installed.iter().filter(|a| search.matches(&a.name, &a.alias, &a.description, &a.author)).cloned().collect();
-    filtered.sort_by(|a, b| {
-        let a_up = releases.get(&a.name).is_some_and(|r| addon::has_update(a, r));
-        let b_up = releases.get(&b.name).is_some_and(|r| addon::has_update(b, r));
-        match (a_up, b_up) {
-            (true, false) => Ordering::Less,
-            (false, true) => Ordering::Greater,
-            _ => locale_cmp(&a.name, &b.name),
-        }
+    let mut listed: Vec<ListedAddon> = installed
+        .iter()
+        .enumerate()
+        .filter(|(_, a)| search.matches(&a.name, &a.alias, &a.description, &a.author))
+        .map(|(index, a)| ListedAddon {
+            index,
+            has_update: releases.get(&a.name).is_some_and(|r| addon::has_update(a, r)),
+        })
+        .collect();
+    listed.sort_by(|a, b| {
+        b.has_update.cmp(&a.has_update).then_with(|| locale_cmp(&installed[a.index].name, &installed[b.index].name))
     });
-    filtered
+    listed
 }
 
-/// The stored snapshot, replaced by the live addon with the same name when that addon is installed.
-pub fn resolve_selected(installed: &[Addon], snapshot: Option<&Addon>) -> Option<Addon> {
-    snapshot.map(|s| installed.iter().find(|a| a.name == s.name).unwrap_or(s).clone())
-}
-
-/// Keeps the selection valid for the current list. Returns `Some(new_selection)` when the selection has to change:
-/// with nothing selected the first listed addon is picked, and when the selected addon is no longer listed the first
-/// one (or nothing) replaces it.
-pub fn reconcile_selection(selected: Option<&Addon>, filtered: &[Addon]) -> Option<Option<Addon>> {
+/// Keeps the selection valid for the listed addons. `selected` is the name of the selected addon. Returns
+/// `Some(new_selection)` when the selection has to change: with nothing selected the first listed addon is picked, and
+/// when the selected addon is no longer listed the first one (or nothing) replaces it.
+pub fn reconcile_selection<'a>(
+    selected: Option<&str>,
+    listed: impl IntoIterator<Item = &'a Addon>,
+) -> Option<Option<&'a Addon>> {
+    let mut listed = listed.into_iter();
+    let first = listed.next();
     match selected {
-        None => filtered.first().map(|first| Some(first.clone())),
-        Some(sel) => {
-            if filtered.iter().any(|a| a.name == sel.name) {
-                None
-            } else {
-                Some(filtered.first().cloned())
-            }
+        None => first.map(Some),
+        Some(name) => {
+            let still_listed = first.is_some_and(|a| a.name == name) || listed.any(|a| a.name == name);
+            (!still_listed).then_some(first)
         }
     }
 }
@@ -105,6 +115,10 @@ mod tests {
         }
     }
 
+    fn listed_names<'a>(installed: &'a [Addon], releases: &HashMap<String, Release>, query: &str) -> Vec<&'a str> {
+        filtered_addons(installed, releases, query).iter().map(|l| installed[l.index].name.as_str()).collect()
+    }
+
     #[test]
     fn sorts_updates_first_then_by_name() {
         let installed =
@@ -112,9 +126,9 @@ mod tests {
         let mut releases = HashMap::new();
         releases.insert("zeta".to_string(), release("2"));
         releases.insert("alpha".to_string(), release("1"));
-        let out = filtered_addons(&installed, &releases, "");
-        let names: Vec<_> = out.iter().map(|a| a.name.as_str()).collect();
-        assert_eq!(names, ["zeta", "alpha", "mid"]);
+        assert_eq!(listed_names(&installed, &releases, ""), ["zeta", "alpha", "mid"]);
+        let flags: Vec<_> = filtered_addons(&installed, &releases, "").iter().map(|l| l.has_update).collect();
+        assert_eq!(flags, [true, false, false]);
     }
 
     #[test]
@@ -122,8 +136,7 @@ mod tests {
         let installed = vec![addon("b", "B", false, ""), addon("a", "A", true, "1")];
         let mut releases = HashMap::new();
         releases.insert("b".to_string(), release("9"));
-        let names: Vec<_> = filtered_addons(&installed, &releases, "").into_iter().map(|a| a.name).collect();
-        assert_eq!(names, ["a", "b"]);
+        assert_eq!(listed_names(&installed, &releases, ""), ["a", "b"]);
     }
 
     #[test]
@@ -131,12 +144,12 @@ mod tests {
         let mut installed = vec![addon("dbm", "Deadly Boss Mods", true, "1"), addon("bag", "Bagnon", true, "1")];
         installed[1].author = "Tuller".into();
         let r = HashMap::new();
-        assert_eq!(filtered_addons(&installed, &r, "DEADLY").len(), 1);
-        assert_eq!(filtered_addons(&installed, &r, "bag")[0].name, "bag");
-        assert_eq!(filtered_addons(&installed, &r, "desc of").len(), 2);
-        assert_eq!(filtered_addons(&installed, &r, "tuller")[0].name, "bag");
-        assert_eq!(filtered_addons(&installed, &r, "   ").len(), 2);
-        assert!(filtered_addons(&installed, &r, "nothing").is_empty());
+        assert_eq!(listed_names(&installed, &r, "DEADLY"), ["dbm"]);
+        assert_eq!(listed_names(&installed, &r, "bag"), ["bag"]);
+        assert_eq!(listed_names(&installed, &r, "desc of").len(), 2);
+        assert_eq!(listed_names(&installed, &r, "tuller"), ["bag"]);
+        assert_eq!(listed_names(&installed, &r, "   ").len(), 2);
+        assert!(listed_names(&installed, &r, "nothing").is_empty());
     }
 
     #[test]
@@ -144,19 +157,11 @@ mod tests {
         let a = addon("a", "A", true, "1");
         let b = addon("b", "B", true, "1");
         let list = vec![a.clone(), b.clone()];
-        assert_eq!(reconcile_selection(None, &list), Some(Some(a.clone())));
+        assert_eq!(reconcile_selection(None, &list), Some(Some(&a)));
         assert_eq!(reconcile_selection(None, &[]), None);
-        assert_eq!(reconcile_selection(Some(&b), &list), None);
-        assert_eq!(reconcile_selection(Some(&addon("gone", "G", true, "1")), &list), Some(Some(a)));
-        assert_eq!(reconcile_selection(Some(&b), &[]), Some(None));
-    }
-
-    #[test]
-    fn resolve_prefers_live_addon() {
-        let old = addon("a", "Old", true, "1");
-        let live = addon("a", "New", true, "2");
-        assert_eq!(resolve_selected(std::slice::from_ref(&live), Some(&old)).unwrap().version, "2");
-        assert_eq!(resolve_selected(&[], Some(&old)).unwrap().alias, "Old");
-        assert!(resolve_selected(&[live], None).is_none());
+        assert_eq!(reconcile_selection(Some("a"), &list), None);
+        assert_eq!(reconcile_selection(Some("b"), &list), None);
+        assert_eq!(reconcile_selection(Some("gone"), &list), Some(Some(&a)));
+        assert_eq!(reconcile_selection(Some("b"), &[]), Some(None));
     }
 }

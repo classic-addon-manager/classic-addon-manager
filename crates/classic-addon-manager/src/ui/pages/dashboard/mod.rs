@@ -11,9 +11,14 @@ mod toolbar;
 mod update_dialog;
 mod version_dialog;
 
-use std::{collections::HashSet, time::Duration};
+use std::{
+    collections::{HashMap, HashSet},
+    mem, ptr,
+    sync::{Arc, Weak},
+    time::Duration,
+};
 
-use cam_core::addon;
+use cam_core::{addon::Addon, api::Release};
 use cam_ui::{
     anim::{fade_in, fade_slide_in},
     components::{Button, ButtonVariant, EmptyState, EmptyTone, ScrollArea, spinner},
@@ -30,7 +35,7 @@ use gpui_kit::{
 use self::{
     details::DetailsPane,
     list_item::AddonListItem,
-    model::{DashboardModel, filtered_addons, model, reconcile_selection, resolve_selected},
+    model::{DashboardModel, ListedAddon, filtered_addons, model, reconcile_selection},
 };
 use crate::{
     state::{self, AddonState},
@@ -45,9 +50,58 @@ pub struct DashboardPage {
     addons: Entity<AddonState>,
     /// True until the first reload of the installed addons has finished.
     is_loading: bool,
-    details: Option<(String, Entity<DetailsPane>)>,
-    /// Names rendered in the list so far. Rows that appear later fade in.
-    rendered_names: HashSet<String>,
+    details: Option<Entity<DetailsPane>>,
+    /// The list as drawn last. Rows that appear later fade in.
+    order: ListOrder,
+}
+
+/// The listed addons in list order, computed from the snapshots and search text it holds. Kept until one of them
+/// changes, so a draw that changes none of them reuses it.
+#[derive(Default)]
+struct ListOrder {
+    installed: Arc<Vec<Addon>>,
+    /// Only tells whether the releases changed. Weak, so it does not keep replaced release notes alive; the
+    /// allocation it points to stays reserved, so its address can't be reused by a later map.
+    releases: Weak<HashMap<String, Release>>,
+    query: String,
+    rows: Vec<Row>,
+}
+
+struct Row {
+    listed: ListedAddon,
+    /// Element id of the row.
+    id: SharedString,
+}
+
+impl ListOrder {
+    fn new(installed: Arc<Vec<Addon>>, releases: Arc<HashMap<String, Release>>, query: &str) -> Self {
+        let rows = filtered_addons(&installed, &releases, query)
+            .into_iter()
+            .map(|listed| Row { listed, id: SharedString::from(format!("addon-{}", installed[listed.index].name)) })
+            .collect();
+        Self { installed, releases: Arc::downgrade(&releases), query: query.to_owned(), rows }
+    }
+
+    fn is_for(&self, installed: &Arc<Vec<Addon>>, releases: &Arc<HashMap<String, Release>>, query: &str) -> bool {
+        Arc::ptr_eq(&self.installed, installed)
+            && ptr::eq(self.releases.as_ptr(), Arc::as_ptr(releases))
+            && self.query == query
+    }
+
+    /// True when both list the same addons, perhaps in another order: which addons are listed follows from the
+    /// installed list and the search text alone.
+    fn lists_same_addons(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.installed, &other.installed) && self.query == other.query
+    }
+
+    fn addon(&self, row: &Row) -> &Addon {
+        &self.installed[row.listed.index]
+    }
+
+    /// The listed addons in list order.
+    fn addons(&self) -> impl Iterator<Item = &Addon> {
+        self.rows.iter().map(|row| self.addon(row))
+    }
 }
 
 impl DashboardPage {
@@ -76,7 +130,7 @@ impl DashboardPage {
         .detach();
         state::catalog::ensure(cx);
 
-        Self { model, addons, is_loading: true, details: None, rendered_names: HashSet::new() }
+        Self { model, addons, is_loading: true, details: None, order: ListOrder::default() }
     }
 
     fn loading_view(&self, cx: &App) -> impl IntoElement {
@@ -188,10 +242,10 @@ impl Render for DashboardPage {
             return div().size_full().child(self.loading_view(cx)).into_any_element();
         }
 
-        let store = self.addons.read(cx);
-        let installed = store.installed_addons.clone();
-        let releases = store.latest_releases.clone();
-        let checking = store.is_checking_for_updates;
+        let (installed, releases, checking) = {
+            let store = self.addons.read(cx);
+            (store.installed_addons.clone(), store.latest_releases.clone(), store.is_checking_for_updates)
+        };
 
         if installed.is_empty() {
             return drop_target(
@@ -207,55 +261,72 @@ impl Render for DashboardPage {
             .into_any_element();
         }
 
-        // Keep the selection valid for the filtered list
-        let filtered = filtered_addons(&installed, &releases, &self.model.read(cx).search_query);
-        let snapshot = self.model.read(cx).selected.clone();
-        let mut selected = resolve_selected(&installed, snapshot.as_ref());
-        if let Some(new) = reconcile_selection(selected.as_ref(), &filtered) {
-            self.model.update(cx, |m, cx| m.set_selected(new.clone(), cx));
-            selected = resolve_selected(&installed, new.as_ref());
+        // Reorder only when the installed list, the releases or the search text changed since the last draw
+        let query = self.model.read(cx).search_query.as_str();
+        let previous = (!self.order.is_for(&installed, &releases, query))
+            .then(|| mem::replace(&mut self.order, ListOrder::new(installed, releases, query)));
+        // Rows missing from the previous list fade in, unless that list was empty
+        let previous_names: Option<HashSet<&str>> = previous
+            .as_ref()
+            .filter(|p| !p.rows.is_empty() && !p.lists_same_addons(&self.order))
+            .map(|p| p.addons().map(|a| a.name.as_str()).collect());
+        let order = &self.order;
+
+        // Keep the selection valid for the filtered list. The selected addon is shown as its installed copy.
+        let mut replacement = None;
+        let selected: Option<&Addon> = {
+            let current = self.model.read(cx).selected.as_ref().map(|s| s.name.as_str());
+            let name = match reconcile_selection(current, order.addons()) {
+                None => current,
+                Some(new) => {
+                    replacement = Some(new.cloned());
+                    new.map(|a| a.name.as_str())
+                }
+            };
+            name.and_then(|name| order.installed.iter().find(|a| a.name == name))
+        };
+        if let Some(new) = replacement {
+            self.model.update(cx, |m, cx| m.set_selected(new, cx));
         }
 
-        // The details view is rebuilt whenever the selected addon's `name:repo:branch` key changes
-        match &selected {
+        // The details view is rebuilt whenever the selected addon's name, repo or branch changes
+        match selected {
             Some(addon) => {
-                let key = DetailsPane::key_of(addon);
-                if self.details.as_ref().is_none_or(|(k, _)| *k != key) {
+                if self.details.as_ref().is_none_or(|pane| !pane.read(cx).shows(addon)) {
                     let (addon, model) = (addon.clone(), self.model.clone());
-                    self.details = Some((key, cx.new(|cx| DetailsPane::new(addon, model, cx))));
+                    self.details = Some(cx.new(|cx| DetailsPane::new(addon, model, cx)));
                 }
             }
             None => self.details = None,
         }
 
         let catalog = state::catalog::current(cx);
-        let animate_new = !self.rendered_names.is_empty();
-        let items: Vec<gpui_kit::AnyElement> = filtered
+        let selected_name = selected.map(|a| a.name.as_str());
+        let items: Vec<gpui_kit::AnyElement> = order
+            .rows
             .iter()
-            .map(|addon| {
-                let is_new = animate_new && !self.rendered_names.contains(&addon.name);
-                let model = self.model.clone();
-                let clicked = addon.clone();
-                let row = AddonListItem::new(
-                    SharedString::from(format!("addon-{}", addon.name)),
-                    addon.clone(),
-                    selected.as_ref().is_some_and(|s| s.name == addon.name),
-                    releases.get(&addon.name).is_some_and(|r| addon::has_update(addon, r)),
+            .map(|row| {
+                let addon = order.addon(row);
+                let (model, installed, index) = (self.model.clone(), order.installed.clone(), row.listed.index);
+                let item = AddonListItem::new(
+                    row.id.clone(),
+                    addon,
+                    selected_name == Some(addon.name.as_str()),
+                    row.listed.has_update,
                     checking,
-                    catalog.as_ref().and_then(|c| c.icon_url(&addon.name)).map(str::to_owned),
-                    move |_, cx| model.update(cx, |m, cx| m.set_selected(Some(clicked.clone()), cx)),
+                    catalog.as_deref().and_then(|c| c.icon_url(&addon.name)),
+                    move |_, cx| model.update(cx, |m, cx| m.set_selected(Some(installed[index].clone()), cx)),
                 );
-                let wrapper = div().child(row);
-                if is_new {
+                let wrapper = div().child(item);
+                if previous_names.as_ref().is_some_and(|names| !names.contains(addon.name.as_str())) {
                     fade_slide_in(wrapper, SharedString::from(format!("row-in-{}", addon.name))).into_any_element()
                 } else {
                     wrapper.into_any_element()
                 }
             })
             .collect();
-        self.rendered_names = filtered.iter().map(|a| a.name.clone()).collect();
 
-        let list: gpui_kit::AnyElement = if filtered.is_empty() {
+        let list: gpui_kit::AnyElement = if order.rows.is_empty() {
             fade_in(
                 EmptyState::new(icons::PACKAGE_SEARCH, "No addons match your search")
                     .description("Try a different query or clear the search.")
@@ -271,7 +342,7 @@ impl Render for DashboardPage {
         };
 
         let right: gpui_kit::AnyElement = match &self.details {
-            Some((_, pane)) => pane.clone().into_any_element(),
+            Some(pane) => pane.clone().into_any_element(),
             None => no_selected_addon().into_any_element(),
         };
 

@@ -1,10 +1,9 @@
 //! Details pane of the selected addon: header with the action menu, a grid of facts (name, update time, source,
-//! rating) and the addon's README. One view exists per `name:repo:branch` key (see [`DetailsPane::key_of`]), and the
-//! page recreates it when the key changes.
-use cam_core::{
-    addon::{self, Addon},
-    api::Release,
-};
+//! rating) and the addon's README. One view exists per addon name, repo and branch (see [`DetailsPane::shows`]), and
+//! the page recreates it when one of them changes.
+use std::{ops::Deref, rc::Rc, sync::Arc};
+
+use cam_core::addon::{self, Addon};
 use cam_ui::{
     components::{
         Align, Badge, BadgeVariant, Button, ButtonSize, ButtonVariant, DropdownMenu, MenuItem, Readme, ScrollArea, Side,
@@ -31,12 +30,42 @@ use crate::{
 
 pub struct DetailsPane {
     /// The addon the pane was created for; the live copy from the store wins while it is installed.
-    snapshot: Addon,
+    snapshot: Rc<Addon>,
+    /// README query key of the addon: its repo and branch.
+    readme_key: (String, String),
     addons: Entity<AddonState>,
     readme: Entity<queries::ReadmeQuery>,
     rating: Entity<RatingModel>,
     repo_match: Option<Entity<RepoMatch>>,
     menu_open: bool,
+}
+
+/// The addon a draw shows, shared by that draw's handlers without copying it: the installed copy while the addon is
+/// installed, else the pane's snapshot.
+#[derive(Clone)]
+enum Shown {
+    Installed(Arc<Vec<Addon>>, usize),
+    Snapshot(Rc<Addon>),
+}
+
+impl Shown {
+    fn resolve(installed: Arc<Vec<Addon>>, snapshot: &Rc<Addon>) -> Self {
+        match installed.iter().position(|a| a.name == snapshot.name) {
+            Some(index) => Self::Installed(installed, index),
+            None => Self::Snapshot(snapshot.clone()),
+        }
+    }
+}
+
+impl Deref for Shown {
+    type Target = Addon;
+
+    fn deref(&self) -> &Addon {
+        match self {
+            Self::Installed(installed, index) => &installed[*index],
+            Self::Snapshot(addon) => addon,
+        }
+    }
 }
 
 impl DetailsPane {
@@ -47,9 +76,9 @@ impl DetailsPane {
         let readme = queries::readme(cx);
         cx.observe(&readme, |_, _, cx| cx.notify()).detach();
         cx.observe(&state::catalog(cx), |_, _, cx| cx.notify()).detach();
+        let readme_key = (addon.repo.clone(), addon.branch.clone());
         if !addon.repo.is_empty() {
-            let key = (addon.repo.clone(), addon.branch.clone());
-            readme.update(cx, |q, cx| q.ensure(key, cx));
+            readme.update(cx, |q, cx| q.ensure(readme_key.clone(), cx));
         }
 
         let rating = {
@@ -63,22 +92,13 @@ impl DetailsPane {
             cx.new(|cx| RepoMatch::new(name, model, cx))
         });
 
-        Self { snapshot: addon, addons, readme, rating, repo_match, menu_open: false }
+        Self { snapshot: Rc::new(addon), readme_key, addons, readme, rating, repo_match, menu_open: false }
     }
 
-    /// Key identifying the view: `name:repo:branch`.
-    pub fn key_of(addon: &Addon) -> String {
-        format!("{}:{}:{}", addon.name, addon.repo, addon.branch)
-    }
-
-    fn current(&self, cx: &gpui_kit::App) -> Addon {
-        self.addons
-            .read(cx)
-            .installed_addons
-            .iter()
-            .find(|a| a.name == self.snapshot.name)
-            .cloned()
-            .unwrap_or_else(|| self.snapshot.clone())
+    /// True when the pane was created for an addon with the name, repo and branch of `addon`.
+    pub fn shows(&self, addon: &Addon) -> bool {
+        let s = &self.snapshot;
+        s.name == addon.name && s.repo == addon.repo && s.branch == addon.branch
     }
 
     fn open_directory(addon: &Addon, cx: &mut gpui_kit::App) {
@@ -100,7 +120,7 @@ impl DetailsPane {
         .detach();
     }
 
-    fn uninstall(addon: Addon, cx: &mut gpui_kit::App) {
+    fn uninstall(addon: &Addon, cx: &mut gpui_kit::App) {
         let (name, alias) = (addon.name.clone(), addon.alias.clone());
         let uninstall = state::addons(cx).update(cx, |s, cx| s.uninstall(name.clone(), cx));
         cx.spawn(async move |cx| {
@@ -125,7 +145,7 @@ impl DetailsPane {
         .detach();
     }
 
-    fn unmanage(addon: Addon, cx: &mut gpui_kit::App) {
+    fn unmanage(addon: &Addon, cx: &mut gpui_kit::App) {
         let (name, alias) = (addon.name.clone(), addon.alias.clone());
         let unmanage = state::addons(cx).update(cx, |s, cx| s.unmanage(name.clone(), cx));
         cx.spawn(async move |cx| {
@@ -160,12 +180,15 @@ fn cell(label: impl IntoElement, value: impl IntoElement) -> gpui_kit::Div {
 impl Render for DetailsPane {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let t = cx.tokens();
-        let addon = self.current(cx);
-        let store = self.addons.read(cx);
-        let latest_release: Option<Release> = store.latest_releases.get(&addon.name).cloned();
-        let checking = store.is_checking_for_updates;
-        let has_update = latest_release.as_ref().is_some_and(|r| addon::has_update(&addon, r));
-        let icon_url = state::catalog::current(cx).and_then(|c| c.icon_url(&addon.name).map(str::to_owned));
+        let (installed, releases, checking) = {
+            let store = self.addons.read(cx);
+            (store.installed_addons.clone(), store.latest_releases.clone(), store.is_checking_for_updates)
+        };
+        let addon = Shown::resolve(installed, &self.snapshot);
+        let latest_release = releases.get(&addon.name);
+        let has_update = latest_release.is_some_and(|r| addon::has_update(&addon, r));
+        let catalog = state::catalog::current(cx);
+        let icon_url = catalog.as_deref().and_then(|c| c.icon_url(&addon.name));
         let this = cx.entity();
 
         let green = tw(Tw::Green, 600);
@@ -175,17 +198,17 @@ impl Render for DetailsPane {
         let mut meta =
             div().flex().items_center().gap_x_3().mt_1().overflow_hidden().text_sm_tw().text_color(t.muted_foreground);
         if addon.is_managed {
-            meta =
-                meta.child(
-                    div().flex().items_center().gap_1().child(Icon::new(icons::USER).size(px(14.0))).child(
-                        div().text_color(alpha(t.foreground, 0.9)).child(SharedString::from(addon.author.clone())),
-                    ),
-                );
+            meta = meta.child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap_1()
+                    .child(Icon::new(icons::USER).size(px(14.0)))
+                    .child(div().text_color(alpha(t.foreground, 0.9)).child(SharedString::new(&addon.author))),
+            );
             if !addon.version.is_empty() {
                 meta = meta.child(
-                    Badge::new(SharedString::from(addon.version.clone()))
-                        .variant(BadgeVariant::Secondary)
-                        .icon(icons::TAG),
+                    Badge::new(SharedString::new(&addon.version)).variant(BadgeVariant::Secondary).icon(icons::TAG),
                 );
             }
         } else {
@@ -207,9 +230,10 @@ impl Render for DetailsPane {
             );
         }
 
-        let update_badge = latest_release.clone().filter(|_| has_update).map(|release| {
-            let tag = release.tag_name.clone();
-            let addon = addon.clone();
+        let update_badge = latest_release.filter(|_| has_update).map(|release| {
+            let label = SharedString::from(format!("Update to {}", release.tag_name));
+            // The release is looked up again on click in the same snapshot, so it is the one drawn here
+            let (addon, releases) = (addon.clone(), releases.clone());
             let primary = t.primary;
             div().flex().mt_2().child(
                 div()
@@ -228,93 +252,84 @@ impl Render for DetailsPane {
                     .text_color(primary)
                     .cursor_pointer()
                     .hover(move |s| s.bg(alpha(primary, 0.2)))
-                    .on_click(move |_, window, cx| update_dialog::open(addon.clone(), release.clone(), window, cx))
+                    .on_click(move |_, window, cx| {
+                        update_dialog::open(Addon::clone(&addon), releases[&addon.name].clone(), window, cx)
+                    })
                     .child(Icon::new(icons::DOWNLOAD).size(px(16.0)))
-                    .child(SharedString::from(format!("Update to {tag}"))),
+                    .child(label),
             )
         });
 
-        let menu = {
-            let (a_dir, a_issue, a_version, a_unmanage, a_uninstall) =
-                (addon.clone(), addon.clone(), addon.clone(), addon.clone(), addon.clone());
-            let managed = addon.is_managed;
-            let open_this = this.clone();
-            DropdownMenu::new()
-                .id("addon-actions")
-                .side(Side::Bottom)
-                .align(Align::End)
-                .open(self.menu_open)
-                .on_open_change(move |open, _, cx| {
-                    open_this.update(cx, |t, cx| {
-                        t.menu_open = open;
-                        cx.notify();
-                    })
+        let (shown, open_this) = (addon.clone(), this.clone());
+        let menu = DropdownMenu::new()
+            .id("addon-actions")
+            .side(Side::Bottom)
+            .align(Align::End)
+            .open(self.menu_open)
+            .on_open_change(move |open, _, cx| {
+                open_this.update(cx, |t, cx| {
+                    t.menu_open = open;
+                    cx.notify();
                 })
-                .trigger(
-                    Button::new("addon-menu")
-                        .variant(ButtonVariant::Ghost)
-                        .size(ButtonSize::Icon)
-                        .flex_none()
-                        .when(self.menu_open, |b| b.bg(t.accent))
-                        .child(Icon::new(icons::MENU).size(px(20.0))),
+            })
+            .trigger(
+                Button::new("addon-menu")
+                    .variant(ButtonVariant::Ghost)
+                    .size(ButtonSize::Icon)
+                    .flex_none()
+                    .when(self.menu_open, |b| b.bg(t.accent))
+                    .child(Icon::new(icons::MENU).size(px(20.0))),
+            )
+            .menu(move |m| {
+                let a_dir = shown.clone();
+                let mut m = m.item(
+                    MenuItem::new("Open Directory")
+                        .icon(icons::FOLDER_OPEN)
+                        .on_click(move |_, cx| Self::open_directory(&a_dir, cx)),
+                );
+                if shown.is_managed {
+                    let (a_issue, a_version, a_unmanage) = (shown.clone(), shown.clone(), shown.clone());
+                    m = m
+                        .item(MenuItem::new("Report Issue").icon(icons::BUG).on_click(move |_, cx| {
+                            cx.open_url(&format!("https://github.com/{}/issues/new", a_issue.repo));
+                        }))
+                        .item(
+                            MenuItem::new("Install Version")
+                                .icon(icons::GIT_BRANCH)
+                                .on_click(move |window, cx| version_dialog::open(Addon::clone(&a_version), window, cx)),
+                        )
+                        .item(
+                            MenuItem::new("Unmanage")
+                                .warning()
+                                .icon(icons::TRIANGLE_ALERT)
+                                .on_click(move |_, cx| Self::unmanage(&a_unmanage, cx)),
+                        );
+                }
+                let a_uninstall = shown.clone();
+                m.separator().item(
+                    MenuItem::new("Uninstall")
+                        .destructive()
+                        .icon(icons::TRASH_2)
+                        .on_click(move |_, cx| Self::uninstall(&a_uninstall, cx)),
                 )
-                .menu(move |m| {
-                    let (a_dir, a_issue, a_version, a_unmanage, a_uninstall) =
-                        (a_dir.clone(), a_issue.clone(), a_version.clone(), a_unmanage.clone(), a_uninstall.clone());
-                    let mut m = m.item(
-                        MenuItem::new("Open Directory")
-                            .icon(icons::FOLDER_OPEN)
-                            .on_click(move |_, cx| Self::open_directory(&a_dir, cx)),
-                    );
-                    if managed {
-                        m = m
-                            .item(MenuItem::new("Report Issue").icon(icons::BUG).on_click(move |_, cx| {
-                                cx.open_url(&format!("https://github.com/{}/issues/new", a_issue.repo));
-                            }))
-                            .item(
-                                MenuItem::new("Install Version")
-                                    .icon(icons::GIT_BRANCH)
-                                    .on_click(move |window, cx| version_dialog::open(a_version.clone(), window, cx)),
-                            )
-                            .item(
-                                MenuItem::new("Unmanage")
-                                    .warning()
-                                    .icon(icons::TRIANGLE_ALERT)
-                                    .on_click(move |_, cx| Self::unmanage(a_unmanage.clone(), cx)),
-                            );
-                    }
-                    m.separator().item(
-                        MenuItem::new("Uninstall")
-                            .destructive()
-                            .icon(icons::TRASH_2)
-                            .on_click(move |_, cx| Self::uninstall(a_uninstall.clone(), cx)),
-                    )
-                })
-        };
+            });
 
+        let alias = SharedString::new(&addon.alias);
         let header = div().flex_none().border_b_1().border_color(t.border).px_6().py_5().child(
             div()
                 .flex()
                 .items_start()
                 .gap_4()
                 .child(
-                    div().flex_none().child(
-                        AddonIcon::new(SharedString::from(addon.alias.clone()), icon_url.clone())
-                            .size(AddonIconSize::Lg)
-                            .shadow(shadow_sm()),
-                    ),
+                    div()
+                        .flex_none()
+                        .child(AddonIcon::new(alias.clone(), icon_url).size(AddonIconSize::Lg).shadow(shadow_sm())),
                 )
                 .child(
                     div()
                         .flex_1()
                         .min_w_0()
-                        .child(
-                            div()
-                                .truncate()
-                                .text_xl_tw()
-                                .font_weight(FontWeight::SEMIBOLD)
-                                .child(SharedString::from(addon.alias.clone())),
-                        )
+                        .child(div().truncate().text_xl_tw().font_weight(FontWeight::SEMIBOLD).child(alias))
                         .child(meta)
                         .children(update_badge),
                 )
@@ -323,7 +338,7 @@ impl Render for DetailsPane {
 
         // ---------------------------------------------------------------- facts grid
         let label = |text: &'static str| div().text_color(t.muted_foreground).child(text);
-        let value = |text: String| div().truncate().font_weight(FontWeight::MEDIUM).child(SharedString::from(text));
+        let value = |text: SharedString| div().truncate().font_weight(FontWeight::MEDIUM).child(text);
         let mut grid = div()
             .flex()
             .flex_wrap()
@@ -331,9 +346,11 @@ impl Render for DetailsPane {
             .gap_y_2()
             .w(px(512.0))
             .text_sm_tw()
-            .child(cell(label("Name"), value(addon.name.clone())));
+            .child(cell(label("Name"), value(SharedString::new(&addon.name))));
         if addon.is_managed {
-            let updated = addon.updated_at.map_or_else(|| "—".to_string(), |t| format_to_local_time(&t, true));
+            let updated = addon
+                .updated_at
+                .map_or_else(|| SharedString::new_static("—"), |t| format_to_local_time(&t, true).into());
             grid = grid.child(cell(label("Updated"), value(updated)));
             let source_label = div()
                 .flex()
@@ -343,9 +360,9 @@ impl Render for DetailsPane {
                 .child(Icon::new(icons::GITHUB).size(px(14.0)))
                 .child("Source");
             let source_value = if addon.repo.is_empty() {
-                value("—".into()).into_any_element()
+                value(SharedString::new_static("—")).into_any_element()
             } else {
-                let url = format!("https://github.com/{}", addon.repo);
+                let source = addon.clone();
                 let blue = tw(Tw::Blue, 400);
                 let blue_hover = tw(Tw::Blue, 500);
                 div()
@@ -355,8 +372,8 @@ impl Render for DetailsPane {
                     .text_color(blue)
                     .cursor_pointer()
                     .hover(move |s| s.text_color(blue_hover).underline().text_sm_tw().font_weight(FontWeight::MEDIUM))
-                    .on_click(move |_, _, cx| cx.open_url(&url))
-                    .child(SharedString::from(addon.repo.clone()))
+                    .on_click(move |_, _, cx| cx.open_url(&format!("https://github.com/{}", source.repo)))
+                    .child(SharedString::new(&addon.repo))
                     .into_any_element()
             };
             grid = grid.child(cell(source_label, source_value));
@@ -385,7 +402,7 @@ impl Render for DetailsPane {
             addon.description.clone()
         };
         let body = if addon.is_managed {
-            let readme = self.readme.read(cx).get(&(addon.repo.clone(), addon.branch.clone()));
+            let readme = self.readme.read(cx).get(&self.readme_key);
             let readme_el = if !addon.repo.is_empty() && matches!(readme, Load::Idle | Load::Pending) {
                 div()
                     .flex()

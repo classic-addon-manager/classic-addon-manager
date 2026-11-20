@@ -30,8 +30,9 @@ use super::{
     tasks::{hold_spinner, run_blocking},
 };
 
-fn count_updates(managed: &[Addon], releases: &HashMap<String, Release>) -> usize {
-    managed.iter().filter(|a| releases.get(&a.name).is_some_and(|r| addon::has_update(a, r))).count()
+/// How many of `installed` have an update in `releases`. Unmanaged addons never have one.
+fn count_updates(installed: &[Addon], releases: &HashMap<String, Release>) -> usize {
+    installed.iter().filter(|a| a.is_managed && releases.get(&a.name).is_some_and(|r| addon::has_update(a, r))).count()
 }
 
 /// An install, update or uninstall running on one addon.
@@ -52,11 +53,13 @@ pub struct Restored {
 }
 
 pub struct AddonState {
-    pub installed_addons: Vec<Addon>,
+    /// Replaced as a whole on every reload, never changed in place, so a view can keep it and tell a new list from the
+    /// one it saw with [`Arc::ptr_eq`].
+    pub installed_addons: Arc<Vec<Addon>>,
     pub updates_available_count: usize,
     pub is_checking_for_updates: bool,
-    /// name -> latest release (from the bulk update check)
-    pub latest_releases: HashMap<String, Release>,
+    /// name -> latest release (from the bulk update check). Replaced as a whole like `installed_addons`.
+    pub latest_releases: Arc<HashMap<String, Release>>,
     update_check_queued: bool,
     /// The installs, updates and uninstalls running, keyed by addon name.
     operations: HashMap<String, Operation>,
@@ -70,10 +73,10 @@ pub struct AddonState {
 impl AddonState {
     pub fn new() -> Self {
         Self {
-            installed_addons: Vec::new(),
+            installed_addons: Arc::default(),
             updates_available_count: 0,
             is_checking_for_updates: false,
-            latest_releases: HashMap::new(),
+            latest_releases: Arc::default(),
             update_check_queued: false,
             operations: HashMap::new(),
             zip_installs: 0,
@@ -102,7 +105,7 @@ impl AddonState {
         cx.spawn(async move |this, cx| {
             let addons = run_blocking(cx, move || installed_addons(&backend)).await;
             let _ = this.update(cx, |this, cx| {
-                this.installed_addons = addons;
+                this.installed_addons = Arc::new(addons);
                 cx.notify();
             });
         })
@@ -127,11 +130,14 @@ impl AddonState {
         self.is_checking_for_updates = true;
         cx.notify();
         let started = Instant::now();
-        let managed: Vec<Addon> = self.installed_addons.iter().filter(|a| a.is_managed).cloned().collect();
-        let names: Vec<String> = managed.iter().map(|a| a.name.clone()).collect();
+        // The list is a snapshot: a reload replaces it rather than changing it, so it stays the list checked here.
+        let installed = self.installed_addons.clone();
+        let names: Vec<String> = installed.iter().filter(|a| a.is_managed).map(|a| a.name.clone()).collect();
 
         if names.is_empty() {
-            self.latest_releases.clear();
+            if !self.latest_releases.is_empty() {
+                self.latest_releases = Arc::default();
+            }
             self.updates_available_count = 0;
             self.finish_update_check(started, cx);
             return;
@@ -143,13 +149,12 @@ impl AddonState {
                     Err(e) => {
                         log::error!("Bulk update check failed: {e:#}");
                         // keep the last good releases so badges survive a network hiccup, but recount
-                        this.updates_available_count = count_updates(&managed, &this.latest_releases);
+                        this.updates_available_count = count_updates(&installed, &this.latest_releases);
                     }
                     Ok(releases) => {
-                        let count = count_updates(&managed, &releases);
                         if !this.update_check_queued {
-                            this.latest_releases = releases;
-                            this.updates_available_count = count;
+                            this.updates_available_count = count_updates(&installed, &releases);
+                            this.latest_releases = Arc::new(releases);
                         }
                     }
                 }
