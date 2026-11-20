@@ -91,8 +91,7 @@ pub fn parse_log<R: Read>(r: R, mut skip_first: bool) -> std::io::Result<Vec<Log
         } else if literal.find(&buf).is_some() {
             // Lossy conversion only inserts U+FFFD, never ASCII, so the prefilter above cannot reject a match.
             let line = String::from_utf8_lossy(&buf);
-            let locations =
-                locations.get_or_insert_with(|| PATTERNS.each_ref().map(|p| p.regex.capture_locations()));
+            let locations = locations.get_or_insert_with(|| PATTERNS.each_ref().map(|p| p.regex.capture_locations()));
             for (i, (p, slots)) in PATTERNS.iter().zip(locations).enumerate() {
                 if p.regex.captures_read(slots, &line).is_none() {
                     continue;
@@ -100,8 +99,9 @@ pub fn parse_log<R: Read>(r: R, mut skip_first: bool) -> std::io::Result<Vec<Log
                 seq += 1;
                 // Both groups take part in every match of every pattern.
                 let group = |g| slots.get(g).map_or("", |(start, end)| &line[start..end]);
-                let entry =
-                    seen.entry((i, group(1).to_owned(), group(2).to_owned())).or_insert(Seen { count: 0, last_seen: 0 });
+                let entry = seen
+                    .entry((i, group(1).to_owned(), group(2).to_owned()))
+                    .or_insert(Seen { count: 0, last_seen: 0 });
                 entry.count += 1;
                 entry.last_seen = seq;
                 break;
@@ -205,10 +205,8 @@ mod tests {
     #[test]
     fn overlong_line_is_truncated_not_fatal() {
         // The error past the cut belongs to the overlong line and must not be read as a line of its own.
-        let long = format!(
-            "/Addon/a/x.lua:1: [Script Error] {}/Addon/c/x.lua:1: [Script Error] C\n",
-            "x".repeat(200_000)
-        );
+        let long =
+            format!("/Addon/a/x.lua:1: [Script Error] {}/Addon/c/x.lua:1: [Script Error] C\n", "x".repeat(200_000));
         let r = parse(&format!("{long}/Addon/b/x.lua:1: [Script Error] B\n"));
         assert_eq!(r.len(), 2);
         assert_eq!(r[0].addon, "a");

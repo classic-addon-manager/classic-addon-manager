@@ -9,8 +9,8 @@
 //! after 15 minutes. A lookup that failed is fetched again by the next call whatever its age.
 use std::{cell::RefCell, collections::HashSet, hash::Hash, rc::Rc, sync::Arc, time::Duration};
 
-use cam_core::api::developer::{self, types::*};
 use cam_core::api::ApiError;
+use cam_core::api::developer::{self, types::*};
 use cam_ui::toast;
 use gpui_kit::{App, AppContext, Context, Entity, Global, Subscription, Task};
 

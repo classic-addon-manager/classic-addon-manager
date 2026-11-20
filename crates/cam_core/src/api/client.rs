@@ -5,8 +5,9 @@ use std::sync::LazyLock;
 use std::time::Duration;
 
 use serde::Deserialize;
-use serde::de::DeserializeOwned;
+use serde::de::{self, DeserializeOwned, DeserializeSeed, Deserializer, MapAccess, SeqAccess, Visitor};
 use serde_json::Value;
+use serde_json::value::RawValue;
 
 use crate::auth;
 
@@ -255,10 +256,164 @@ fn decode_envelope<T: DeserializeOwned + Default>(status: u16, body: &str) -> Re
     }
 }
 
+/// [`decode_envelope`] for large replies: [`decode_envelope_direct`] builds `T` straight from the text of `data`, and
+/// whenever it can't vouch for its outcome [`decode_envelope`] decides, so every input gets the same result and error
+/// text. Small replies don't gain from it: the extra checking pass costs more than the tree it saves.
+///
+/// The guarantee holds for structs, string-keyed maps and integers up to 64 bits. A `T` that keeps raw JSON text
+/// (`RawValue`), reads 128-bit integers or sees duplicate map keys in order (two keys aliased to one enum variant)
+/// could get a different result, because the tree drops whitespace, has no 128-bit numbers and keeps one value per key.
+fn decode_large_envelope<T: DeserializeOwned + Default>(status: u16, body: &str) -> Result<T, ApiError> {
+    if is_success(status)
+        && let Some(result) = decode_envelope_direct(status, body)
+    {
+        return result;
+    }
+    decode_envelope(status, body)
+}
+
+/// [`decode_envelope`] without the intermediate tree. `None` where the outcome could differ: a body or `data` the tree
+/// parse rejects, and every failure to build `T`, which covers the inputs the two read differently (such as duplicate
+/// keys) and leaves error texts to the tree decoder.
+fn decode_envelope_direct<T: DeserializeOwned + Default>(status: u16, body: &str) -> Option<Result<T, ApiError>> {
+    #[derive(Deserialize)]
+    struct Envelope<'a> {
+        status: bool,
+        #[serde(default)]
+        message: String,
+        #[serde(borrow)]
+        data: Option<&'a RawValue>,
+    }
+    let envelope: Envelope = serde_json::from_str(body).ok()?;
+    if let Some(data) = envelope.data {
+        // Capturing `data` only checks its syntax; the tree parse also rejects out-of-range numbers, for example.
+        ValueCheck { level: 1 }.deserialize(&mut serde_json::Deserializer::from_str(data.get())).ok()?;
+    }
+    if !envelope.status {
+        return Some(Err(ApiError::Rejected { status, message: envelope.message }));
+    }
+    match envelope.data {
+        None => Some(Ok(T::default())),
+        Some(data) => serde_json::from_str(data.get()).ok().map(Ok),
+    }
+}
+
+/// Walks a JSON value like parsing it into a [`Value`] does, without building anything, and fails wherever that
+/// parse fails (and on a few inputs it accepts). `level` is the number of containers open around the value in the
+/// whole body, for serde_json's nesting limit.
+#[derive(Clone, Copy)]
+struct ValueCheck {
+    level: u8,
+}
+
+impl ValueCheck {
+    /// serde_json rejects the 128th level of nesting.
+    const MAX_LEVEL: u8 = 127;
+
+    fn enter<E: de::Error>(self) -> Result<Self, E> {
+        match self.level {
+            Self::MAX_LEVEL.. => Err(E::custom("nested too deeply")),
+            level => Ok(Self { level: level + 1 }),
+        }
+    }
+}
+
+impl<'de> DeserializeSeed<'de> for ValueCheck {
+    type Value = ();
+
+    fn deserialize<D: Deserializer<'de>>(self, deserializer: D) -> Result<(), D::Error> {
+        deserializer.deserialize_any(self)
+    }
+}
+
+impl<'de> Visitor<'de> for ValueCheck {
+    type Value = ();
+
+    fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str("any JSON value")
+    }
+
+    fn visit_bool<E: de::Error>(self, _: bool) -> Result<(), E> {
+        Ok(())
+    }
+
+    fn visit_i64<E: de::Error>(self, _: i64) -> Result<(), E> {
+        Ok(())
+    }
+
+    fn visit_u64<E: de::Error>(self, _: u64) -> Result<(), E> {
+        Ok(())
+    }
+
+    fn visit_f64<E: de::Error>(self, _: f64) -> Result<(), E> {
+        Ok(())
+    }
+
+    fn visit_str<E: de::Error>(self, _: &str) -> Result<(), E> {
+        Ok(())
+    }
+
+    fn visit_unit<E: de::Error>(self) -> Result<(), E> {
+        Ok(())
+    }
+
+    fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<(), A::Error> {
+        let item = self.enter()?;
+        while seq.next_element_seed(item)?.is_some() {}
+        Ok(())
+    }
+
+    fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<(), A::Error> {
+        let value = self.enter()?;
+        while map.next_key_seed(KeyCheck)?.is_some() {
+            map.next_value_seed(value)?;
+        }
+        Ok(())
+    }
+}
+
+/// An object key for [`ValueCheck`]. Parsing into a [`Value`] reads a first key equal to one of serde_json's private
+/// tokens as a marker (a raw value or an arbitrary-precision number), so such keys fail the check.
+struct KeyCheck;
+
+impl<'de> DeserializeSeed<'de> for KeyCheck {
+    type Value = ();
+
+    fn deserialize<D: Deserializer<'de>>(self, deserializer: D) -> Result<(), D::Error> {
+        deserializer.deserialize_str(self)
+    }
+}
+
+impl<'de> Visitor<'de> for KeyCheck {
+    type Value = ();
+
+    fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str("an object key")
+    }
+
+    fn visit_str<E: de::Error>(self, key: &str) -> Result<(), E> {
+        match key.starts_with("$serde_json::private::") {
+            true => Err(E::custom("reserved key")),
+            false => Ok(()),
+        }
+    }
+}
+
 /// Sends a request and decodes the `data` of the `{status, message, data}` envelope the server wraps responses in.
 pub fn request<T: DeserializeOwned + Default>(method: Method, path: &str, body: Body) -> Result<T, ApiError> {
     let (status, text) = send(method, path, body)?;
     decode_envelope(status, &text)
+}
+
+/// [`request`] for replies large enough that skipping the intermediate tree pays off, see [`decode_large_envelope`]
+/// for the types it is exact for.
+pub(crate) fn request_large<T: DeserializeOwned + Default>(
+    method: Method,
+    path: &str,
+    body: Body,
+) -> Result<T, ApiError> {
+    let (status, text) = send(method, path, body)?;
+    decode_large_envelope(status, &text)
 }
 
 /// Like [`request`], for the endpoints that answer with bare JSON instead of an envelope (`/me`, `/addons`).
@@ -506,5 +661,39 @@ mod tests {
         assert_eq!(decode_envelope::<Vec<String>>(200, r#"{"status":true,"message":"ok"}"#), Ok(vec![]));
         assert!(matches!(decode_envelope::<Vec<String>>(200, "not json"), Err(ApiError::Decode(_))));
         assert!(matches!(decode_envelope::<Vec<String>>(200, r#"{"status":true,"data":5}"#), Err(ApiError::Decode(_))));
+    }
+
+    #[test]
+    fn large_envelope_decoding_agrees_with_the_tree() {
+        #[derive(Debug, Default, PartialEq, Deserialize)]
+        #[serde(default)]
+        struct N {
+            n: i64,
+        }
+        fn agree<T: DeserializeOwned + Default + PartialEq + fmt::Debug>(body: &str) {
+            assert_eq!(decode_large_envelope::<T>(200, body), decode_envelope::<T>(200, body), "{body}");
+        }
+
+        // The common replies take the direct path.
+        assert_eq!(decode_envelope_direct::<N>(200, r#"{"status":true,"data":{"n":3,"x":[1]}}"#), Some(Ok(N { n: 3 })));
+        assert_eq!(
+            decode_envelope_direct::<N>(200, r#"{"status":false,"message":"no","data":{"x":[1]}}"#),
+            Some(Err(ApiError::Rejected { status: 200, message: "no".into() }))
+        );
+        // Inputs the two parsers read differently.
+        for body in [
+            r#"{"status":true,"data":{"n":1,"n":2}}"#,
+            r#"{"status":true,"data":{"n":4,"x":1e400}}"#,
+            r#"{"status":false,"message":"no","data":{"x":1e400}}"#,
+            r#"{"status":true,"data":{"$serde_json::private::RawValue":"{\"n\":7}"}}"#,
+            r#"{"status":true,"data":{"\u0024serde_json::private::RawValue":"{\"n\":7}"}}"#,
+            r#"{"status":true,"data":{"n":"x"}}"#,
+        ] {
+            agree::<N>(body);
+        }
+        // `data` sits one level deep, so it may nest one level less than a whole body.
+        for depth in [126, 127] {
+            agree::<Value>(&format!(r#"{{"status":true,"data":{}{}}}"#, "[".repeat(depth), "]".repeat(depth)));
+        }
     }
 }

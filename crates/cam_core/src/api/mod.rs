@@ -11,6 +11,7 @@ use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, utf8_percent_encode};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
+use client::request_large;
 pub use client::{
     API_URL, ApiError, Body, FieldError, FormPart, Method, Stream, client_header, download, open_stream, request,
     request_bare,
@@ -162,7 +163,7 @@ pub fn releases(name: &str) -> Result<Vec<Release>, ApiError> {
 /// The latest release of several addons in one call. Addons without a release are missing from the map.
 pub fn latest_releases(names: &[String]) -> Result<HashMap<String, Release>, ApiError> {
     let data: HashMap<String, ReleaseWithTag> =
-        request(Method::Post, "/latest_releases", Body::Json(json!({ "addons": names })))?;
+        request_large(Method::Post, "/latest_releases", Body::Json(json!({ "addons": names })))?;
     Ok(data.into_iter().map(|(name, r)| (name, r.into_release())).collect())
 }
 
