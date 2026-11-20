@@ -3,17 +3,34 @@
 use std::time::Duration;
 
 use cam_core::api::{self, AddonManifest, Release};
-use gpui_kit::{App, AppContext as _, Entity};
+use chrono::{DateTime, Utc};
+use gpui_kit::{App, AppContext as _, Entity, SharedString};
 
 use super::{catalog, query::Query, ratings};
 
 /// Release and README lookups younger than this are not fetched again.
 const STALE: Duration = Duration::from_secs(5 * 60);
 
+/// What the addon dialog shows of the latest release. The text is converted once when it arrives, so views hand out
+/// refcounts instead of copies.
+#[derive(Clone, Debug, PartialEq)]
+pub struct LatestRelease {
+    pub tag_name: SharedString,
+    pub published_at: Option<DateTime<Utc>>,
+    /// The release notes (Markdown), as published.
+    pub body: SharedString,
+}
+
+impl From<Release> for LatestRelease {
+    fn from(r: Release) -> Self {
+        Self { tag_name: r.tag_name.into(), published_at: r.published_at, body: r.body.into() }
+    }
+}
+
 /// The latest release, by addon name.
-pub type ReleaseQuery = Query<String, Release>;
+pub type ReleaseQuery = Query<String, LatestRelease>;
 /// README.md of a GitHub repository, by `(repo, branch)`. `None` when the repository has none.
-pub type ReadmeQuery = Query<(String, String), Option<String>>;
+pub type ReadmeQuery = Query<(String, String), Option<SharedString>>;
 /// Every published release, by addon name, in the order the server sends them.
 pub type VersionsQuery = Query<String, Vec<Release>>;
 
@@ -31,14 +48,14 @@ impl Queries {
                 ReleaseQuery::blocking(
                     |name| format!("the latest release of {name}"),
                     STALE,
-                    |name| Ok(api::release(name, "latest")?),
+                    |name| Ok(api::release(name, "latest")?.into()),
                 )
             }),
             readme: cx.new(|_| {
                 ReadmeQuery::blocking(
                     |(repo, branch)| format!("the README of {repo}@{branch}"),
                     STALE,
-                    |(repo, branch)| Ok(api::readme(repo, branch)?),
+                    |(repo, branch)| Ok(api::readme(repo, branch)?.map(SharedString::from)),
                 )
             }),
             // The version picker always asks the server, and shows the last list meanwhile.

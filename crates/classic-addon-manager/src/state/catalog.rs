@@ -4,7 +4,7 @@
 //! Refresh button and a sign-in change fetch it again ([`refresh`]). Code that continues with the catalog awaits
 //! [`fetch`] and passes it on, for example to dependency resolution. Whether an addon is installed comes from
 //! [`AddonState::is_installed`](super::AddonState::is_installed).
-use std::{cmp::Ordering, collections::HashMap, sync::Arc, time::Duration};
+use std::{cmp::Ordering, collections::HashMap, ops::Deref, sync::Arc, time::Duration};
 
 use anyhow::Context as _;
 use cam_core::api::{self, AddonManifest};
@@ -55,6 +55,27 @@ impl Catalog {
     /// Highest download count of any entry.
     pub fn max_downloads(&self) -> i64 {
         self.max_downloads
+    }
+
+    /// Entry `index` of [`Catalog::addons`], sharing the catalog instead of copying the manifest.
+    pub fn entry(self: &Arc<Self>, index: usize) -> CatalogEntry {
+        assert!(index < self.addons.len(), "catalog entry {index} out of range");
+        CatalogEntry { catalog: self.clone(), index }
+    }
+}
+
+/// One manifest of a shared [`Catalog`]. Cloning it bumps a refcount, the manifest itself is never copied.
+#[derive(Clone)]
+pub struct CatalogEntry {
+    catalog: Arc<Catalog>,
+    index: usize,
+}
+
+impl Deref for CatalogEntry {
+    type Target = AddonManifest;
+
+    fn deref(&self) -> &AddonManifest {
+        &self.catalog.addons[self.index]
     }
 }
 

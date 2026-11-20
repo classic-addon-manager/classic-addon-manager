@@ -44,10 +44,19 @@ fn remeasure(list_state: &ListState, rows: usize) {
     list_state.scroll_to(top);
 }
 
+/// The filtered order for a catalog revision, filter revision and sort. Kept apart from [`ListView`] so an empty result
+/// is cached too while the last populated view stays.
+struct Filtered {
+    rev: u64,
+    filter_rev: u64,
+    sort: AddonSort,
+    indices: Rc<[usize]>,
+}
+
 /// What the virtualized list currently shows, and the inputs it was built from.
 struct ListView {
     rev: u64,
-    indices: Vec<usize>,
+    indices: Rc<[usize]>,
     view_mode: AddonViewMode,
     sort: AddonSort,
     cols: usize,
@@ -61,6 +70,7 @@ pub struct AddonsPage {
     catalog: Entity<CatalogState>,
     _toolbar: Entity<AddonsToolbar>,
     list_state: ListState,
+    filtered: Option<Filtered>,
     view: Option<ListView>,
 }
 
@@ -77,7 +87,7 @@ impl AddonsPage {
         // full content height from the start instead of growing as rows come into view. Elements are still only
         // painted for visible rows; render a few hundred px beyond the viewport so scrolling does not pop in.
         let list_state = ListState::new(0, ListAlignment::Top, px(400.0)).measure_all();
-        Self { catalog, _toolbar: toolbar, list_state, view: None }
+        Self { catalog, _toolbar: toolbar, list_state, filtered: None, view: None }
     }
 }
 
@@ -98,7 +108,21 @@ impl Render for AddonsPage {
         let on_retry: RetryHandler = Rc::new(|_, cx| state::catalog::refresh(cx).detach());
 
         let state = self.catalog.read(cx);
-        let indices = state.filtered_indices(sort);
+        // Filtering and sorting only change with the catalog, the search text, the tag and the sort order.
+        let (rev, filter_rev) = (state.rev, state.filter_rev());
+        let filtered = match self.filtered.take() {
+            Some(f) if f.rev == rev && f.filter_rev == filter_rev && f.sort == sort => f,
+            _ => {
+                let indices = state.filtered_indices(sort);
+                // An unchanged result shares the shown slice, so later draws compare it by identity.
+                let indices = match &self.view {
+                    Some(v) if *v.indices == *indices => v.indices.clone(),
+                    _ => indices.into(),
+                };
+                Filtered { rev, filter_rev, sort, indices }
+            }
+        };
+        let indices = self.filtered.insert(filtered).indices.clone();
 
         // skeletons / error / "no addons": small, not worth virtualizing
         if let Some(content) = static_view(state, indices.is_empty(), view_mode, sort, cols, &on_retry, &t) {

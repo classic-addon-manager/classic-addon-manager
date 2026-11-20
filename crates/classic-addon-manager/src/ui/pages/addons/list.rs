@@ -1,6 +1,6 @@
 //! The addon list of the catalog page: skeletons while loading, error and empty states, and the "New" and "All other
 //! addons" sections for the list and grid layouts (one flat section when a sort order is picked).
-use std::rc::Rc;
+use std::{rc::Rc, sync::Arc};
 
 use cam_core::config::{AddonSort, AddonViewMode};
 use cam_ui::{
@@ -19,9 +19,12 @@ use super::{
     catalog::{AddonListItem, CatalogState},
     item::{COL_ACTION, COL_DOWNLOADS, COL_GAP, COL_ICON, COL_LIKED, COL_TAGS, OpenHandler, RemoteAddon, list_header},
 };
-use crate::ui::{
-    addon_filter::{NEW_ADDON_DAYS, is_new_addon},
-    format::truncate_chars,
+use crate::{
+    state::catalog::Catalog,
+    ui::{
+        addon_filter::{NEW_ADDON_DAYS, is_new_addon},
+        format::truncate_chars,
+    },
 };
 
 pub type RetryHandler = Rc<dyn Fn(&mut Window, &mut App)>;
@@ -271,7 +274,7 @@ pub fn static_view(
         ),
         _ if filtered_empty => (
             "no-addons",
-            EmptyState::new(icons::PACKAGE_SEARCH, "No addons found").description(if state.search_query.is_empty() {
+            EmptyState::new(icons::PACKAGE_SEARCH, "No addons found").description(if state.search_query().is_empty() {
                 "No addons are currently available.\nCheck back later or try refreshing."
             } else {
                 "No addons match your search criteria.\nTry adjusting your search or filters."
@@ -292,34 +295,32 @@ pub fn static_view(
 /// The filtered addons in display order (new first, then the rest, or flat in sort order) plus what the rows need
 /// besides the addons.
 pub struct Snapshot {
+    /// The catalog `items` index into.
+    catalog: Arc<Catalog>,
     items: Vec<AddonListItem>,
     /// `items[..new_count]` are the "New in the last N days" addons (always 0 for a non-default sort).
     new_count: usize,
     sort: AddonSort,
     /// Load error shown above a stale list.
     banner: Option<String>,
-    max_downloads: i64,
 }
 
 impl Snapshot {
     /// `indices`: result of [`CatalogState::filtered_indices`] for `sort`.
     pub fn build(state: &CatalogState, indices: &[usize], sort: AddonSort) -> Self {
-        let addons = indices.iter().map(|&i| &state.addons[i]);
+        let catalog = state.source().clone();
+        let addons = indices.iter().map(|&i| state.addons[i]);
         let (items, new_count) = if sort == AddonSort::Default {
-            let (new, other): (Vec<&AddonListItem>, Vec<&AddonListItem>) =
-                addons.partition(|a| is_new_addon(a.manifest.added_at));
+            let manifests = catalog.addons();
+            let (mut new, other): (Vec<AddonListItem>, Vec<AddonListItem>) =
+                addons.partition(|a| is_new_addon(manifests[a.source_index].added_at));
             let new_count = new.len();
-            (new.into_iter().chain(other).cloned().collect(), new_count)
+            new.extend(other);
+            (new, new_count)
         } else {
-            (addons.cloned().collect(), 0)
+            (addons.collect(), 0)
         };
-        Self {
-            items,
-            new_count,
-            sort,
-            banner: state.error.clone().filter(|_| !state.addons.is_empty()),
-            max_downloads: state.max_downloads,
-        }
+        Self { catalog, items, new_count, sort, banner: state.error.clone().filter(|_| !state.addons.is_empty()) }
     }
 }
 
@@ -417,8 +418,9 @@ pub fn render_row(
 ) -> AnyElement {
     let t = cx.tokens();
     let cell = |i: usize| {
-        let a = &snapshot.items[i];
-        RemoteAddon::new(a.manifest.clone(), a.is_installed, snapshot.max_downloads, view_mode, on_open.clone())
+        let a = snapshot.items[i];
+        let entry = snapshot.catalog.entry(a.source_index);
+        RemoteAddon::new(entry, a.is_installed, snapshot.catalog.max_downloads(), view_mode, on_open.clone())
             .into_any_element()
     };
     let row_el = div().w_full();
@@ -471,11 +473,11 @@ mod tests {
 
     fn snapshot(total: usize, new_count: usize, banner: bool) -> Snapshot {
         Snapshot {
-            items: (0..total).map(|_| AddonListItem { manifest: Default::default(), is_installed: false }).collect(),
+            catalog: Arc::new(Catalog::new(vec![Default::default(); total])),
+            items: (0..total).map(|source_index| AddonListItem { source_index, is_installed: false }).collect(),
             new_count,
             sort: AddonSort::default(),
             banner: banner.then(|| "boom".to_string()),
-            max_downloads: 0,
         }
     }
 

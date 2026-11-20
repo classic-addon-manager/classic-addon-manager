@@ -4,11 +4,13 @@
 //! One view entity holds the shown manifest and the install / uninstall actions. The release, README, dependency
 //! and installed lookups come from the app's stores. Following a dependency chip swaps the manifest inside the same
 //! dialog.
-use std::{collections::HashSet, sync::Arc, time::Duration};
+use std::{collections::HashSet, rc::Rc, sync::Arc, time::Duration};
 
 use cam_core::{
-    addon::{DependencyInfo, DependencyResolutionResult, InstallError, InstallProgress, resolve_dependencies_with},
-    api::{AddonManifest, Release},
+    addon::{
+        Addon, DependencyInfo, DependencyResolutionResult, InstallError, InstallProgress, resolve_dependencies_with,
+    },
+    api::AddonManifest,
 };
 use cam_ui::{
     components::{
@@ -29,7 +31,13 @@ use gpui_kit::{
 };
 
 use crate::{
-    state::{self, Load, Operation, catalog, ratings::RatingModel, tasks::error_message},
+    state::{
+        self, Load, Operation,
+        catalog::{self, Catalog},
+        queries::LatestRelease,
+        ratings::RatingModel,
+        tasks::error_message,
+    },
     ui::{
         addon_icon::{AddonIcon, AddonIconSize},
         dependency_notify::notify_dependency_result,
@@ -43,25 +51,23 @@ const RECENT_RELEASE_DAYS: i64 = 14;
 const SHOW_SCROLL_TOP_AFTER: f32 = 240.0;
 
 /// Text of the changelog block.
-pub fn changelog_text(release: &Load<Release>) -> String {
+pub fn changelog_text(release: &Load<LatestRelease>) -> SharedString {
     match release {
-        Load::Idle | Load::Pending => String::new(),
-        Load::Failed(_) => "Error loading change log".to_string(),
-        Load::Ready(r) if r.body.is_empty() => "No change log was provided".to_string(),
+        Load::Idle | Load::Pending => SharedString::default(),
+        Load::Failed(_) => SharedString::new_static("Error loading change log"),
+        Load::Ready(r) if r.body.is_empty() => SharedString::new_static("No change log was provided"),
         Load::Ready(r) => r.body.clone(),
     }
 }
 
 /// Text of the description section: the README when it loaded and is not empty, otherwise the manifest description,
 /// otherwise "No description provided."
-pub fn readme_text(readme: &Load<Option<String>>, manifest: &AddonManifest) -> String {
-    let from_readme = match readme {
-        Load::Ready(Some(text)) if !text.is_empty() => Some(text.clone()),
-        _ => None,
-    };
-    from_readme
-        .or_else(|| (!manifest.description.is_empty()).then(|| manifest.description.clone()))
-        .unwrap_or_else(|| "No description provided.".to_string())
+pub fn readme_text(readme: &Load<Option<SharedString>>, manifest: &AddonManifest) -> SharedString {
+    match readme {
+        Load::Ready(Some(text)) if !text.is_empty() => text.clone(),
+        _ if !manifest.description.is_empty() => manifest.description.as_str().into(),
+        _ => SharedString::new_static("No description provided."),
+    }
 }
 
 /// Toast text for an install that failed before the store recorded a per-addon result.
@@ -92,8 +98,17 @@ pub fn progress_label(addon_name: &str, progress: &InstallProgress) -> Option<(S
 // dialog view
 // ---------------------------------------------------------------------------------------------------------
 
+/// The dependency tree of the shown addon and the catalog and installed list it was resolved against.
+struct ResolvedDependencies {
+    catalog: Arc<Catalog>,
+    installed: Arc<Vec<Addon>>,
+    result: Rc<DependencyResolutionResult>,
+}
+
 pub struct RemoteAddonDialog {
     manifest: AddonManifest,
+    /// README query key of `manifest`: its repo and branch.
+    readme_key: (String, String),
     window_handle: AnyWindowHandle,
     rating: Entity<RatingModel>,
     _rating_sub: Subscription,
@@ -108,6 +123,8 @@ pub struct RemoteAddonDialog {
     // changelog section
     changelog_open: bool,
     previous_recent: bool,
+    /// Last dependency resolution of `manifest`, see [`Self::dependencies`].
+    dependencies: Option<ResolvedDependencies>,
 }
 
 impl RemoteAddonDialog {
@@ -139,6 +156,7 @@ impl RemoteAddonDialog {
             cx.observe(&state::addons(cx), |_, _, cx| cx.notify()),
         ];
         let mut this = Self {
+            readme_key: (manifest.repo.clone(), manifest.branch.clone()),
             manifest,
             window_handle,
             rating,
@@ -150,6 +168,7 @@ impl RemoteAddonDialog {
             overflowing: false,
             changelog_open: false,
             previous_recent: false,
+            dependencies: None,
         };
         this.start_queries(cx);
         this
@@ -159,7 +178,9 @@ impl RemoteAddonDialog {
     fn set_manifest(&mut self, manifest: AddonManifest, cx: &mut Context<Self>) {
         self.rating = cx.new(|cx| RatingModel::new(manifest.name.clone(), manifest.alias.clone(), true, cx));
         self._rating_sub = cx.observe(&self.rating, |_, _, cx| cx.notify());
+        self.readme_key = (manifest.repo.clone(), manifest.branch.clone());
         self.manifest = manifest;
+        self.dependencies = None;
         self.expanded = false;
         self.overflowing = false;
         self.start_queries(cx);
@@ -172,7 +193,7 @@ impl RemoteAddonDialog {
         let manifest = self.manifest.clone();
         let release = state::queries::release(cx).update(cx, |q, cx| q.fetch(manifest.name.clone(), cx));
         if !manifest.repo.is_empty() {
-            let key = (manifest.repo.clone(), manifest.branch.clone());
+            let key = self.readme_key.clone();
             state::queries::readme(cx).update(cx, |q, cx| q.ensure(key, cx));
         }
         let catalog = (!manifest.dependencies.is_empty()).then(|| catalog::fetch(cx));
@@ -219,22 +240,38 @@ impl RemoteAddonDialog {
         .detach();
     }
 
-    fn release<'a>(&self, cx: &'a App) -> &'a Load<Release> {
+    fn release<'a>(&self, cx: &'a App) -> &'a Load<LatestRelease> {
         state::queries::release(cx).read(cx).get(&self.manifest.name)
     }
 
     /// `Idle` for an addon without a repository.
-    fn readme<'a>(&self, cx: &'a App) -> &'a Load<Option<String>> {
-        state::queries::readme(cx).read(cx).get(&(self.manifest.repo.clone(), self.manifest.branch.clone()))
+    fn readme<'a>(&self, cx: &'a App) -> &'a Load<Option<SharedString>> {
+        state::queries::readme(cx).read(cx).get(&self.readme_key)
     }
 
     /// The dependency tree against the catalog and the installed addons, `Idle` for an addon without dependencies.
-    fn dependencies(&self, cx: &App) -> Load<DependencyResolutionResult> {
+    /// Resolved again only when the shown addon, the catalog or the installed list changed.
+    fn dependencies(&mut self, cx: &App) -> Load<Rc<DependencyResolutionResult>> {
         if self.manifest.dependencies.is_empty() {
             return Load::Idle;
         }
-        let installed = installed_names(cx);
-        catalog::load(cx).as_ref().map(|c| resolve_dependencies_with(&self.manifest, c.addons(), &installed))
+        catalog::load(cx).as_ref().map(|catalog| {
+            let installed = &state::addons(cx).read(cx).installed_addons;
+            if let Some(d) = &self.dependencies
+                && Arc::ptr_eq(&d.catalog, catalog)
+                && Arc::ptr_eq(&d.installed, installed)
+            {
+                return d.result.clone();
+            }
+            let names = installed.iter().map(|a| a.name.clone()).collect();
+            let result = Rc::new(resolve_dependencies_with(&self.manifest, catalog.addons(), &names));
+            self.dependencies = Some(ResolvedDependencies {
+                catalog: catalog.clone(),
+                installed: installed.clone(),
+                result: result.clone(),
+            });
+            result
+        })
     }
 
     fn installed(&self, cx: &App) -> bool {
@@ -405,7 +442,7 @@ impl RemoteAddonDialog {
         window: &mut Window,
         cx: &mut Context<Self>,
         t: &Tokens,
-        release: &Load<Release>,
+        release: &Load<LatestRelease>,
     ) -> AnyElement {
         let manifest = &self.manifest;
         let (banner_url, banner) = self.banner_image(window, cx);
@@ -580,9 +617,9 @@ impl RemoteAddonDialog {
     }
 
     /// Row of stats: downloads, liked percentage, version and update date.
-    fn stat_bar(&self, t: &Tokens, release: &Load<Release>) -> AnyElement {
+    fn stat_bar(&self, t: &Tokens, release: &Load<LatestRelease>) -> AnyElement {
         let loading = release.is_pending();
-        let release_value = |f: &dyn Fn(&Release) -> String| -> AnyElement {
+        let release_value = |f: &dyn Fn(&LatestRelease) -> SharedString| -> AnyElement {
             if loading {
                 return div().flex().justify_center().child(Skeleton::new().h(px(16.0)).w(px(80.0))).into_any_element();
             }
@@ -599,7 +636,7 @@ impl RemoteAddonDialog {
         stats.push((icons::TAG, release_value(&|r| r.tag_name.clone()), "Version"));
         stats.push((
             icons::CALENDAR_DAYS,
-            release_value(&|r| r.published_at.map(|t| format_to_local_date(&t, true)).unwrap_or_default()),
+            release_value(&|r| r.published_at.map(|t| format_to_local_date(&t, true).into()).unwrap_or_default()),
             "Updated",
         ));
         let border = alpha(t.border, 0.6);
@@ -629,7 +666,12 @@ impl RemoteAddonDialog {
     }
 
     /// Description section: the README (or manifest description), collapsed when it is long.
-    fn description_section(&mut self, cx: &mut Context<Self>, t: &Tokens, readme: &Load<Option<String>>) -> AnyElement {
+    fn description_section(
+        &mut self,
+        cx: &mut Context<Self>,
+        t: &Tokens,
+        readme: &Load<Option<SharedString>>,
+    ) -> AnyElement {
         if readme.is_pending() {
             return section("Description", t)
                 .child(
@@ -705,7 +747,7 @@ impl RemoteAddonDialog {
     }
 
     /// Changelog section: the latest release notes, open by default when the release is recent.
-    fn changelog_section(&mut self, cx: &mut Context<Self>, t: &Tokens, release: &Load<Release>) -> AnyElement {
+    fn changelog_section(&mut self, cx: &mut Context<Self>, t: &Tokens, release: &Load<LatestRelease>) -> AnyElement {
         let is_recent =
             release.ready().and_then(|r| r.published_at).is_some_and(|t| days_ago(&t) < RECENT_RELEASE_DAYS);
         if is_recent != self.previous_recent {
@@ -721,7 +763,7 @@ impl RemoteAddonDialog {
         let Some(release) = release.ready() else {
             let (no_notes, load_failed) =
                 (changelog == "No change log was provided", changelog == "Error loading change log");
-            let text = if changelog.is_empty() { "No release available".to_string() } else { changelog };
+            let text = if changelog.is_empty() { SharedString::new_static("No release available") } else { changelog };
             return section("What's New", t)
                 .child(div().text_sm_tw().font_weight(FontWeight::MEDIUM).text_color(t.muted_foreground).child(text))
                 .when(no_notes, |d| {
@@ -795,9 +837,10 @@ impl RemoteAddonDialog {
         &self,
         cx: &mut Context<Self>,
         t: &Tokens,
-        deps: &Load<DependencyResolutionResult>,
+        deps: &Load<Rc<DependencyResolutionResult>>,
     ) -> Option<AnyElement> {
-        let deps: &Vec<DependencyInfo> = &deps.ready()?.dependencies;
+        let resolved = deps.ready()?;
+        let deps: &Vec<DependencyInfo> = &resolved.dependencies;
         if deps.is_empty() {
             return None;
         }
@@ -807,7 +850,7 @@ impl RemoteAddonDialog {
         Some(
             section(format!("Requires ({})", deps.len()), t)
                 .child(div().flex().flex_wrap().gap(px(8.0)).children(deps.iter().enumerate().map(|(i, d)| {
-                    let manifest = d.manifest.clone();
+                    let resolved = resolved.clone();
                     div()
                         .id(("dependency", i))
                         .flex()
@@ -822,7 +865,9 @@ impl RemoteAddonDialog {
                         .text_sm_tw()
                         .cursor_pointer()
                         .hover(move |s| s.border_color(alpha(primary, 0.4)).bg(bg_hover))
-                        .on_click(cx.listener(move |this, _, _, cx| this.set_manifest(manifest.clone(), cx)))
+                        .on_click(cx.listener(move |this, _, _, cx| {
+                            this.set_manifest(resolved.dependencies[i].manifest.clone(), cx)
+                        }))
                         .child(
                             div()
                                 .flex_none()
@@ -858,7 +903,13 @@ impl RemoteAddonDialog {
     }
 
     /// Bottom bar: rating buttons and the install / uninstall button, which shows progress while installing.
-    fn action_bar(&self, cx: &mut Context<Self>, t: &Tokens, release: &Load<Release>, installed: bool) -> AnyElement {
+    fn action_bar(
+        &self,
+        cx: &mut Context<Self>,
+        t: &Tokens,
+        release: &Load<LatestRelease>,
+        installed: bool,
+    ) -> AnyElement {
         let rating = self.rating.read(cx);
         let rating_disabled = rating.busy(cx);
         let rating_value = i32::from(rating.rating(cx));
@@ -1004,6 +1055,7 @@ impl RemoteAddonDialog {
 impl Render for RemoteAddonDialog {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let t = cx.tokens();
+        // Both are refcounted, so these clones copy no text.
         let (release, readme) = (self.release(cx).clone(), self.readme(cx).clone());
         let (deps, installed) = (self.dependencies(cx), self.installed(cx));
         let header = self.header(window, cx, &t, &release);
@@ -1069,8 +1121,8 @@ impl Render for RemoteAddonDialog {
 mod tests {
     use super::*;
 
-    fn release(body: &str) -> Release {
-        Release { body: body.into(), tag_name: "v1".into(), ..Default::default() }
+    fn release(body: &str) -> LatestRelease {
+        cam_core::api::Release { body: body.into(), tag_name: "v1".into(), ..Default::default() }.into()
     }
 
     #[test]
@@ -1087,7 +1139,7 @@ mod tests {
         assert_eq!(readme_text(&Load::Ready(None), &m), "No description provided.");
         m.description = "desc".into();
         assert_eq!(readme_text(&Load::Ready(None), &m), "desc");
-        assert_eq!(readme_text(&Load::Ready(Some(String::new())), &m), "desc");
+        assert_eq!(readme_text(&Load::Ready(Some(SharedString::default())), &m), "desc");
         assert_eq!(readme_text(&Load::Failed(anyhow::anyhow!("e").into()), &m), "desc");
         assert_eq!(readme_text(&Load::Ready(Some("# hi".into())), &m), "# hi");
     }

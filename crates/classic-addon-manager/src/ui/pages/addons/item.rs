@@ -18,7 +18,7 @@ use gpui_kit::{
 
 use super::stats::{WarningStyle, action_button, download_meter, like_ring, tag_dots, warning_icon};
 use crate::{
-    state::queries,
+    state::{catalog::CatalogEntry, queries},
     ui::{
         addon_filter::is_new_addon,
         addon_icon::{AddonIcon, addon_icon_url},
@@ -43,7 +43,7 @@ struct PrefetchTimer(Option<Task<()>>);
 
 #[derive(IntoElement)]
 pub struct RemoteAddon {
-    manifest: AddonManifest,
+    manifest: CatalogEntry,
     installed: bool,
     max_downloads: i64,
     variant: AddonViewMode,
@@ -52,7 +52,7 @@ pub struct RemoteAddon {
 
 impl RemoteAddon {
     pub fn new(
-        manifest: AddonManifest,
+        manifest: CatalogEntry,
         installed: bool,
         max_downloads: i64,
         variant: AddonViewMode,
@@ -164,8 +164,9 @@ impl RenderOnce for RemoteAddon {
 
         let on_open = self.on_open;
         let open_manifest = manifest.clone();
+        // The dialog gets its own copy of the manifest, made only when the row is clicked.
         let on_click = move |_: &gpui_kit::ClickEvent, window: &mut Window, cx: &mut App| {
-            on_open(open_manifest.clone(), window, cx)
+            on_open((*open_manifest).clone(), window, cx)
         };
 
         let primary = t.primary;

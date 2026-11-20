@@ -70,15 +70,10 @@ impl AddonsToolbar {
     pub fn new(catalog: Entity<CatalogState>, window: &mut Window, cx: &mut Context<Self>) -> Self {
         // The search text lives in the shared catalog state, which outlives the page, so the box shows the active filter
         // again when you come back.
-        let initial = catalog.read(cx).search_query.clone();
+        let initial = catalog.read(cx).search_query().to_owned();
         let search = text_input_with_value(window, cx, "Search addons...", initial);
         on_input_settled(&search, window, cx, |this: &mut Self, text, cx| {
-            this.catalog.update(cx, |c, cx| {
-                if c.search_query != text {
-                    c.search_query = text;
-                    cx.notify();
-                }
-            });
+            this.catalog.update(cx, |c, cx| c.set_search_query(text, cx));
         });
         cx.observe(&catalog, |_, _, cx| cx.notify()).detach();
         cx.observe(&state::preferences(cx), |_, _, cx| cx.notify()).detach();
@@ -127,7 +122,7 @@ impl Render for AddonsToolbar {
         let catalog = self.catalog.read(cx);
         let ready = catalog.is_ready;
         let refreshing = catalog.is_refreshing;
-        let selected_tag = catalog.selected_tag.clone();
+        let selected_tag = catalog.selected_tag().to_owned();
         let tags: Vec<(String, String)> = catalog.tags.iter().map(|t| (t.clone(), t.clone())).collect();
         let prefs = state::preferences(cx).read(cx);
         let (view_mode, sort) = (prefs.addon_view_mode, prefs.addon_sort);
@@ -170,10 +165,7 @@ impl Render for AddonsToolbar {
                                 .disabled(!ready)
                                 .on_change(move |value, _window, cx| {
                                     let value = value.to_string();
-                                    catalog_entity.update(cx, |c, cx| {
-                                        c.selected_tag = value;
-                                        cx.notify();
-                                    });
+                                    catalog_entity.update(cx, |c, cx| c.set_selected_tag(value, cx));
                                 }),
                         )
                         .child(

@@ -60,6 +60,36 @@ pub fn has_sections(changelog: &str) -> bool {
     })
 }
 
+/// The trimmed release notes of a dialog as handed to `Markdown`, converted once and kept while the text stays the
+/// same. Keyed by the text itself: a re-published tag can come with new notes.
+#[derive(Default)]
+pub struct ReleaseNotes {
+    text: SharedString,
+    /// [`has_sections`] of `text`.
+    sections: bool,
+}
+
+impl ReleaseNotes {
+    pub fn new(text: &str) -> Self {
+        Self { text: text.into(), sections: has_sections(text) }
+    }
+
+    /// Takes over `text` unless it is the text already held.
+    pub fn set(&mut self, text: &str) {
+        if self.text != text {
+            *self = Self::new(text);
+        }
+    }
+
+    pub fn text(&self) -> &SharedString {
+        &self.text
+    }
+
+    pub fn has_sections(&self) -> bool {
+        self.sections
+    }
+}
+
 // ------------------------------------------------------------------------------------------------ view
 
 pub struct UpdateDialog {
@@ -70,6 +100,8 @@ pub struct UpdateDialog {
     phase: Phase<(Addon, Release)>,
     focus: FocusHandle,
     notes_scroll: ScrollHandle,
+    /// Notes of the release shown, see [`Self::sync_notes`].
+    notes: ReleaseNotes,
 }
 
 /// Opens the update dialog for `addon` and its newer `release`. It can't be dismissed while the update runs.
@@ -98,21 +130,37 @@ impl UpdateDialog {
         })
         .detach();
         cx.observe(&state::catalog(cx), |_, _, cx| cx.notify()).detach();
-        Self { addon, release, addons, phase: Phase::Idle, focus: cx.focus_handle(), notes_scroll: ScrollHandle::new() }
+        Self {
+            addon,
+            release,
+            addons,
+            phase: Phase::Idle,
+            focus: cx.focus_handle(),
+            notes_scroll: ScrollHandle::new(),
+            notes: ReleaseNotes::default(),
+        }
     }
 
     /// While idle the dialog follows the store, so it shows the latest installed addon and release. Once the update has
     /// started it keeps showing the values it started with.
-    fn live(&self, cx: &App) -> (Addon, Release) {
+    fn live<'a>(&'a self, cx: &'a App) -> (&'a Addon, &'a Release) {
         match &self.phase {
-            Phase::Running { started, .. } => started.clone(),
+            Phase::Running { started: (addon, release), .. } => (addon, release),
             _ => {
                 let store = self.addons.read(cx);
-                let addon =
-                    store.installed_addons.iter().find(|a| a.name == self.addon.name).unwrap_or(&self.addon).clone();
-                let release = store.latest_releases.get(&self.addon.name).unwrap_or(&self.release).clone();
+                let addon = store.installed_addons.iter().find(|a| a.name == self.addon.name).unwrap_or(&self.addon);
+                let release = store.latest_releases.get(&self.addon.name).unwrap_or(&self.release);
                 (addon, release)
             }
+        }
+    }
+
+    /// Takes over the notes of the release shown.
+    fn sync_notes(&mut self, cx: &App) {
+        // `live` borrows all of `self`, so `ReleaseNotes::set` can't be used here.
+        let body = self.live(cx).1.body.trim();
+        if self.notes.text() != body {
+            self.notes = ReleaseNotes::new(body);
         }
     }
 
@@ -127,6 +175,7 @@ impl UpdateDialog {
             return;
         }
         let (from, to) = self.live(cx);
+        let (from, to) = (from.clone(), to.clone());
         let update = self.addons.update(cx, |s, cx| s.update(from.name.clone(), to.tag_name.clone(), cx));
         self.set_phase(Phase::running((from.clone(), to.clone())), cx);
         cx.spawn_in(window, async move |this, cx| {
@@ -369,10 +418,10 @@ impl UpdateDialog {
             })
     }
 
+    /// `release`'s notes come from `self.notes`, see [`Self::sync_notes`].
     fn release_notes(&self, repo: &str, release: &Release, cx: &App) -> impl IntoElement {
         let t = cx.tokens();
-        let changelog = release.body.trim().to_string();
-        let sections = has_sections(&changelog);
+        let changelog = self.notes.text();
         let link = (!repo.is_empty()).then(|| {
             let url = format!("https://github.com/{repo}/releases/tag/{}", encode_uri_component(&release.tag_name));
             let primary = t.primary;
@@ -432,10 +481,10 @@ impl UpdateDialog {
                                             "update-notes-{}-{}",
                                             self.addon.name, release.tag_name
                                         )),
-                                        SharedString::from(changelog),
+                                        changelog.clone(),
                                     )
                                     .style(MarkdownStyle::ReleaseNotes)
-                                    .timeline(sections)
+                                    .timeline(self.notes.has_sections())
                                     .p_4()
                                     .pb_8(),
                                 ),
@@ -473,7 +522,7 @@ impl UpdateDialog {
             .child(body)
     }
 
-    fn footer(&self, to: &Release, cx: &mut Context<Self>) -> impl IntoElement {
+    fn footer(&self, to: &Release, cx: &Context<Self>) -> impl IntoElement {
         let t = cx.tokens();
         let this = cx.entity();
         let content = match &self.phase {
@@ -529,6 +578,7 @@ impl UpdateDialog {
 
 impl Render for UpdateDialog {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        self.sync_notes(cx);
         let (addon, release) = self.live(cx);
         let icon_url = state::catalog::current(cx).and_then(|c| c.icon_url(&addon.name).map(str::to_owned));
 
@@ -547,10 +597,10 @@ impl Render for UpdateDialog {
             Phase::Failed(failure) => Some(error_alert(failure, cx)),
             _ => None,
         };
-        root.child(self.hero(&addon, &release, icon_url, cx))
-            .child(self.release_notes(&addon.repo, &release, cx))
+        root.child(self.hero(addon, release, icon_url, cx))
+            .child(self.release_notes(&addon.repo, release, cx))
             .children(alert)
-            .child(self.footer(&release, cx))
+            .child(self.footer(release, cx))
             .into_any_element()
     }
 }

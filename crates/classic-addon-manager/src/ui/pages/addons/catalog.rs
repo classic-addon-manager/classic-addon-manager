@@ -23,10 +23,10 @@ use crate::{
 
 pub const ALL_TAG: &str = "All";
 
-/// A catalog entry together with whether it is installed.
-#[derive(Clone)]
+/// A catalog entry, by its index into [`Catalog::addons`], together with whether it is installed.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct AddonListItem {
-    pub manifest: AddonManifest,
+    pub source_index: usize,
     pub is_installed: bool,
 }
 
@@ -34,23 +34,23 @@ pub struct CatalogState {
     /// True once the first fetch has finished, whether it succeeded or failed.
     pub is_ready: bool,
     /// Search text applied to the list (already debounced).
-    pub search_query: String,
+    search_query: String,
     /// Tag the list is filtered by, [`ALL_TAG`] for no tag filter.
-    pub selected_tag: String,
+    selected_tag: String,
     /// True while the toolbar's refresh is running.
     pub is_refreshing: bool,
-    /// Every catalog entry: new addons first (newest first), then by name.
+    /// Every entry of `source`: new addons first (newest first), then by name.
     pub addons: Vec<AddonListItem>,
     /// Tags to choose from. Starts with "All".
     pub tags: Vec<String>,
     /// Message of the latest failed fetch, `None` after a successful one.
     pub error: Option<String>,
-    /// Highest download count in the catalog.
-    pub max_downloads: i64,
     /// Bumped whenever `addons`, `error` or `is_ready` change, so views can tell when to rebuild.
     pub rev: u64,
-    /// The catalog `addons` was built from.
-    source: Option<Arc<Catalog>>,
+    /// Bumped whenever the search text or the tag changes.
+    filter_rev: u64,
+    /// The catalog `addons` indexes into. Empty until the first catalog arrives.
+    source: Arc<Catalog>,
     /// The installed addons the `is_installed` marks of `addons` were taken from.
     installed: Option<Arc<Vec<Addon>>>,
     _subs: [Subscription; 2],
@@ -83,9 +83,9 @@ impl CatalogState {
             addons: Vec::new(),
             tags: vec![ALL_TAG.to_string()],
             error: None,
-            max_downloads: 0,
             rev: 0,
-            source: None,
+            filter_rev: 0,
+            source: Arc::new(Catalog::new(Vec::new())),
             installed: None,
             _subs: subs,
         };
@@ -105,17 +105,16 @@ impl CatalogState {
         let names = || installed.iter().map(|a| a.name.as_str()).collect::<HashSet<&str>>();
         let mut changed = is_ready != self.is_ready || error != self.error;
         match current {
-            Some(catalog) if !self.source.as_ref().is_some_and(|s| Arc::ptr_eq(s, &catalog)) => {
+            Some(catalog) if !Arc::ptr_eq(&self.source, &catalog) => {
                 self.addons = build_list(catalog.addons(), &names());
                 self.tags = std::iter::once(ALL_TAG.to_string()).chain(catalog.tags().iter().cloned()).collect();
-                self.max_downloads = catalog.max_downloads();
-                self.source = Some(catalog);
+                self.source = catalog;
                 changed = true;
             }
             _ if marks_stale => {
-                let names = names();
+                let (names, manifests) = (names(), self.source.addons());
                 for item in &mut self.addons {
-                    let now = names.contains(item.manifest.name.as_str());
+                    let now = names.contains(manifests[item.source_index].name.as_str());
                     changed |= item.is_installed != now;
                     item.is_installed = now;
                 }
@@ -131,20 +130,60 @@ impl CatalogState {
         }
     }
 
+    pub fn search_query(&self) -> &str {
+        &self.search_query
+    }
+
+    pub fn set_search_query(&mut self, text: String, cx: &mut Context<Self>) {
+        if self.search_query != text {
+            self.search_query = text;
+            self.filter_rev += 1;
+            cx.notify();
+        }
+    }
+
+    pub fn selected_tag(&self) -> &str {
+        &self.selected_tag
+    }
+
+    pub fn set_selected_tag(&mut self, tag: String, cx: &mut Context<Self>) {
+        if self.selected_tag != tag {
+            self.selected_tag = tag;
+            self.filter_rev += 1;
+            cx.notify();
+        }
+    }
+
+    /// Bumped whenever the search text or the tag changes.
+    pub fn filter_rev(&self) -> u64 {
+        self.filter_rev
+    }
+
+    /// The catalog the entries of `addons` index into.
+    pub fn source(&self) -> &Arc<Catalog> {
+        &self.source
+    }
+
     /// Indices into `addons` of the entries matching the tag and search text, in `sort` order.
     pub fn filtered_indices(&self, sort: AddonSort) -> Vec<usize> {
-        filtered_indices(&self.addons, &self.selected_tag, &self.search_query, sort)
+        filtered_indices(self.source.addons(), &self.addons, &self.selected_tag, &self.search_query, sort)
     }
 }
 
-/// Indices into `addons` of the entries matching `tag` and `query`, in `sort` order ([`AddonSortKey::Default`] keeps
-/// the list order).
-pub fn filtered_indices(addons: &[AddonListItem], tag: &str, query: &str, sort: AddonSort) -> Vec<usize> {
+/// Indices into `addons` (entries of `manifests`) of the entries matching `tag` and `query`, in `sort` order
+/// ([`AddonSortKey::Default`] keeps the list order).
+pub fn filtered_indices(
+    manifests: &[AddonManifest],
+    addons: &[AddonListItem],
+    tag: &str,
+    query: &str,
+    sort: AddonSort,
+) -> Vec<usize> {
     let search = AddonSearch::new(query);
-    let mut indices: Vec<usize> =
-        addons.iter().enumerate().filter(|(_, item)| matches_filter(item, tag, &search)).map(|(i, _)| i).collect();
+    let manifest = |i: usize| &manifests[addons[i].source_index];
+    let mut indices: Vec<usize> = (0..addons.len()).filter(|&i| matches_filter(manifest(i), tag, &search)).collect();
     if sort.key() != AddonSortKey::Default {
-        indices.sort_by(|&a, &b| compare_addons(&addons[a].manifest, &addons[b].manifest, sort));
+        indices.sort_by(|&a, &b| compare_addons(manifest(a), manifest(b), sort));
     }
     indices
 }
@@ -184,30 +223,27 @@ pub fn compare_addons(a: &AddonManifest, b: &AddonManifest, sort: AddonSort) -> 
 }
 
 /// Whether an entry passes the selected tag and the search text.
-pub fn matches_filter(item: &AddonListItem, selected_tag: &str, search: &AddonSearch) -> bool {
-    let m = &item.manifest;
+pub fn matches_filter(m: &AddonManifest, selected_tag: &str, search: &AddonSearch) -> bool {
     (selected_tag == ALL_TAG || m.tags.iter().any(|t| t == selected_tag))
         && search.matches(&m.name, &m.alias, &m.description, &m.author)
 }
 
-/// The list order: new addons first (newest first), then by name.
+/// Every entry of `manifests` in list order: new addons first (newest first), then by name.
 pub fn build_list(manifests: &[AddonManifest], installed: &HashSet<&str>) -> Vec<AddonListItem> {
     let mut items: Vec<AddonListItem> = manifests
         .iter()
-        .map(|m| AddonListItem { manifest: m.clone(), is_installed: installed.contains(m.name.as_str()) })
+        .enumerate()
+        .map(|(source_index, m)| AddonListItem { source_index, is_installed: installed.contains(m.name.as_str()) })
         .collect();
     items.sort_by(|a, b| {
-        let a_new = is_new_addon(a.manifest.added_at);
-        let b_new = is_new_addon(b.manifest.added_at);
-        match (a_new, b_new) {
+        let (a, b) = (&manifests[a.source_index], &manifests[b.source_index]);
+        match (is_new_addon(a.added_at), is_new_addon(b.added_at)) {
             (true, false) => return Ordering::Less,
             (false, true) => return Ordering::Greater,
-            (true, true) if a.manifest.added_at != b.manifest.added_at => {
-                return b.manifest.added_at.cmp(&a.manifest.added_at);
-            }
+            (true, true) if a.added_at != b.added_at => return b.added_at.cmp(&a.added_at),
             _ => {}
         }
-        locale_cmp(&a.manifest.name, &b.manifest.name)
+        locale_cmp(&a.name, &b.name)
     });
     items
 }
@@ -232,7 +268,7 @@ mod tests {
         let manifests =
             vec![manifest("zeta", 200), manifest("alpha", 200), manifest("older-new", 20), manifest("newest", 1)];
         let items = build_list(&manifests, &HashSet::from(["alpha"]));
-        let names: Vec<&str> = items.iter().map(|i| i.manifest.name.as_str()).collect();
+        let names: Vec<&str> = items.iter().map(|i| manifests[i.source_index].name.as_str()).collect();
         assert_eq!(names, vec!["newest", "older-new", "alpha", "zeta"]);
         assert!(items[2].is_installed && !items[3].is_installed);
     }
@@ -242,16 +278,15 @@ mod tests {
         let mut m = manifest("bagpack", 100);
         m.tags = vec!["UI".into()];
         m.author = "Madpeter".into();
-        let item = AddonListItem { manifest: m, is_installed: false };
-        let matches = |tag: &str, text: &str| matches_filter(&item, tag, &AddonSearch::new(text));
+        let matches = |tag: &str, text: &str| matches_filter(&m, tag, &AddonSearch::new(text));
         assert!(matches(ALL_TAG, ""));
         assert!(matches("UI", "Madpe"));
         assert!(!matches("Raid", ""));
         assert!(!matches("UI", "zzz"));
     }
 
-    fn rated(alias: &str, downloads: i64, like: Option<i8>, votes: Option<i64>) -> AddonListItem {
-        let manifest = AddonManifest {
+    fn rated(alias: &str, downloads: i64, like: Option<i8>, votes: Option<i64>) -> AddonManifest {
+        AddonManifest {
             name: alias.to_lowercase(),
             alias: alias.into(),
             downloads,
@@ -259,12 +294,17 @@ mod tests {
             votes,
             added_at: Some(Utc::now() - Duration::days(100)),
             ..Default::default()
-        };
-        AddonListItem { manifest, is_installed: false }
+        }
     }
 
-    fn order(addons: Vec<AddonListItem>, sort: AddonSort) -> Vec<String> {
-        filtered_indices(&addons, ALL_TAG, "", sort).into_iter().map(|i| addons[i].manifest.alias.clone()).collect()
+    /// Aliases of `manifests` filtered without a tag or text, listed in load order.
+    fn order(manifests: Vec<AddonManifest>, sort: AddonSort) -> Vec<String> {
+        let items: Vec<AddonListItem> =
+            (0..manifests.len()).map(|source_index| AddonListItem { source_index, is_installed: false }).collect();
+        filtered_indices(&manifests, &items, ALL_TAG, "", sort)
+            .into_iter()
+            .map(|i| manifests[items[i].source_index].alias.clone())
+            .collect()
     }
 
     #[test]

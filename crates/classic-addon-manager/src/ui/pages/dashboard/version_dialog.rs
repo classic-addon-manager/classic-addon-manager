@@ -25,6 +25,7 @@ use gpui_kit::{
 use super::{
     install_flow::{Verb, outcome_failure},
     phase_ui::{Phase, error_alert, eyebrow, kbd, running_steps, running_view},
+    update_dialog::ReleaseNotes,
 };
 use crate::{
     state::{self, Load},
@@ -175,6 +176,8 @@ pub struct VersionDialog {
     phase: Phase<(String, Direction)>,
     focus: FocusHandle,
     list_scroll: ScrollHandle,
+    /// Notes of the selected release, taken over in `render`.
+    notes: ReleaseNotes,
 }
 
 /// Opens the version picker dialog for `addon`. It can't be dismissed while an install runs.
@@ -219,6 +222,7 @@ impl VersionDialog {
             phase: Phase::Idle,
             focus: cx.focus_handle(),
             list_scroll: ScrollHandle::new(),
+            notes: ReleaseNotes::default(),
         };
         this.sync_list(cx);
         this.load(false, cx);
@@ -520,7 +524,8 @@ impl VersionDialog {
         cx: &App,
     ) -> impl IntoElement {
         let t = cx.tokens();
-        let changelog = release.body.trim();
+        // `render` took the trimmed notes of `release` over into `self.notes`.
+        let changelog = self.notes.text();
         let summary = match dir {
             Direction::Reinstall => "This is the version you have installed".to_string(),
             Direction::Install => "Your installed version is not in this list".to_string(),
@@ -545,7 +550,7 @@ impl VersionDialog {
         } else {
             Markdown::new(
                 SharedString::from(format!("version-notes-{}-{}", self.addon.name, release.tag_name)),
-                SharedString::from(changelog.to_string()),
+                changelog.clone(),
             )
             .style(MarkdownStyle::ReleaseNotes)
             .timeline(false)
@@ -699,7 +704,10 @@ impl Render for VersionDialog {
         let ready = matches!(state, Load::Ready(()));
         let selected_index = self.selected_index();
         let installed_index = self.installed_index();
-        let selected: Option<&Release> = if ready { self.list().get(selected_index) } else { None };
+        let selected: Option<&Release> = if ready { self.list.get(selected_index) } else { None };
+        if let Some(sel) = selected {
+            self.notes.set(sel.body.trim());
+        }
         let dir = direction(installed_index, selected_index);
         let query = self.filter.read(cx).value().to_string();
         let visible = visible_indices(self.list(), &query);

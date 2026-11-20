@@ -396,10 +396,12 @@ impl Render for DetailsPane {
         let facts = div().flex_none().border_b_1().border_color(t.border).px_6().py_3().child(grid);
 
         // ---------------------------------------------------------------- body
-        let fallback = if addon.description.is_empty() {
-            "No description provided".to_string()
-        } else {
-            addon.description.clone()
+        let fallback = || {
+            if addon.description.is_empty() {
+                SharedString::new_static("No description provided")
+            } else {
+                SharedString::from(addon.description.as_str())
+            }
         };
         let body = if addon.is_managed {
             let readme = self.readme.read(cx).get(&self.readme_key);
@@ -416,17 +418,13 @@ impl Render for DetailsPane {
                     .child(div().text_sm_tw().font_weight(FontWeight::MEDIUM).child("Loading description..."))
                     .into_any_element()
             } else {
-                let text = if addon.repo.is_empty() {
-                    fallback
-                } else {
-                    match readme {
-                        Load::Ready(Some(text)) => text.clone(),
-                        _ => fallback,
-                    }
+                let text = match readme {
+                    Load::Ready(Some(text)) if !addon.repo.is_empty() => text.clone(),
+                    _ => fallback(),
                 };
                 div()
                     .child(
-                        Readme::new(SharedString::from(format!("readme-{}", addon.name)), SharedString::from(text))
+                        Readme::new(SharedString::from(format!("readme-{}", addon.name)), text)
                             .repo(addon.repo.clone())
                             .branch(addon.branch.clone()),
                     )

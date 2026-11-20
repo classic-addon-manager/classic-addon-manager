@@ -1,6 +1,9 @@
 //! Troubleshooting page: addon log diagnostics, addon recovery (reset settings, uninstall all) and a guide for
 //! reporting a problem with one addon.
-use std::time::{Duration, Instant};
+use std::{
+    rc::Rc,
+    time::{Duration, Instant},
+};
 
 use cam_core::{addon, diagnostics};
 use cam_ui::toast;
@@ -10,11 +13,11 @@ use cam_ui::{
         *,
     },
     icons,
-    theme::{TokensExt, Tw, TwText, alpha, radius, tw},
+    theme::{Tokens, TokensExt, Tw, TwText, alpha, radius, tw},
 };
 use gpui_kit::component::Icon;
 use gpui_kit::{
-    AnyElement, AnyWindowHandle, App, AsyncApp, Context, Entity, FontWeight, IntoElement, ParentElement, Render,
+    AnyElement, AnyWindowHandle, App, AsyncApp, Context, Entity, FontWeight, Hsla, IntoElement, ParentElement, Render,
     SharedString, Styled, Task, Transformation, WeakEntity, Window, div, percentage, prelude::FluentBuilder as _, px,
 };
 
@@ -22,8 +25,8 @@ use crate::state::{self, AddonState, run_blocking, tasks::error_message};
 use crate::ui::pages::settings::page_header;
 
 struct Issue {
-    error: String,
-    file: String,
+    error: SharedString,
+    file: SharedString,
     count: i64,
 }
 
@@ -31,7 +34,51 @@ struct Issue {
 #[derive(Default)]
 struct Diagnostics {
     issue_count: usize,
-    grouped: Vec<(String, Vec<Issue>)>,
+    /// Shared with the group's lazily built content, so a closed group costs nothing to draw.
+    grouped: Vec<(String, Rc<[Issue]>)>,
+}
+
+/// One issue of an opened group: the error, how often it occurred and the file it points at.
+fn issue_card(issue: &Issue, t: &Tokens, border: Hsla) -> impl IntoElement {
+    div()
+        .rounded(radius::LG)
+        .border_1()
+        .border_color(border)
+        .bg(alpha(t.background, 0.4))
+        .px_3()
+        .py(px(10.0))
+        .child(
+            div()
+                .flex()
+                .items_start()
+                .gap_3()
+                .child(
+                    div()
+                        .min_w_0()
+                        .flex_1()
+                        .text_xs_tw()
+                        .font_mono_tw()
+                        .text_color(t.destructive)
+                        .child(issue.error.clone()),
+                )
+                .when(issue.count > 1, |d| {
+                    d.child(
+                        div()
+                            .flex_none()
+                            .text_xs_tw()
+                            .text_color(t.muted_foreground)
+                            .child(format!("×{}", issue.count)),
+                    )
+                }),
+        )
+        .child(
+            div()
+                .mt(px(6.0))
+                .text_xs_tw()
+                .font_mono_tw()
+                .text_color(alpha(t.foreground, 0.7))
+                .child(issue.file.clone()),
+        )
 }
 
 pub struct TroubleshootingPage {
@@ -90,12 +137,13 @@ impl TroubleshootingPage {
                         let mut grouped: Vec<(String, Vec<Issue>)> = Vec::new();
                         let count = issues.len();
                         for i in issues {
-                            let issue = Issue { error: i.error, file: i.file, count: i.count };
+                            let issue = Issue { error: i.error.into(), file: i.file.into(), count: i.count };
                             match grouped.iter_mut().find(|(n, _)| *n == i.addon) {
                                 Some((_, v)) => v.push(issue),
                                 None => grouped.push((i.addon, vec![issue])),
                             }
                         }
+                        let grouped = grouped.into_iter().map(|(name, issues)| (name, issues.into())).collect();
                         this.data = Diagnostics { issue_count: count, grouped };
                         this.error.clear();
                     }
@@ -265,51 +313,7 @@ impl TroubleshootingPage {
                         )
                         .into_any_element()
                 };
-                let cards: Vec<AnyElement> = issues
-                    .iter()
-                    .map(|issue| {
-                        div()
-                            .rounded(radius::LG)
-                            .border_1()
-                            .border_color(border60)
-                            .bg(alpha(t.background, 0.4))
-                            .px_3()
-                            .py(px(10.0))
-                            .child(
-                                div()
-                                    .flex()
-                                    .items_start()
-                                    .gap_3()
-                                    .child(
-                                        div()
-                                            .min_w_0()
-                                            .flex_1()
-                                            .text_xs_tw()
-                                            .font_mono_tw()
-                                            .text_color(t.destructive)
-                                            .child(issue.error.clone()),
-                                    )
-                                    .when(issue.count > 1, |d| {
-                                        d.child(
-                                            div()
-                                                .flex_none()
-                                                .text_xs_tw()
-                                                .text_color(t.muted_foreground)
-                                                .child(format!("×{}", issue.count)),
-                                        )
-                                    }),
-                            )
-                            .child(
-                                div()
-                                    .mt(px(6.0))
-                                    .text_xs_tw()
-                                    .font_mono_tw()
-                                    .text_color(alpha(t.foreground, 0.7))
-                                    .child(issue.file.clone()),
-                            )
-                            .into_any_element()
-                    })
-                    .collect();
+                let issues = issues.clone();
                 div().when(gi > 0, |d| d.border_t_1().border_color(border60)).child(
                     Collapsible::new(("diag", gi))
                         .trigger_with(trigger)
@@ -324,7 +328,7 @@ impl TroubleshootingPage {
                                 .bg(alpha(t.muted, 0.15))
                                 .px_4()
                                 .py_3()
-                                .children(cards)
+                                .children(issues.iter().map(|issue| issue_card(issue, &t, border60)))
                                 .into_any_element()
                         }),
                 )
