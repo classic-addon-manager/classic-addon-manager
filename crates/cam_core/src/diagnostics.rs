@@ -1,9 +1,11 @@
-use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
+use std::collections::HashMap;
+use std::io::{BufRead, BufReader, ErrorKind, Read, Seek, SeekFrom};
 use std::path::Path;
-use std::sync::OnceLock;
+use std::sync::LazyLock;
 
 use anyhow::Result;
-use regex::Regex;
+use memchr::memmem;
+use regex::{CaptureLocations, Regex};
 use serde::{Deserialize, Serialize};
 
 const MAX_LOG_TAIL_BYTES: u64 = 8 << 20;
@@ -24,32 +26,32 @@ pub struct LogParseResult {
 struct Pattern {
     regex: Regex,
     err_type: &'static str,
-    /// `None` => constant "x2ui", otherwise first path segment.
+    /// `Some` => this constant, otherwise the first path segment of the file.
     constant_addon: Option<&'static str>,
 }
 
-fn patterns() -> &'static [Pattern] {
-    static P: OnceLock<Vec<Pattern>> = OnceLock::new();
-    P.get_or_init(|| {
-        vec![
-            Pattern {
-                regex: Regex::new(r"\[Lua Error].*/Addon/(.+\.lua:\d+): (.+)").unwrap(),
-                err_type: "lua",
-                constant_addon: None,
-            },
-            Pattern {
-                regex: Regex::new(r"/Addon/([^:]+:\d+):\s*\[Script Error]\s*(.*)").unwrap(),
-                err_type: "addon",
-                constant_addon: None,
-            },
-            Pattern {
-                regex: Regex::new(r"@.*?/x2ui/addons/([^:]+:\d+):\s*\[Script Error]\s*(.*)").unwrap(),
-                err_type: "api",
-                constant_addon: Some("x2ui"),
-            },
-        ]
-    })
-}
+/// Every pattern contains this literal, so a line without it cannot match.
+const PATTERN_LITERAL: &[u8] = b"Error]";
+
+static PATTERNS: LazyLock<[Pattern; 3]> = LazyLock::new(|| {
+    [
+        Pattern {
+            regex: Regex::new(r"\[Lua Error].*/Addon/(.+\.lua:\d+): (.+)").unwrap(),
+            err_type: "lua",
+            constant_addon: None,
+        },
+        Pattern {
+            regex: Regex::new(r"/Addon/([^:]+:\d+):\s*\[Script Error]\s*(.*)").unwrap(),
+            err_type: "addon",
+            constant_addon: None,
+        },
+        Pattern {
+            regex: Regex::new(r"@.*?/x2ui/addons/([^:]+:\d+):\s*\[Script Error]\s*(.*)").unwrap(),
+            err_type: "api",
+            constant_addon: Some("x2ui"),
+        },
+    ]
+});
 
 pub fn parse_log_path(path: impl AsRef<Path>) -> std::io::Result<Vec<LogParseResult>> {
     let mut f = std::fs::File::open(path)?;
@@ -63,64 +65,46 @@ pub fn parse_log_path(path: impl AsRef<Path>) -> std::io::Result<Vec<LogParseRes
 }
 
 pub fn parse_log<R: Read>(r: R, mut skip_first: bool) -> std::io::Result<Vec<LogParseResult>> {
-    struct Entry {
-        result: LogParseResult,
+    /// How often an error occurred, and the number of the matching line it was last seen on.
+    struct Seen {
+        count: i64,
         last_seen: usize,
     }
     let mut br = BufReader::with_capacity(MAX_LOG_LINE_BYTES, r);
-    let mut entries: std::collections::HashMap<(&'static str, String, String), Entry> = Default::default();
+    // Keyed by (pattern index, file, error). The key strings become the result's strings.
+    let mut seen: HashMap<(usize, String, String), Seen> = HashMap::new();
+    // Capture slots for each pattern, reused for every line. Made on the first candidate line.
+    let mut locations: Option<[CaptureLocations; 3]> = None;
+    let literal = memmem::Finder::new(PATTERN_LITERAL);
     let mut seq = 0usize;
     let mut buf: Vec<u8> = Vec::new();
 
     loop {
         buf.clear();
-        let n = br.read_until(b'\n', &mut buf)?;
-        let eof = n == 0 || buf.last() != Some(&b'\n');
-        if buf.last() == Some(&b'\n') {
-            buf.pop();
-        }
-        buf.truncate(MAX_LOG_LINE_BYTES);
+        let eof = !read_line_capped(&mut br, &mut buf)?;
         if buf.last() == Some(&b'\r') {
             buf.pop();
         }
 
         if skip_first {
             skip_first = false;
-        } else if !buf.is_empty() {
+        } else if literal.find(&buf).is_some() {
+            // Lossy conversion only inserts U+FFFD, never ASCII, so the prefilter above cannot reject a match.
             let line = String::from_utf8_lossy(&buf);
-            for p in patterns() {
-                if let Some(caps) = p.regex.captures(&line) {
-                    seq += 1;
-                    let file = caps[1].to_string();
-                    let error = caps[2].to_string();
-                    let key = (p.err_type, file.clone(), error.clone());
-                    match entries.get_mut(&key) {
-                        Some(e) => {
-                            e.result.count += 1;
-                            e.last_seen = seq;
-                        }
-                        None => {
-                            let addon = match p.constant_addon {
-                                Some(a) => a.to_string(),
-                                None => file.split('/').next().unwrap_or("").to_string(),
-                            };
-                            entries.insert(
-                                key,
-                                Entry {
-                                    result: LogParseResult {
-                                        r#type: p.err_type.to_string(),
-                                        addon,
-                                        file,
-                                        error,
-                                        count: 1,
-                                    },
-                                    last_seen: seq,
-                                },
-                            );
-                        }
-                    }
-                    break;
+            let locations =
+                locations.get_or_insert_with(|| PATTERNS.each_ref().map(|p| p.regex.capture_locations()));
+            for (i, (p, slots)) in PATTERNS.iter().zip(locations).enumerate() {
+                if p.regex.captures_read(slots, &line).is_none() {
+                    continue;
                 }
+                seq += 1;
+                // Both groups take part in every match of every pattern.
+                let group = |g| slots.get(g).map_or("", |(start, end)| &line[start..end]);
+                let entry =
+                    seen.entry((i, group(1).to_owned(), group(2).to_owned())).or_insert(Seen { count: 0, last_seen: 0 });
+                entry.count += 1;
+                entry.last_seen = seq;
+                break;
             }
         }
         if eof {
@@ -128,15 +112,48 @@ pub fn parse_log<R: Read>(r: R, mut skip_first: bool) -> std::io::Result<Vec<Log
         }
     }
 
-    if entries.is_empty() {
-        return Ok(Vec::new());
+    let mut ordered: Vec<_> = seen.into_iter().collect();
+    // `last_seen` is unique per entry, so an unstable sort gives the same order as a stable one.
+    ordered.sort_unstable_by_key(|(_, s)| s.last_seen);
+    let dropped = ordered.len().saturating_sub(MAX_LOG_UNIQUE_ERRORS);
+    Ok(ordered
+        .into_iter()
+        .skip(dropped)
+        .map(|((i, file, error), s)| {
+            let p = &PATTERNS[i];
+            LogParseResult {
+                r#type: p.err_type.to_owned(),
+                addon: p.constant_addon.unwrap_or_else(|| file.split('/').next().unwrap_or("")).to_owned(),
+                file,
+                error,
+                count: s.count,
+            }
+        })
+        .collect())
+}
+
+/// Reads one line into `buf` without its `\n`, keeping at most `MAX_LOG_LINE_BYTES` and skipping the rest of a longer
+/// line. Returns false when the input ended before a `\n`.
+fn read_line_capped(r: &mut impl BufRead, buf: &mut Vec<u8>) -> std::io::Result<bool> {
+    loop {
+        let chunk = match r.fill_buf() {
+            Ok(chunk) => chunk,
+            Err(e) if e.kind() == ErrorKind::Interrupted => continue,
+            Err(e) => return Err(e),
+        };
+        if chunk.is_empty() {
+            return Ok(false);
+        }
+        let newline = memchr::memchr(b'\n', chunk);
+        let line = &chunk[..newline.unwrap_or(chunk.len())];
+        let room = MAX_LOG_LINE_BYTES - buf.len();
+        buf.extend_from_slice(&line[..line.len().min(room)]);
+        let consumed = newline.map_or(chunk.len(), |i| i + 1);
+        r.consume(consumed);
+        if newline.is_some() {
+            return Ok(true);
+        }
     }
-    let mut ordered: Vec<Entry> = entries.into_values().collect();
-    ordered.sort_by_key(|e| e.last_seen);
-    if ordered.len() > MAX_LOG_UNIQUE_ERRORS {
-        ordered.drain(..ordered.len() - MAX_LOG_UNIQUE_ERRORS);
-    }
-    Ok(ordered.into_iter().map(|e| e.result).collect())
 }
 
 /// The addon errors in `ArcheAge.log` in the ArcheAge Classic Documents folder `aac_dir`.
@@ -187,10 +204,16 @@ mod tests {
 
     #[test]
     fn overlong_line_is_truncated_not_fatal() {
-        let long = format!("/Addon/a/x.lua:1: [Script Error] {}\n", "x".repeat(200_000));
-        let r = parse(&long);
-        assert_eq!(r.len(), 1);
+        // The error past the cut belongs to the overlong line and must not be read as a line of its own.
+        let long = format!(
+            "/Addon/a/x.lua:1: [Script Error] {}/Addon/c/x.lua:1: [Script Error] C\n",
+            "x".repeat(200_000)
+        );
+        let r = parse(&format!("{long}/Addon/b/x.lua:1: [Script Error] B\n"));
+        assert_eq!(r.len(), 2);
+        assert_eq!(r[0].addon, "a");
         assert!(r[0].error.len() < MAX_LOG_LINE_BYTES);
+        assert_eq!((r[1].addon.as_str(), r[1].error.as_str()), ("b", "B"));
     }
 
     #[test]

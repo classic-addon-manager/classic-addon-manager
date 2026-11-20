@@ -18,7 +18,7 @@ mod statistics;
 mod submission_details;
 mod toolbar;
 
-use std::{collections::HashSet, time::Duration};
+use std::time::Duration;
 
 use cam_ui::{
     components::{Button, ScrollArea},
@@ -313,9 +313,7 @@ impl DeveloperPage {
         cx: &mut Context<Self>,
     ) -> gpui_kit::AnyElement {
         let t = cx.tokens();
-        let published: HashSet<&str> = data.addons.iter().map(|a| a.name.as_str()).collect();
-        let visible_submissions: Vec<&OwnedSubmission> =
-            data.submissions.iter().filter(|s| s.is_standalone(&published)).collect();
+        let visible_submissions = data.standalone_submissions();
         let fallback = match self.scope {
             DeveloperScope::Addons => data.addons.first().map(|a| Selection::Addon(a.name.clone())),
             DeveloperScope::Submissions => visible_submissions.first().map(|s| Selection::Submission(s.id)),

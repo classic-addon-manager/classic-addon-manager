@@ -307,11 +307,17 @@ pub fn validate_icon_file(path: &Path) -> Vec<String> {
 }
 
 fn read_png_dimensions(path: &Path) -> Option<(u32, u32)> {
-    use std::io::Read;
-    let mut buf = Vec::new();
-    std::fs::File::open(path).ok()?.take(512 * 1024).read_to_end(&mut buf).ok()?;
-    png_dimensions(&buf)
+    use std::io::{self, Read};
+    let mut file = std::fs::File::open(path).ok()?.take(512 * 1024);
+    let mut header = [0u8; PNG_HEADER_LEN];
+    let len = io::copy(&mut (&mut file).take(PNG_HEADER_LEN as u64), &mut &mut header[..]).ok()?;
+    // Only the header is kept, but the rest of the first 512 KiB is still read: a read error there rejects the file.
+    io::copy(&mut file, &mut io::sink()).ok()?;
+    png_dimensions(&header[..len as usize])
 }
+
+/// The bytes [`png_dimensions`] looks at: the signature, a CgBI chunk and the start of IHDR up to its height.
+const PNG_HEADER_LEN: usize = 52;
 
 /// Detects PNG by signature (a file renamed to .png holding JPEG/WebP data is rejected) and reads IHDR.
 pub fn png_dimensions(bytes: &[u8]) -> Option<(u32, u32)> {
@@ -474,6 +480,18 @@ mod tests {
         b
     }
 
+    /// An Apple CgBI PNG: the CgBI chunk first, IHDR second. Exactly `PNG_HEADER_LEN` bytes long.
+    fn cgbi_bytes(w: u32, h: u32) -> Vec<u8> {
+        let mut b = png_bytes(0, 0);
+        b.truncate(12);
+        b.extend_from_slice(b"CgBI");
+        b.resize(40, 0);
+        b.extend_from_slice(b"IHDR");
+        b.extend_from_slice(&w.to_be_bytes());
+        b.extend_from_slice(&h.to_be_bytes());
+        b
+    }
+
     fn rejected(status: u16, message: &str) -> ApiError {
         ApiError::Rejected { status, message: message.into() }
     }
@@ -517,6 +535,11 @@ mod tests {
         v.resize(3 * 1024 * 1024 + 1, 0);
         std::fs::write(&big, v).unwrap();
         assert_eq!(validate_icon_file(&big), vec!["Icon must be 3 MB or smaller."]);
+        let cgbi = dir.join("cgbi.png");
+        std::fs::write(&cgbi, cgbi_bytes(64, 64)).unwrap();
+        assert!(validate_icon_file(&cgbi).is_empty());
+        std::fs::write(&cgbi, &cgbi_bytes(64, 64)[..PNG_HEADER_LEN - 1]).unwrap();
+        assert_eq!(validate_icon_file(&cgbi), vec!["Icon must be a valid PNG file."]);
         std::fs::remove_dir_all(&dir).ok();
     }
 

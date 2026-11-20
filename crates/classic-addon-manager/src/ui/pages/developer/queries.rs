@@ -7,15 +7,15 @@
 //! getters in `render`, and call the matching `ensure_*` method once when they are created. That call fetches again every
 //! time a view is created (cached data stays visible meanwhile), except for statistics, which are only fetched again
 //! after 15 minutes. A lookup that failed is fetched again by the next call whatever its age.
-use std::{collections::HashSet, hash::Hash, time::Duration};
+use std::{cell::RefCell, collections::HashSet, hash::Hash, rc::Rc, sync::Arc, time::Duration};
 
 use cam_core::api::developer::{self, types::*};
-use cam_core::api::{AddonManifest, ApiError};
+use cam_core::api::ApiError;
 use cam_ui::toast;
 use gpui_kit::{App, AppContext, Context, Entity, Global, Subscription, Task};
 
 use super::owned::{self, OwnedAddonsData};
-use crate::state::{self, Load, Query, QueryError};
+use crate::state::{self, Load, Query, QueryError, catalog::Catalog};
 
 /// Statistics snapshots are taken hourly, so statistics fetched less than 15 minutes ago are not fetched again when a
 /// view is created.
@@ -48,7 +48,7 @@ pub struct StatsView {
 /// What the owned list sees.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct OwnedView {
-    pub data: Option<OwnedAddonsData>,
+    pub data: Option<Rc<OwnedAddonsData>>,
     /// Only set when there is nothing to display (poll failures keep the last data and stay silent).
     pub error: Option<String>,
     pub last_attempt_failed: bool,
@@ -61,7 +61,7 @@ type SubmissionQuery = Query<(String, i64), SubmissionDetail>;
 /// Statistics by `(discord id, addon uuid)`.
 type StatsQuery = Query<(String, String), AddonDeveloperStats>;
 /// The owner's addons and submissions as the server lists them, by discord id.
-type OwnedQuery = Query<String, AddonSources>;
+type OwnedQuery = Query<String, Arc<AddonSources>>;
 /// The declaration schema, fetched once and then kept for the rest of the run.
 type SchemaQuery = Query<(), SchemaDoc>;
 
@@ -79,8 +79,16 @@ pub struct DevQueries {
     submissions: Entity<SubmissionQuery>,
     stats: Entity<StatsQuery>,
     owned: Entity<OwnedQuery>,
+    /// The last list [`Self::owned`] built, with the sources and catalog it was built from.
+    owned_data: RefCell<Option<OwnedData>>,
     touched: Touched,
     _subs: Vec<Subscription>,
+}
+
+struct OwnedData {
+    sources: Arc<AddonSources>,
+    catalog: Option<Arc<Catalog>>,
+    data: Rc<OwnedAddonsData>,
 }
 
 struct GlobalQueries(Entity<DevQueries>);
@@ -108,8 +116,7 @@ fn latest<'a, V>(load: &'a Load<V>, error: Option<&QueryError>) -> Load<&'a V> {
 
 /// What the owned list sees. A failure only shows as `error` while there is no list. After a failed refetch the last
 /// list stays and `last_attempt_failed` is set.
-fn owned_view(sources: Option<&AddonSources>, manifests: &[AddonManifest], error: Option<&QueryError>) -> OwnedView {
-    let data = sources.map(|sources| owned::sources_to_owned(sources, manifests));
+fn owned_view(data: Option<Rc<OwnedAddonsData>>, error: Option<&QueryError>) -> OwnedView {
     OwnedView {
         error: error.filter(|_| data.is_none()).map(ToString::to_string),
         last_attempt_failed: error.is_some(),
@@ -206,7 +213,7 @@ impl DevQueries {
             OwnedQuery::blocking(
                 |_| "your addons and submissions".into(),
                 Duration::ZERO,
-                |_| developer::sources().map_err(|e| failure(&developer::SOURCES, e)),
+                |_| developer::sources().map(Arc::new).map_err(|e| failure(&developer::SOURCES, e)),
             )
         });
         // The owned list shows details from the catalog, so it changes with the catalog too.
@@ -218,7 +225,16 @@ impl DevQueries {
             cx.observe(&owned, |_, _, cx| cx.notify()),
             cx.observe(&state::catalog(cx), |_, _, cx| cx.notify()),
         ];
-        Self { schema, values, submissions, stats, owned, touched: Touched::default(), _subs: subs }
+        Self {
+            schema,
+            values,
+            submissions,
+            stats,
+            owned,
+            owned_data: RefCell::default(),
+            touched: Touched::default(),
+            _subs: subs,
+        }
     }
 
     /// The declaration schema: the one fetched before, or the result of a fetch.
@@ -305,10 +321,25 @@ impl DevQueries {
     pub fn owned(&self, cx: &App) -> OwnedView {
         let id = discord_id(cx);
         let query = self.owned.read(cx);
-        // The details from the catalog are best effort: the list shows without them until the catalog is there.
+        let data = query.value(&id).map(|sources| self.owned_data(sources, cx));
+        owned_view(data, query.error(&id))
+    }
+
+    /// The list for `sources`, built again only when the sources or the catalog changed. The details from the catalog
+    /// are best effort: the list shows without them until the catalog is there.
+    fn owned_data(&self, sources: &Arc<AddonSources>, cx: &App) -> Rc<OwnedAddonsData> {
         let catalog = state::catalog::current(cx);
-        let manifests = catalog.as_deref().map(|c| c.addons()).unwrap_or_default();
-        owned_view(query.value(&id), manifests, query.error(&id))
+        let mut cached = self.owned_data.borrow_mut();
+        if let Some(c) = cached.as_ref()
+            && Arc::ptr_eq(&c.sources, sources)
+            && c.catalog.as_ref().map(Arc::as_ptr) == catalog.as_ref().map(Arc::as_ptr)
+        {
+            return c.data.clone();
+        }
+        let manifests = catalog.as_deref().map(Catalog::addons).unwrap_or_default();
+        let data = Rc::new(owned::sources_to_owned(sources, manifests));
+        *cached = Some(OwnedData { sources: sources.clone(), catalog, data: data.clone() });
+        data
     }
 
     /// Fetches the owner's list (page open, 60 s poll) unless a fetch is running, and the catalog that adds details to
@@ -353,7 +384,11 @@ impl DevQueries {
     /// Drops a submission from the cached list.
     pub fn remove_submission(&mut self, id: i64, cx: &mut Context<Self>) {
         let user = discord_id(cx);
-        self.owned.update(cx, |q, cx| q.update(&user, |sources| sources.submissions.retain(|s| s.id != id), cx));
+        // The list built from the sources is outdated now, and its reference would make `make_mut` copy them.
+        self.owned_data.get_mut().take();
+        self.owned.update(cx, |q, cx| {
+            q.update(&user, |sources| Arc::make_mut(sources).submissions.retain(|s| s.id != id), cx)
+        });
     }
 }
 
@@ -388,15 +423,14 @@ mod tests {
 
     #[test]
     fn the_owned_list_shows_a_failure_only_when_there_is_no_list() {
-        assert_eq!(owned_view(None, &[], None), OwnedView::default());
+        assert_eq!(owned_view(None, None), OwnedView::default());
 
-        let first_fetch_failed = owned_view(None, &[], Some(&down()));
+        let first_fetch_failed = owned_view(None, Some(&down()));
         assert_eq!(first_fetch_failed.data, None);
         assert_eq!(first_fetch_failed.error.as_deref(), Some("down"));
         assert!(first_fetch_failed.last_attempt_failed);
 
-        let sources = AddonSources::default();
-        let refetch_failed = owned_view(Some(&sources), &[], Some(&down()));
+        let refetch_failed = owned_view(Some(Rc::default()), Some(&down()));
         assert!(refetch_failed.data.is_some());
         assert_eq!(refetch_failed.error, None);
         assert!(refetch_failed.last_attempt_failed);

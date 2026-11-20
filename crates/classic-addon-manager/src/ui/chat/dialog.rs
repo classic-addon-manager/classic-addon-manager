@@ -36,6 +36,8 @@ const PLACEHOLDER: &str = "Ask your question, the Darus won't judge...";
 pub struct AiChatDialog {
     st: ChatState,
     reveal: TextReveal,
+    /// The replies of the settled turns (all but an active last one), shared by their Markdown and copy button.
+    settled_replies: Vec<SharedString>,
     reveal_running: bool,
     reveal_task: Option<Task<()>>,
     stream_task: Option<Task<()>>,
@@ -67,6 +69,7 @@ impl AiChatDialog {
         Self {
             st: ChatState::new(),
             reveal: TextReveal::new("", false),
+            settled_replies: Vec::new(),
             reveal_running: false,
             reveal_task: None,
             stream_task: None,
@@ -131,6 +134,7 @@ impl AiChatDialog {
         self.stream_task = None;
         self.slow_task = None;
         self.st.reset();
+        self.settled_replies.clear();
         self.pin_to_bottom();
         self.expanded_tools.clear();
         cx.notify();
@@ -325,6 +329,7 @@ impl Render for AiChatDialog {
         self.ensure_reveal_ticker(cx);
         let is_revealing = self.reveal.is_revealing(waiting);
         let active_turn = if waiting || is_revealing { self.st.turns.len().checked_sub(1) } else { None };
+        self.sync_settled_replies(active_turn.unwrap_or(self.st.turns.len()));
         let has_turns = !self.st.turns.is_empty();
 
         // ---- input placeholder follows the status text
@@ -420,7 +425,8 @@ impl Render for AiChatDialog {
             let mut list = div().flex().flex_col().gap(px(24.0));
             for (i, turn) in self.st.turns.iter().enumerate() {
                 list = list.child(self.user_message(i, &turn.user, cx));
-                if let Some(el) = self.assistant_turn(i, turn, active_turn == Some(i), is_revealing, window, cx) {
+                let settled = self.settled_replies.get(i);
+                if let Some(el) = self.assistant_turn(i, turn, settled, is_revealing, window, cx) {
                     list = list.child(el);
                 }
             }
@@ -511,6 +517,20 @@ impl Render for AiChatDialog {
 }
 
 impl AiChatDialog {
+    /// Makes `settled_replies` hold the replies of the first `settled` turns. Stream events only change the last turn
+    /// and `reset_conversation` clears the cache, so only the newest cached entry can be outdated.
+    fn sync_settled_replies(&mut self, settled: usize) {
+        let turns = &self.st.turns[..settled];
+        self.settled_replies.truncate(settled);
+        let cached = self.settled_replies.len();
+        if let Some(reply) = self.settled_replies.last_mut()
+            && reply.as_str() != turns[cached - 1].assistant
+        {
+            *reply = SharedString::from(turns[cached - 1].assistant.as_str());
+        }
+        self.settled_replies.extend(turns[cached..].iter().map(|turn| SharedString::from(turn.assistant.as_str())));
+    }
+
     /// The user message of turn `i`: right-aligned bubble next to the user's avatar.
     fn user_message(&self, i: usize, message: &str, cx: &mut Context<Self>) -> AnyElement {
         let t = cx.tokens();
@@ -537,16 +557,18 @@ impl AiChatDialog {
     }
 
     /// The reply of turn `i`: avatar rail, tool activity, the (possibly partly revealed) reply and the copy button.
-    /// A finished turn without reply text or tool calls shows nothing.
+    /// `settled` is the finished reply text of a turn that is no longer active. A finished turn without reply text or
+    /// tool calls shows nothing.
     fn assistant_turn(
         &self,
         i: usize,
         turn: &Turn,
-        is_active: bool,
+        settled: Option<&SharedString>,
         is_revealing: bool,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Option<AnyElement> {
+        let is_active = settled.is_none();
         let full = turn.assistant.as_str();
         if !is_active && full.trim().is_empty() && turn.tools.is_empty() {
             return None;
@@ -583,14 +605,14 @@ impl AiChatDialog {
             col = col.child(loading_indicator(window, cx));
         }
         if !visible.trim().is_empty() {
+            // A settled reply shares its text, the active one is copied as it grows.
+            let source = settled.cloned().unwrap_or_else(|| visible.into());
             col = col.child(
-                Markdown::new(SharedString::from(format!("chat-msg-{i}")), visible.to_string())
-                    .style(MarkdownStyle::Chat)
-                    .w_full(),
+                Markdown::new(SharedString::from(format!("chat-msg-{i}")), source).style(MarkdownStyle::Chat).w_full(),
             );
         }
-        if !is_active && !full.trim().is_empty() {
-            col = col.child(Self::message_actions(i, full));
+        if let Some(reply) = settled.filter(|_| !full.trim().is_empty()) {
+            col = col.child(Self::message_actions(i, reply.clone()));
         }
 
         let row = div().group(group).flex().gap(px(12.0)).child(rail).child(col);
@@ -700,8 +722,8 @@ impl AiChatDialog {
     }
 
     /// Copy button for a finished reply. Shown once the turn is no longer streaming or revealing.
-    fn message_actions(turn: usize, content: &str) -> AnyElement {
-        let button = Clipboard::new(SharedString::from(format!("copy-{turn}"))).value(content.to_string()).small();
+    fn message_actions(turn: usize, content: SharedString) -> AnyElement {
+        let button = Clipboard::new(SharedString::from(format!("copy-{turn}"))).value(content).small();
         div().flex().items_center().gap(px(4.0)).child(button).into_any_element()
     }
 }

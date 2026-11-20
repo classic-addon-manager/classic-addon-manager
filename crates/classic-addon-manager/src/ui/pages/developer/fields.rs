@@ -754,12 +754,12 @@ impl AddonDeclarationFields {
                 }
             }),
             Load::Ready(catalog) if catalog.addons().is_empty() => combobox.status("No addons available."),
-            Load::Ready(catalog) => combobox.items(
-                catalog
-                    .addons()
-                    .iter()
-                    .map(|m| CommandItem::new(m.name.clone(), m.alias.clone()).keywords(m.name.clone())),
-            ),
+            // From `&str`: names and aliases that fit inline in a `SharedString` allocate nothing, and a longer name
+            // is shared by the value and the keywords.
+            Load::Ready(catalog) => combobox.items(catalog.addons().iter().map(|m| {
+                let name = SharedString::from(m.name.as_str());
+                CommandItem::new(name.clone(), m.alias.as_str()).keywords(name)
+            })),
         };
         let spec = FieldSpec {
             key: "dependencies".into(),

@@ -15,6 +15,7 @@ form_urlencoded.workspace = true
 hex.workspace = true
 libc.workspace = true
 log.workspace = true
+memchr.workspace = true
 percent-encoding.workspace = true
 regex.workspace = true
 semver.workspace = true

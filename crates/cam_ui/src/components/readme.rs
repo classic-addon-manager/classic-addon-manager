@@ -19,8 +19,8 @@ use gpui_kit::prelude::FluentBuilder;
 use gpui_kit::{
     AnyElement, App, AppContext, Div, ElementId, Entity, EntityId, Font, FontStyle, FontWeight, Hsla,
     InteractiveElement, InteractiveText, IntoElement, ParentElement, RenderOnce, Resource, SharedString, SharedUri,
-    StatefulInteractiveElement, StrikethroughStyle, StyleRefinement, Styled, StyledText, TextRun, UnderlineStyle,
-    Window, div, img, px, relative, svg,
+    Stateful, StatefulInteractiveElement, StrikethroughStyle, StyleRefinement, Styled, StyledText, TextRun,
+    UnderlineStyle, Window, div, img, px, relative, svg,
 };
 use gpui_kit::{ImageSource, ImgResourceLoader};
 
@@ -282,8 +282,10 @@ struct Tcx {
     italic: bool,
 }
 
+/// Element ids and keyed-state keys inside a document are `role-n`: unique because each role has its own name and
+/// `n` counts per draw in document order. They don't contain the document id: `Markdown::render` runs inside the
+/// document's element namespace, and the elements are laid out below the root, which has the document id.
 struct Ctx {
-    id: SharedString,
     n: Cell<usize>,
     look: Look,
     font: Font,
@@ -294,11 +296,19 @@ struct Ctx {
 }
 
 impl Ctx {
-    fn next_id(&self, kind: &str) -> ElementId {
+    fn next_n(&self) -> usize {
         let n = self.n.get();
         self.n.set(n + 1);
-        ElementId::Name(format!("{}/{kind}{n}", self.id).into())
+        n
     }
+
+    fn next_id(&self, role: &'static str) -> ElementId {
+        role_id(role, self.next_n())
+    }
+}
+
+fn role_id(role: &'static str, n: usize) -> ElementId {
+    ElementId::NamedInteger(SharedString::new_static(role), n as u64)
 }
 
 fn default_link_handler() -> LinkHandler {
@@ -322,10 +332,16 @@ fn open_link(url: &SharedString, window: &mut Window, cx: &mut App) {
 
 impl RenderOnce for Markdown {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        // Scopes the keyed state used while rendering to this document (see `Ctx`).
+        window.with_element_namespace(self.id.clone(), |window| self.render_doc(window, cx))
+    }
+}
+
+impl Markdown {
+    fn render_doc(self, window: &mut Window, cx: &mut App) -> Stateful<Div> {
         http_client::install(cx);
         let t = cx.tokens();
-        let state =
-            window.use_keyed_state(SharedString::from(format!("{}/md", self.id)), cx, |_, _| MarkdownState::default());
+        let state = window.use_keyed_state("md", cx, |_, _| MarkdownState::default());
         ensure_parsed(
             &state,
             ParseKey {
@@ -349,7 +365,6 @@ impl RenderOnce for Markdown {
         let timeline = self.style == MarkdownStyle::ReleaseNotes
             && self.timeline.unwrap_or_else(|| doc.as_ref().is_some_and(|d| d.has_headings));
         let ctx = Ctx {
-            id: SharedString::from(format!("{}", self.id)),
             n: Cell::new(0),
             look,
             font: text_style.font(),
@@ -514,8 +529,7 @@ fn render_block(block: &Block, ctx: &Ctx, tcx: Tcx, depth: usize, window: &mut W
         Block::Table { rows, weights } => render_table(rows, weights, ctx, tcx, depth, window, cx),
         Block::Rule => div().w_full().h(px(1.0)).bg(t.border),
         Block::Details { summary, open, blocks } => {
-            let state_key = SharedString::from(format!("{}/open", ctx.next_id("details")));
-            let state = window.use_keyed_state(state_key, cx, |_, _| *open);
+            let state = window.use_keyed_state(ctx.next_id("open"), cx, |_, _| *open);
             let is_open = *state.read(cx);
             let view = ctx.view;
             let sum = flows_el(summary, Align::Start, tcx, ctx, window, cx);
@@ -785,12 +799,12 @@ fn flows_el(flows: &[Flow], align: Align, tcx: Tcx, ctx: &Ctx, window: &mut Wind
 
 fn text_el(tb: &TextBlock, tcx: Tcx, ctx: &Ctx, window: &mut Window, cx: &mut App) -> AnyElement {
     let look = ctx.look;
-    let id = ctx.next_id("t");
+    let n = ctx.next_n();
     let links: Vec<(Range<usize>, SharedString)> =
         tb.spans.iter().filter_map(|s| s.link.clone().map(|l| (s.range.clone(), l))).collect();
 
-    let hover_state = (!links.is_empty())
-        .then(|| window.use_keyed_state(SharedString::from(format!("{id:?}/hover")), cx, |_, _| None::<usize>));
+    let hover_state =
+        (!links.is_empty()).then(|| window.use_keyed_state(role_id("hover", n), cx, |_, _| None::<usize>));
     let hovered = hover_state.as_ref().and_then(|s| *s.read(cx));
 
     let mut link_no = 0usize;
@@ -852,7 +866,7 @@ fn text_el(tb: &TextBlock, tcx: Tcx, ctx: &Ctx, window: &mut Window, cx: &mut Ap
     let view = ctx.view;
     let hover_ranges = ranges.clone();
     let hover_state = state.clone();
-    let text = InteractiveText::new(id.clone(), styled)
+    let text = InteractiveText::new(role_id("t", n), styled)
         .on_click(ranges, move |ix, window, cx| on_link(&urls[ix], window, cx))
         .on_hover(move |ix, _, _, cx| {
             let pos = ix.and_then(|ix| hover_ranges.iter().position(|r| r.contains(&ix)));
@@ -860,7 +874,7 @@ fn text_el(tb: &TextBlock, tcx: Tcx, ctx: &Ctx, window: &mut Window, cx: &mut Ap
         });
     // Leaving the block must clear the hover underline (InteractiveText only reports moves over its text).
     div()
-        .id(ElementId::Name(format!("{id:?}/wrap").into()))
+        .id(role_id("wrap", n))
         .on_hover(move |hovered, window, cx| {
             if !*hovered {
                 let changed = state.update(cx, |s, _| s.take().is_some());

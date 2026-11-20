@@ -327,17 +327,17 @@ impl<V: Clone> Entry<V> {
         if let Some(task) = self.task.take() {
             task.detach();
         }
-        match &result {
+        for waiter in self.waiters.drain(..) {
+            let _ = waiter.try_send(result.clone());
+        }
+        match result {
             Ok(value) => {
-                self.load = Load::Ready(value.clone());
+                self.load = Load::Ready(value);
                 self.refetch_error = None;
                 self.fetched_at = Some(Instant::now());
             }
-            Err(e) if matches!(self.load, Load::Ready(_)) => self.refetch_error = Some(e.clone()),
-            Err(e) => self.load = Load::Failed(e.clone()),
-        }
-        for waiter in self.waiters.drain(..) {
-            let _ = waiter.try_send(result.clone());
+            Err(e) if matches!(self.load, Load::Ready(_)) => self.refetch_error = Some(e),
+            Err(e) => self.load = Load::Failed(e),
         }
         true
     }

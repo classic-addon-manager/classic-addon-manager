@@ -117,7 +117,7 @@ impl AddonDir<'_> {
             return;
         }
         let managed = Managed { addons: by_name(backfill_dependencies(addons, &manifests)), legacy: false };
-        match self.save_managed(&managed) {
+        match self.save_managed(managed) {
             Ok(()) => log::info!("Migrated managed_addons.json from legacy format to version 1"),
             Err(e) => log::error!("Error saving migrated managed_addons.json: {e:#}"),
         }
@@ -148,19 +148,19 @@ impl AddonDir<'_> {
         let _lists = self.lock();
         let mut managed = self.read_managed().context("refusing to record managed addon")?;
         managed.addons.insert(manifest.name.clone(), addon);
-        self.save_managed(&managed)
+        self.save_managed(managed)
     }
 
     pub fn remove_managed_addon(&self, name: &str) -> Result<()> {
         let _lists = self.lock();
         let mut managed = self.read_managed().context("refusing to save managed addons")?;
         managed.addons.remove(name);
-        self.save_managed(&managed)
+        self.save_managed(managed)
     }
 
     /// Writes `managed`, sorted by name, in the format it was read in. The caller holds the lock.
-    fn save_managed(&self, managed: &Managed) -> Result<()> {
-        let mut addons: Vec<Addon> = managed.addons.values().cloned().map(normalize_addon).collect();
+    fn save_managed(&self, managed: Managed) -> Result<()> {
+        let mut addons: Vec<Addon> = managed.addons.into_values().map(normalize_addon).collect();
         addons.sort_by(|a, b| a.name.cmp(&b.name));
         let file = self.managed_file().context("resolve managed addons file path")?;
         if managed.legacy {
@@ -180,6 +180,6 @@ impl AddonDir<'_> {
         if managed.addons.remove(name).is_none() {
             return Ok(());
         }
-        self.save_managed(&managed).with_context(|| format!("save managed metadata after replacing {:?}", name))
+        self.save_managed(managed).with_context(|| format!("save managed metadata after replacing {:?}", name))
     }
 }

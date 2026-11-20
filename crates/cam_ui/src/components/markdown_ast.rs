@@ -228,10 +228,6 @@ struct Builder<'a> {
     picture_src: Option<String>,
 }
 
-fn children(node: &Handle) -> Vec<Handle> {
-    node.children.borrow().clone()
-}
-
 fn tag(node: &Handle) -> Option<&str> {
     match &node.data {
         NodeData::Element { name, .. } => Some(&name.local),
@@ -316,16 +312,16 @@ impl Builder<'_> {
     /// Folds the children of `parent` into blocks; stray inline content becomes implicit paragraphs.
     fn blocks_from_children(&mut self, parent: &Handle, align: Align, out: &mut Vec<Block>) {
         let mut inl = Inl::new(self.opts, false);
-        for child in children(parent) {
+        for child in parent.children.borrow().iter() {
             match &child.data {
                 NodeData::Text { contents } => inl.push_text(&contents.borrow(), 0, &None),
                 NodeData::Element { name, .. } => {
                     let t: &str = &name.local;
                     if is_block_tag(t) {
                         self.flush(&mut inl, align, out);
-                        self.block_element(&child, t, align, out);
+                        self.block_element(child, t, align, out);
                     } else {
-                        self.inline_element(&child, &mut inl, 0, &None);
+                        self.inline_element(child, &mut inl, 0, &None);
                     }
                 }
                 _ => {}
@@ -343,8 +339,8 @@ impl Builder<'_> {
 
     fn inline_flows(&mut self, node: &Handle, uppercase: bool) -> Vec<Flow> {
         let mut inl = Inl::new(self.opts, uppercase);
-        for child in children(node) {
-            self.inline_node(&child, &mut inl, 0, &None);
+        for child in node.children.borrow().iter() {
+            self.inline_node(child, &mut inl, 0, &None);
         }
         inl.finish()
     }
@@ -378,20 +374,20 @@ impl Builder<'_> {
                 });
             }
             "picture" => {
-                for c in children(node) {
-                    if tag(&c) == Some("source") {
+                for c in node.children.borrow().iter() {
+                    if tag(c) == Some("source") {
                         let dark =
-                            attr(&c, "media").is_some_and(|m| m.replace(' ', "").contains("prefers-color-scheme:dark"));
+                            attr(c, "media").is_some_and(|m| m.replace(' ', "").contains("prefers-color-scheme:dark"));
                         if dark
-                            && let Some(set) = attr(&c, "srcset")
+                            && let Some(set) = attr(c, "srcset")
                             && let Some(first) = set.split(',').next().and_then(|s| s.split_whitespace().next())
                         {
                             self.picture_src = Some(first.to_string());
                         }
                     }
                 }
-                for c in children(node) {
-                    self.inline_node(&c, inl, flags, link);
+                for c in node.children.borrow().iter() {
+                    self.inline_node(c, inl, flags, link);
                 }
                 self.picture_src = None;
             }
@@ -404,14 +400,14 @@ impl Builder<'_> {
                     SharedString::from(resolve(self.opts.link_base.as_ref().or(self.opts.image_base.as_ref()), &h))
                 });
                 let link = href.or_else(|| link.clone());
-                for c in children(node) {
-                    self.inline_node(&c, inl, flags, &link);
+                for c in node.children.borrow().iter() {
+                    self.inline_node(c, inl, flags, &link);
                 }
             }
             "code" | "kbd" | "samp" | "tt" => {
                 inl.push_text_raw("\u{2009}", flags | CODE, link);
-                for c in children(node) {
-                    self.inline_node(&c, inl, flags | CODE, link);
+                for c in node.children.borrow().iter() {
+                    self.inline_node(c, inl, flags | CODE, link);
                 }
                 inl.push_text_raw("\u{2009}", flags | CODE, link);
             }
@@ -424,8 +420,8 @@ impl Builder<'_> {
                     "mark" => flags | MARK,
                     _ => flags,
                 };
-                for c in children(node) {
-                    self.inline_node(&c, inl, f, link);
+                for c in node.children.borrow().iter() {
+                    self.inline_node(c, inl, f, link);
                 }
             }
         }
@@ -449,10 +445,13 @@ impl Builder<'_> {
                 }
             }
             "pre" => {
-                let lang =
-                    children(node).iter().find(|c| tag(c) == Some("code")).and_then(|c| attr(c, "class")).and_then(
-                        |c| c.split_whitespace().find_map(|k| k.strip_prefix("language-").map(str::to_string)),
-                    );
+                let lang = node
+                    .children
+                    .borrow()
+                    .iter()
+                    .find(|c| tag(c) == Some("code"))
+                    .and_then(|c| attr(c, "class"))
+                    .and_then(|c| c.split_whitespace().find_map(|k| k.strip_prefix("language-").map(str::to_string)));
                 let mut text = String::new();
                 text_content(node, &mut text);
                 while text.ends_with('\n') {
@@ -468,13 +467,13 @@ impl Builder<'_> {
             "ul" | "ol" => {
                 let start = attr(node, "start").and_then(|s| s.trim().parse().ok()).unwrap_or(1);
                 let mut items = Vec::new();
-                for li in children(node) {
-                    if tag(&li) != Some("li") {
+                for li in node.children.borrow().iter() {
+                    if tag(li) != Some("li") {
                         continue;
                     }
-                    let checked = take_checkbox(&li);
+                    let checked = take_checkbox(li);
                     let mut blocks = Vec::new();
-                    self.blocks_from_children(&li, align, &mut blocks);
+                    self.blocks_from_children(li, align, &mut blocks);
                     items.push(ListItem { checked, blocks });
                 }
                 out.push(Block::List { ordered: t == "ol", start, items });
@@ -504,11 +503,10 @@ impl Builder<'_> {
                 let open = attr(node, "open").is_some();
                 let mut summary = Vec::new();
                 let mut inner = Vec::new();
-                let kids = children(node);
                 let mut inl = Inl::new(self.opts, false);
-                for c in kids {
-                    if tag(&c) == Some("summary") {
-                        summary = self.inline_flows(&c, false);
+                for c in node.children.borrow().iter() {
+                    if tag(c) == Some("summary") {
+                        summary = self.inline_flows(c, false);
                     } else {
                         match &c.data {
                             NodeData::Text { contents } => inl.push_text(&contents.borrow(), 0, &None),
@@ -516,9 +514,9 @@ impl Builder<'_> {
                                 let n: &str = &name.local;
                                 if is_block_tag(n) {
                                     self.flush(&mut inl, align, &mut inner);
-                                    self.block_element(&c, n, align, &mut inner);
+                                    self.block_element(c, n, align, &mut inner);
                                 } else {
-                                    self.inline_element(&c, &mut inl, 0, &None);
+                                    self.inline_element(c, &mut inl, 0, &None);
                                 }
                             }
                             _ => {}
@@ -540,18 +538,18 @@ impl Builder<'_> {
     }
 
     fn collect_rows(&mut self, node: &Handle, rows: &mut Vec<Vec<Cell>>) {
-        for c in children(node) {
-            match tag(&c) {
+        for c in node.children.borrow().iter() {
+            match tag(c) {
                 Some("tr") => {
                     let mut cells = Vec::new();
-                    for cell in children(&c) {
-                        let Some(ct @ ("td" | "th")) = tag(&cell) else { continue };
+                    for cell in c.children.borrow().iter() {
+                        let Some(ct @ ("td" | "th")) = tag(cell) else { continue };
                         let mut blocks = Vec::new();
-                        self.blocks_from_children(&cell, Align::Start, &mut blocks);
+                        self.blocks_from_children(cell, Align::Start, &mut blocks);
                         cells.push(Cell {
                             header: ct == "th",
-                            align: parse_align(attr(&cell, "align")).unwrap_or_default(),
-                            colspan: attr(&cell, "colspan")
+                            align: parse_align(attr(cell, "align")).unwrap_or_default(),
+                            colspan: attr(cell, "colspan")
                                 .and_then(|s| s.trim().parse().ok())
                                 .filter(|n| (1..=50).contains(n))
                                 .unwrap_or(1),
@@ -562,7 +560,7 @@ impl Builder<'_> {
                         rows.push(cells);
                     }
                 }
-                Some("thead" | "tbody" | "tfoot") => self.collect_rows(&c, rows),
+                Some("thead" | "tbody" | "tfoot") => self.collect_rows(c, rows),
                 _ => {}
             }
         }

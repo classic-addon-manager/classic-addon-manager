@@ -62,8 +62,19 @@ pub struct OwnedSubmission {
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct OwnedAddonsData {
     pub addons: Vec<OwnedAddon>,
+    /// The standalone submissions first (see [`Self::standalone_submissions`]), then the review history of the
+    /// published addons.
     pub submissions: Vec<OwnedSubmission>,
+    /// How many of `submissions` are standalone.
+    standalone: usize,
     pub webhook_install_url: String,
+}
+
+impl OwnedAddonsData {
+    /// The submissions listed and counted on their own (see [`is_standalone_submission`]), in server order.
+    pub fn standalone_submissions(&self) -> &[OwnedSubmission] {
+        &self.submissions[..self.standalone]
+    }
 }
 
 /// The owner's addons and submissions: the sources the server lists, with the details of the catalog for every addon
@@ -99,23 +110,23 @@ pub fn sources_to_owned(sources: &AddonSources, manifests: &[AddonManifest]) -> 
             )
         })
         .collect();
+    let standalone_count = standalone.len();
     let mut submissions = standalone;
     for name in history_order {
         submissions.extend(history_by_name[name].iter().map(|s| to_owned_submission(s)));
     }
-    OwnedAddonsData { addons, submissions, webhook_install_url: sources.webhook_install_url.clone() }
+    OwnedAddonsData {
+        addons,
+        submissions,
+        standalone: standalone_count,
+        webhook_install_url: sources.webhook_install_url.clone(),
+    }
 }
 
 /// Update submissions for an already published addon belong to that addon's review history, so they are not
 /// listed or counted on their own.
 pub fn is_standalone_submission(kind: DeclarationKind, name: &str, published_names: &HashSet<&str>) -> bool {
     !(kind == DeclarationKind::Update && published_names.contains(name))
-}
-
-impl OwnedSubmission {
-    pub fn is_standalone(&self, published_names: &HashSet<&str>) -> bool {
-        is_standalone_submission(self.kind, &self.name, published_names)
-    }
 }
 
 fn to_owned_addon(
@@ -303,10 +314,7 @@ mod tests {
         assert!(a.review_history[0].date.is_some());
         // standalone first (in order), then the history submissions
         assert_eq!(owned.submissions.iter().map(|s| s.id).collect::<Vec<_>>(), vec![1, 3, 5, 4, 2]);
-        let published: HashSet<&str> = ["A"].into_iter().collect();
-        let visible: Vec<i64> =
-            owned.submissions.iter().filter(|s| s.is_standalone(&published)).map(|s| s.id).collect();
-        assert_eq!(visible, vec![1, 3, 5]);
+        assert_eq!(owned.standalone_submissions().iter().map(|s| s.id).collect::<Vec<_>>(), vec![1, 3, 5]);
         assert_eq!(owned.submissions[2].status, OwnedSubmissionStatus::Open);
         assert_eq!(owned.submissions[4].status, OwnedSubmissionStatus::Rejected);
     }

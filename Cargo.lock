@@ -776,6 +776,7 @@ dependencies = [
  "hex",
  "libc",
  "log",
+ "memchr",
  "percent-encoding",
  "regex",
  "semver",

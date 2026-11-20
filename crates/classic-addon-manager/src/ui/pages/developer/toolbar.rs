@@ -128,8 +128,7 @@ impl Render for DeveloperToolbar {
         let owned = self.queries.read(cx).owned(cx);
         let Some(data) = owned.data else { return div().into_any_element() };
         let scope = self.page.upgrade().map(|p| p.read(cx).scope).unwrap_or(DeveloperScope::All);
-        let published: HashSet<&str> = data.addons.iter().map(|a| a.name.as_str()).collect();
-        let visible_submissions = data.submissions.iter().filter(|s| s.is_standalone(&published)).count();
+        let visible_submissions = data.standalone_submissions().len();
         let failed = owned.last_attempt_failed;
         let busy = self.show_spinner;
         let icon_color = t.foreground;
