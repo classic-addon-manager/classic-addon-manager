@@ -41,7 +41,7 @@ use gpui_kit::component::Icon;
 use gpui_kit::{
     AnyElement, AppContext as _, Bounds, Context, Entity, FocusHandle, Focusable as _, FontWeight,
     InteractiveElement as _, IntoElement, ObjectFit, ParentElement, Pixels, Render, ScrollHandle, SharedString, Size,
-    StatefulInteractiveElement as _, Styled, StyledImage as _, Subscription, Window, canvas, div, img,
+    StatefulInteractiveElement as _, Styled, StyledImage as _, Subscription, Window, canvas, div,
     prelude::FluentBuilder as _, px, transparent_black,
 };
 
@@ -50,6 +50,7 @@ use super::{
     icon_picker::{self, IconChange},
 };
 use crate::state::{self, Load};
+use crate::ui::icon_cache::icon_img;
 
 /// Description shown under a section title, if the section has one.
 fn section_description(section: &str) -> Option<&'static str> {
@@ -775,15 +776,20 @@ impl AddonDeclarationFields {
     fn icon_row(&mut self, snap: &Snapshot, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
         let t = cx.tokens();
         let preview = match snap.icon_url.as_deref().filter(|u| !u.is_empty()) {
-            Some(url) => div()
-                .flex_none()
-                .size(px(48.0))
-                .rounded(radius::MD)
-                .border_1()
-                .border_color(t.border)
-                .overflow_hidden()
-                .child(img(url.to_owned()).size(px(46.0)).object_fit(ObjectFit::Cover))
-                .into_any_element(),
+            Some(url) => {
+                let (image, shown) = icon_img(SharedString::from(url.to_owned()), cx);
+                div()
+                    .relative()
+                    .flex_none()
+                    .size(px(48.0))
+                    .rounded(radius::MD)
+                    .border_1()
+                    .border_color(t.border)
+                    .overflow_hidden()
+                    .child(image.size(px(46.0)).object_fit(ObjectFit::Cover))
+                    .children(shown)
+                    .into_any_element()
+            }
             None => div()
                 .flex()
                 .flex_none()

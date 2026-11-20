@@ -334,7 +334,7 @@ impl Render for SettingsPage {
             (
                 "cache",
                 "Cache location",
-                "Temporary files and downloaded addon packages",
+                "Temporary files, downloaded addon packages and addon icons",
                 icons::FOLDER_OPEN,
                 Paths::cache_dir,
             ),

@@ -6,6 +6,7 @@ mod addon_icon;
 mod chat;
 mod dependency_notify;
 mod format;
+mod icon_cache;
 #[cfg(debug_assertions)]
 pub mod inspector;
 mod pages;
@@ -13,4 +14,5 @@ mod rating_buttons;
 mod shell;
 
 pub use accent::accent;
+pub use icon_cache::install_http_client;
 pub use shell::Shell;

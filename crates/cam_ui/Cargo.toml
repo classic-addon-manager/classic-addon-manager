@@ -8,11 +8,14 @@ publish.workspace = true
 [dependencies]
 anyhow.workspace = true
 async-channel.workspace = true
+bytes.workspace = true
 gpui-kit.workspace = true
 html5ever.workspace = true
 log.workspace = true
 markdown.workspace = true
 markup5ever_rcdom.workspace = true
 rust-embed.workspace = true
+sha2.workspace = true
+tempfile.workspace = true
 ureq.workspace = true
 url.workspace = true

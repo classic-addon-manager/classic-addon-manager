@@ -1,11 +1,12 @@
 //! `AddonIcon`: an addon's icon image, or a coloured monogram tile when it has none, plus the icon URL helpers.
 use cam_ui::components::style_ext::StyleMergeExt as _;
-use cam_ui::http_client;
 use cam_ui::theme::{TokensExt, alpha, hue_from_string, oklch, oklcha, radius, shadow_xs};
 use gpui_kit::{
     AnyElement, App, FontWeight, IntoElement, ObjectFit, ParentElement, Pixels, RenderOnce, SharedString,
-    StyleRefinement, Styled, StyledImage as _, Window, div, img, linear_color_stop, linear_gradient, px,
+    StyleRefinement, Styled, StyledImage as _, Window, div, linear_color_stop, linear_gradient, px,
 };
+
+use crate::ui::icon_cache::icon_img;
 
 /// Resolves the icon URL of an addon. A catalog `icon` (already a full CDN URL) wins. The GitHub
 /// `raw.githubusercontent.com/<repo>/<branch>/icon.png` fallback is used only when `github_fallback` is set (owned
@@ -133,16 +134,17 @@ impl RenderOnce for AddonIcon {
         let (edge, corner, font) = self.size.metrics();
         match self.src {
             Some(src) => {
-                http_client::install(cx);
                 let name = self.name.clone();
                 let inner = px(edge - 2.0);
-                let image: AnyElement = img(src)
+                let (image, shown) = icon_img(src, cx);
+                let image: AnyElement = image
                     .size(inner)
                     .rounded(corner - px(1.0))
                     .object_fit(ObjectFit::Cover)
                     .with_fallback(move || monogram(&name, edge - 2.0, corner - px(1.0), font).into_any_element())
                     .into_any_element();
                 div()
+                    .relative()
                     .flex()
                     .flex_none()
                     .size(px(edge))
@@ -152,6 +154,7 @@ impl RenderOnce for AddonIcon {
                     .shadow(shadow_xs())
                     .merge_style(&self.style)
                     .child(image)
+                    .children(shown)
                     .into_any_element()
             }
             None => monogram(&self.name, edge, corner, font).merge_style(&self.style).into_any_element(),

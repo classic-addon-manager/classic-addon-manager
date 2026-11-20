@@ -4,7 +4,7 @@ use std::{path::PathBuf, rc::Rc};
 use cam_core::api::developer;
 use cam_ui::{
     components::{Button, ButtonSize, ButtonVariant, DialogFooter, DialogSpec, dialog},
-    http_client, icons,
+    icons,
     theme::{TokensExt, TwText, alpha, radius},
 };
 use gpui_kit::component::Icon;
@@ -15,6 +15,7 @@ use gpui_kit::{
 };
 
 use crate::state::run_blocking;
+use crate::ui::icon_cache::icon_img;
 
 /// Result of the picker's Save.
 #[derive(Clone, Debug, PartialEq)]
@@ -220,18 +221,18 @@ impl IconPickerForm {
     fn preview(&self, edge: f32, cx: &mut Context<Self>) -> AnyElement {
         let t = cx.tokens();
         let frame = div().flex().flex_none().size(px(edge)).rounded(radius::LG).border_1().border_color(t.border);
-        let image = |source: gpui_kit::ImageSource| {
-            img(source).size(px(edge - 2.0)).rounded(radius::LG - px(1.0)).object_fit(ObjectFit::Cover)
+        let image = |image: gpui_kit::Img| {
+            image.size(px(edge - 2.0)).rounded(radius::LG - px(1.0)).object_fit(ObjectFit::Cover)
         };
         if !self.remove
             && let Some(staged) = &self.staged
         {
-            return frame.child(image(staged.path.clone().into())).into_any_element();
+            return frame.child(image(img(staged.path.clone()))).into_any_element();
         }
         match self.current_icon_url.as_ref().filter(|_| !self.remove) {
             Some(url) => {
-                http_client::install(cx);
-                frame.child(image(url.clone().into())).into_any_element()
+                let (remote, shown) = icon_img(url.clone().into(), cx);
+                frame.relative().child(image(remote)).children(shown).into_any_element()
             }
             None => frame
                 .items_center()

@@ -76,6 +76,8 @@ fn main() {
         gpui_kit::init(cx);
         #[cfg(debug_assertions)]
         ui::inspector::init(cx);
+        // Before `cam_ui::init`, which would install the HTTP client without the icon cache.
+        ui::install_http_client(cx, &backend.paths.cache);
         // After `gpui_kit::init`: the toast layer is a deferred (priority 50) `Root` plugin.
         cam_ui::init(cx, ui::accent(Default::default()));
         state::init(cx, backend);

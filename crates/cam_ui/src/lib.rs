@@ -8,6 +8,7 @@
 pub mod anim;
 pub mod assets;
 pub mod components;
+pub mod http_cache;
 pub mod http_client;
 pub mod icons;
 mod icons_generated;

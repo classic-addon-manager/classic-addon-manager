@@ -797,12 +797,15 @@ version = "4.0.1"
 dependencies = [
  "anyhow",
  "async-channel",
+ "bytes",
  "gpui-kit",
  "html5ever 0.39.0",
  "log",
  "markdown",
  "markup5ever_rcdom 0.39.0+unofficial",
  "rust-embed",
+ "sha2 0.11.1",
+ "tempfile",
  "ureq",
  "url",
 ]

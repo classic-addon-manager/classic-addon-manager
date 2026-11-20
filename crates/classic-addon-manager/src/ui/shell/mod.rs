@@ -18,6 +18,7 @@ use gpui_kit::{
 use self::sidebar::{OpenUpdateHandler, PageHandler, SidebarProps, sidebar};
 use self::titlebar::{TitleBar, TitleBarSlot, clear_slot};
 use self::user_bar::UserBar;
+use super::icon_cache;
 use super::pages::{self, PageId};
 use crate::state;
 
@@ -112,7 +113,8 @@ impl Render for Shell {
                 div().flex().flex_col().flex_1().min_w_0().min_h_0().overflow_hidden().children(self.page.clone()),
             ))
             // dims the page while a dialog is open, dialogs draw above it
-            .children(dialog::backdrop(window, cx));
+            .children(dialog::backdrop(window, cx))
+            .child(icon_cache::frame_marker());
         // Dialogs, sheets, menus and tooltips come from gpui-kit's `Root`, which wraps this view. Our toasts are a
         // `Root` plugin (`toast::init`) drawn above dialogs and sheets.
         // gpui-kit also draws empty full-window layers over our page, so the inspector would pick those instead of

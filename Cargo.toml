@@ -16,6 +16,7 @@ cam_ui = { path = "crates/cam_ui" }
 anyhow = "1.0.104"
 async-channel = "2.5.0"
 base64 = "0.23.1"
+bytes = "1.12.1"
 chrono = { version = "0.4.45", features = ["serde"] }
 dirs = "7.0.0"
 form_urlencoded = "1.2.2"
