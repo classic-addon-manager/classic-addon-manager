@@ -467,12 +467,15 @@ impl UpdateDialog {
                 .child(
                     div()
                         .relative()
+                        .flex()
+                        .flex_col()
                         .max_h(px(256.0))
                         .min_h_0()
                         .child(
                             div()
                                 .id("release-notes-scroll")
                                 .max_h(px(256.0))
+                                .min_h_0()
                                 .overflow_y_scroll()
                                 .track_scroll(&self.notes_scroll)
                                 .child(
