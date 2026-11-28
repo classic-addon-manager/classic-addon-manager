@@ -23,6 +23,7 @@ form_urlencoded = "1.2.2"
 gpui-kit = { version = "=0.9.0", features = ["inspector"] }
 hex = "0.4.3"
 html5ever = "0.39"
+image = { version = "0.25.10", default-features = false, features = ["png"] }
 libc = "0.2.191"
 log = "0.4.34"
 markdown = "1.0.0"

@@ -1,5 +1,3 @@
-# Everything the app does that is not UI: addons, the server API, auth, settings, self-update, single-instance IPC
-# and logging. It doesn't depend on GPUI, so its tests build and run without it.
 [package]
 name = "cam_core"
 version.workspace = true
@@ -13,6 +11,7 @@ chrono.workspace = true
 dirs.workspace = true
 form_urlencoded.workspace = true
 hex.workspace = true
+image.workspace = true
 libc.workspace = true
 log.workspace = true
 memchr.workspace = true

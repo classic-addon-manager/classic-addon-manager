@@ -774,6 +774,7 @@ dependencies = [
  "dirs 7.0.0",
  "form_urlencoded",
  "hex",
+ "image",
  "libc",
  "log",
  "memchr",

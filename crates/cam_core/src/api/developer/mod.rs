@@ -6,17 +6,20 @@
 //! of the submission endpoints become outcomes the form matches on ([`ValidateResult`], [`SubmitAddonResult`],
 //! [`WithdrawResult`]), so nothing outside this module looks at the server's wording.
 pub mod declaration;
+mod icon;
 mod parse;
 pub mod types;
 
 use std::path::Path;
 
+use image::ImageError;
 use serde::de::DeserializeOwned;
 use serde_json::json;
 use thiserror::Error;
 
 use self::{
     declaration::{PublishFormState, form_to_values, text_of},
+    icon::{ICON_MAX_DIMENSION, prepare_icon},
     parse::{Acknowledgement, StoredValues, Verdict, group_validation_errors},
     types::*,
 };
@@ -185,25 +188,31 @@ const UPLOAD_FAILED: &str = "Icon upload failed.";
 pub enum UploadError {
     #[error("can't read the icon file: {0}")]
     Unreadable(#[from] std::io::Error),
+    #[error("can't scale the icon down: {0}")]
+    Image(#[from] ImageError),
     #[error(transparent)]
     Api(#[from] ApiError),
 }
 
 impl UploadError {
-    /// What the icon dialog shows: the server's own sentence when it refused the icon itself, a generic failure
-    /// otherwise.
+    /// What the icon dialog shows: the server's own sentence when it refused the icon itself, why the icon couldn't be
+    /// scaled down, a generic failure otherwise.
     pub fn message(&self) -> String {
-        let refusal = match self {
-            UploadError::Api(ApiError::Validation(errors)) => errors.iter().find(|e| e.field == "icon"),
-            _ => None,
-        };
-        refusal.map_or(UPLOAD_FAILED, |e| e.message.as_str()).to_owned()
+        match self {
+            UploadError::Api(ApiError::Validation(errors)) => {
+                errors.iter().find(|e| e.field == "icon").map_or(UPLOAD_FAILED, |e| e.message.as_str()).to_owned()
+            }
+            UploadError::Image(ImageError::Limits(_)) => icon_too_large(),
+            UploadError::Image(_) => ICON_INVALID.to_owned(),
+            UploadError::Unreadable(_) | UploadError::Api(_) => UPLOAD_FAILED.to_owned(),
+        }
     }
 }
 
-/// Stages the PNG at `path` as an addon icon: a multipart POST with the file as the `icon` part.
+/// Stages the PNG at `path` as an addon icon: a multipart POST with the file as the `icon` part, scaled down by
+/// [`prepare_icon`] first.
 pub fn upload_icon(path: &Path) -> Result<UploadedIcon, UploadError> {
-    let data = std::fs::read(path)?;
+    let data = prepare_icon(std::fs::read(path)?)?;
     let filename = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| "icon.png".into());
     let part = FormPart { name: "icon".into(), filename, content_type: "image/png".into(), data };
     Ok(fetch(Method::Post, "/dev/addon/icon", Body::Form(vec![part]))?)
@@ -273,9 +282,15 @@ fn find_actionable_submission(name: &str) -> Result<Option<i64>, ApiError> {
 
 // ---- icon rules -----------------------------------------------------------------------------------------------------
 
-// Client-side icon rules. UX only: the server re-checks everything.
+// Client-side icon rules. UX only: the server re-checks everything but the maximum size, which bounds what
+// [`prepare_icon`] decodes.
 const ICON_MAX_BYTES: u64 = 3 * 1024 * 1024;
 const ICON_MIN_DIMENSION: u32 = 50;
+const ICON_INVALID: &str = "Icon must be a valid PNG file.";
+
+fn icon_too_large() -> String {
+    format!("Icon must be at most {ICON_MAX_DIMENSION}×{ICON_MAX_DIMENSION} pixels.")
+}
 
 /// The problems with a picked icon file, empty when it is fine.
 pub fn validate_icon_file(path: &Path) -> Vec<String> {
@@ -291,7 +306,7 @@ pub fn validate_icon_file(path: &Path) -> Vec<String> {
     match read_png_dimensions(path) {
         None => {
             if claims_png {
-                errors.push("Icon must be a valid PNG file.".to_string());
+                errors.push(ICON_INVALID.to_string());
             }
         }
         Some((width, height)) => {
@@ -300,6 +315,9 @@ pub fn validate_icon_file(path: &Path) -> Vec<String> {
             }
             if width < ICON_MIN_DIMENSION || height < ICON_MIN_DIMENSION {
                 errors.push(format!("Icon must be at least {ICON_MIN_DIMENSION}×{ICON_MIN_DIMENSION} pixels."));
+            }
+            if width > ICON_MAX_DIMENSION || height > ICON_MAX_DIMENSION {
+                errors.push(icon_too_large());
             }
         }
     }
@@ -538,6 +556,11 @@ mod tests {
         let cgbi = dir.join("cgbi.png");
         std::fs::write(&cgbi, cgbi_bytes(64, 64)).unwrap();
         assert!(validate_icon_file(&cgbi).is_empty());
+        let huge = dir.join("huge.png");
+        std::fs::write(&huge, png_bytes(4097, 4097)).unwrap();
+        assert_eq!(validate_icon_file(&huge), vec!["Icon must be at most 4096×4096 pixels."]);
+        std::fs::write(&huge, png_bytes(4096, 4096)).unwrap();
+        assert!(validate_icon_file(&huge).is_empty());
         std::fs::write(&cgbi, &cgbi_bytes(64, 64)[..PNG_HEADER_LEN - 1]).unwrap();
         assert_eq!(validate_icon_file(&cgbi), vec!["Icon must be a valid PNG file."]);
         std::fs::remove_dir_all(&dir).ok();
@@ -719,5 +742,16 @@ mod tests {
         assert_eq!(UploadError::Api(ApiError::Decode("malformed icon upload".into())).message(), "Icon upload failed.");
         let unreadable = UploadError::from(std::io::Error::from(std::io::ErrorKind::NotFound));
         assert_eq!(unreadable.message(), "Icon upload failed.");
+        let too_large = UploadError::from(prepare_icon(huge_png()).unwrap_err());
+        assert_eq!(too_large.message(), "Icon must be at most 4096×4096 pixels.");
+        let corrupt = UploadError::from(prepare_icon(png_bytes(512, 512)).unwrap_err());
+        assert_eq!(corrupt.message(), "Icon must be a valid PNG file.");
+    }
+
+    /// A real 4097×1 PNG, one pixel wider than the largest icon accepted.
+    fn huge_png() -> Vec<u8> {
+        let mut png = std::io::Cursor::new(Vec::new());
+        image::RgbaImage::new(4097, 1).write_to(&mut png, image::ImageFormat::Png).unwrap();
+        png.into_inner()
     }
 }
